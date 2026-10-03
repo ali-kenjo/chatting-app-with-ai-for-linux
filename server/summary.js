@@ -23,7 +23,7 @@ const lineFor = (m) => {
 
 // Brings the summary up to date when enough messages have dropped out of the
 // window. Resolves with the summary (or null); failures leave the old one.
-async function update(chatId, { key, model, window = 20 }) {
+async function update(chatId, { api = gemini, key, model, window = 20 }) {
   const chat = chats.get(chatId);
   const cut = chat.messages.length - window;
   const from = chat.summary?.upTo || 0;
@@ -40,7 +40,7 @@ async function update(chatId, { key, model, window = 20 }) {
     "Messages to add:",
     ...chat.messages.slice(from, cut).map(lineFor),
   ].join("\n");
-  const text = await gemini.generateText({ key, model, prompt });
+  const text = await api.generateText({ key, model, prompt });
   if (!text) return chat.summary || null;
 
   // Read and write in one go, so messages saved meanwhile aren't lost

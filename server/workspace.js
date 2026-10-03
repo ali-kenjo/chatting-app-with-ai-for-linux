@@ -1,6 +1,8 @@
 // Google Workspace and Cloud integrations (Drive, Calendar, Gmail, Docs, Sheets, Slides, GitHub)
 const https = require("https");
 
+const TIMEOUT_MS = 20000;
+
 function fetchJson(url, options = {}) {
   return new Promise((resolve, reject) => {
     const parsed = new URL(url);
@@ -9,6 +11,7 @@ function fetchJson(url, options = {}) {
       port: 443,
       path: parsed.pathname + parsed.search,
       method: options.method || "GET",
+      timeout: TIMEOUT_MS,
       headers: {
         "User-Agent": "Friends-App/1.0",
         ...(options.headers || {}),
@@ -16,6 +19,7 @@ function fetchJson(url, options = {}) {
     };
 
     const req = https.request(reqOptions, (res) => {
+      res.setEncoding("utf8"); // keeps characters that span two chunks intact
       let body = "";
       res.on("data", (chunk) => (body += chunk));
       res.on("end", () => {
@@ -38,6 +42,7 @@ function fetchJson(url, options = {}) {
       });
     });
 
+    req.on("timeout", () => req.destroy(new Error("Google or GitHub took too long to answer.")));
     req.on("error", reject);
     if (options.body) {
       req.write(typeof options.body === "string" ? options.body : JSON.stringify(options.body));
@@ -51,7 +56,7 @@ async function searchDrive(token, query = "") {
   if (!token) throw new Error("Google account is not connected. Sign in with Google to access Google Drive.");
   let q = "trashed = false";
   if (query && query.trim()) {
-    const escaped = query.replace(/'/g, "\\'");
+    const escaped = query.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
     q += ` and (name contains '${escaped}' or fullText contains '${escaped}')`;
   }
   const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&pageSize=10&fields=files(id,name,mimeType,modifiedTime,webViewLink,size)&orderBy=modifiedTime desc`;
@@ -94,7 +99,8 @@ async function readDriveFile(token, fileId) {
 async function getCalendarEvents(token, maxResults = 10) {
   if (!token) throw new Error("Google account is not connected. Sign in with Google to view your calendar.");
   const now = new Date().toISOString();
-  const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(now)}&singleEvents=true&orderBy=startTime&maxResults=${maxResults}`;
+  const count = Math.min(20, Math.max(1, Math.round(Number(maxResults)) || 10));
+  const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(now)}&singleEvents=true&orderBy=startTime&maxResults=${count}`;
   const data = await fetchJson(url, { headers: { Authorization: `Bearer ${token}` } });
   return (data.items || []).map((e) => ({
     id: e.id,
@@ -110,6 +116,7 @@ async function getCalendarEvents(token, maxResults = 10) {
 async function createCalendarEvent(token, { summary, description = "", start, end, location = "" }) {
   if (!token) throw new Error("Google account is not connected. Sign in with Google to add calendar events.");
   const url = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
+  if (typeof start !== "string" || typeof end !== "string" || !start || !end) throw new Error("The event needs a start and an end time.");
   const body = {
     summary,
     description,
@@ -159,14 +166,17 @@ async function searchGmail(token, query = "in:inbox", maxResults = 8) {
 
 async function sendGmail(token, { to, subject, body }) {
   if (!token) throw new Error("Google account is not connected. Sign in with Google to send emails.");
-  const utf8Subject = `=?utf-8?B?${Buffer.from(subject).toString("base64")}?=`;
+  // A line break in the address would let the AI add headers (e.g. a hidden Bcc)
+  to = String(to ?? "").trim();
+  if (!/^[^\s<>,;]+@[^\s<>,;]+$/.test(to) && !/^[^<>\r\n,;]*<[^\s<>,;]+@[^\s<>,;]+>$/.test(to)) throw new Error("That isn't a single valid email address.");
+  const utf8Subject = `=?utf-8?B?${Buffer.from(String(subject ?? "")).toString("base64")}?=`;
   const messageParts = [
     `To: ${to}`,
     "Content-Type: text/plain; charset=utf-8",
     "MIME-Version: 1.0",
     `Subject: ${utf8Subject}`,
     "",
-    body,
+    String(body ?? ""),
   ];
   const message = messageParts.join("\r\n");
   const encoded = Buffer.from(message)

@@ -1,57 +1,77 @@
 # Friends
 
-A personal AI chat app that runs in your browser, with Gemini as its brain.
+A personal AI chat app that runs in your browser. Its brain can be Google Gemini (cloud) or any AI model running on your own computer, so chats can stay completely private.
 
 ---
 
-## Quick Start
+## Install
 
-### 1. Local Desktop (Node.js)
+**You need:** a Linux computer (the app and the helper also run on macOS and Windows from source) and [Node.js](https://nodejs.org) 20 or newer. For a private, offline AI also an AI model server such as [Ollama](https://ollama.com/download) (optional; Gemini needs only a free API key).
+
+### 1. One command (recommended)
 
 ```bash
-npm install   # first time only
-npm start
+git clone <this repository> friends && cd friends
+./scripts/install.sh
 ```
 
-Open **http://localhost:3000**, then go to **Settings → AI control → Add brain** and paste a Gemini API key (free at [https://aistudio.google.com/apikey](https://aistudio.google.com/apikey)).
+It installs the dependencies, adds a **Friends (browser)** entry to your application menu and a `friends-web` command (starts the helper in the background and opens your browser; `friends-web --stop` stops it), and then runs `npm run doctor`, which checks your setup and tells you how to fix anything missing. No `sudo`. `./scripts/install.sh --uninstall` removes the command and menu entry again; your chats stay in `~/.config/friends`.
 
-- Stop it with `Ctrl+C`.
-- Run on another port: `PORT=3001 npm start`.
-- Run with hot-reloading (development): `npm run dev`.
+### 2. By hand
 
-### Linux desktop app (Electron)
+```bash
+npm ci          # first time only
+npm start       # then open http://localhost:3000
+```
+
+- Stop it with `Ctrl+C`. Another port: `PORT=3001 npm start`. Development with reload: `npm run dev`.
+- `npm run doctor` checks Node.js, the dependencies, your data folder, the port, API-key storage and any local AI server.
+- Then open **Settings → AI control**: a local AI (Ollama, LM Studio…) shows up there by itself, or add a Gemini brain with a free key from [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
+
+### 3. Linux desktop app (Electron)
 
 The same app in its own window, with a launcher entry and icon. It runs the helper inside the app on a fixed local port (`127.0.0.1:38417`, nothing outside this computer can reach it) and uses the same `~/.config/friends` as the browser version, so your chats, settings and keys carry over.
 
 ```bash
-npm install
-node node_modules/electron/install.js   # once: npm doesn't run Electron's download step
+./scripts/install.sh --desktop          # dependencies + the Electron download (~100 MB)
 npm run desktop                         # try it from the project folder (runs with --no-sandbox)
 npm run dist                            # builds dist/friends_<version>_amd64.deb
-sudo apt install ./dist/friends_0.1.0_amd64.deb
+sudo apt install ./dist/friends_0.2.0_amd64.deb
 ```
 
 - The `.deb` sets up Chromium's sandbox properly (a setuid helper), which is why it needs `sudo`; `npm run desktop` has no root, so it runs without the sandbox. Use the installed app for everyday use.
+- **Updating the installed app means building and installing a new `.deb`** (`npm run dist`, then `sudo apt install ./dist/friends_*.deb`). An installed app doesn't change when you change the source.
 - On a Wayland session it runs natively (X11 otherwise). The window remembers its size and position; a second launch focuses the first window.
 - The window only shows the app itself. The microphone and camera are granted to that page only, links open in your browser, and Google sign-in gets its own popup.
-- Google sign-in is optional. Copy `firebase-applet-config.example.json` to `firebase-applet-config.json`, fill in your own Firebase project's web config, and add `127.0.0.1` (and `localhost`) under Firebase console → Authentication → Settings → Authorized domains.
+- Google sign-in is optional and never loaded in Private mode. Copy `firebase-applet-config.example.json` to `firebase-applet-config.json`, fill in your own Firebase project's web config, and add `127.0.0.1` (and `localhost`) under Firebase console → Authentication → Settings → Authorized domains.
 
-### 2. Containerized (Docker & Docker Compose)
-
-Run with Docker Compose:
+### 4. Docker
 
 ```bash
 docker compose up -d
 ```
 
-Or run with standard Docker:
+or
 
 ```bash
 docker build -t friends .
-docker run -d -p 3000:3000 -v friends_data:/home/node/.config/friends --name friends-app friends
+docker run -d -p 127.0.0.1:3000:3000 -v friends_data:/home/node/.config/friends --name friends-app friends
 ```
 
-Access the application at `http://localhost:3000`. Data is safely persisted across container restarts in the `friends_data` Docker volume.
+Open `http://localhost:3000`. Chats persist in the `friends_data` volume. (If you publish it on another host port, e.g. `-p 127.0.0.1:8080:3000`, also set `ALLOWED_HOSTS=localhost:8080`.) The port is only published on this computer; to reach it from other devices, publish `3000:3000` and set `ALLOWED_HOSTS` to the address you use. To use Ollama running on the host: run Ollama with `OLLAMA_HOST=0.0.0.0` and add the brain with the address `http://host.docker.internal:11434` (the compose file already provides that name).
+
+To also set up local voice during the install: `./scripts/install.sh --voice` (or later: `npm run voice:setup`).
+
+### Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| Something doesn't work | `npm run doctor` says what's missing and how to fix it |
+| `Port 3000 is already in use` | `PORT=3001 npm start` |
+| "Can't reach the AI server" | Start it (`ollama serve`), then **Look again** in Settings → AI control |
+| The first local reply takes a minute | The model is being loaded into memory; later replies are fast. *Keep the model loaded* in the brain's settings keeps it ready |
+| Long chats forget the beginning | Raise the **Context size** of an Ollama brain (Settings → AI control → edit the brain) |
+| A local AI can't listen | Set up **Local voice** (Settings → AI control, or `npm run voice:setup`) |
 
 ---
 
@@ -83,7 +103,7 @@ Example JSON Response:
 ```json
 {
   "status": "ok",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "uptime": 1420,
   "timestamp": "2026-09-27T01:21:00.000Z",
   "storage": {
@@ -99,22 +119,69 @@ The server also emits structured request logs with status codes and duration met
 
 ## Testing & Quality Assurance
 
-Friends includes a complete, zero-dependency automated test suite leveraging Node.js's built-in `node:test` and `node:assert`:
+Friends' tests use Node.js's built-in `node:test` and `node:assert`:
 
 ```bash
-# Run full unit and HTTP integration test suite
-npm test
+npm test               # unit and HTTP integration tests (about 200, a few seconds, no network)
+npm run check          # every script parses, JSON is valid, the page needs no internet to start
+npm run test:e2e       # the real page in Chrome against the real helper and a fake Ollama
+                       #   (needs Chrome; set CHROME_PATH if it isn't in the usual place)
+npm audit              # dependencies with known vulnerabilities
+```
 
-# Run syntax and file integrity checks
-npm run check
+Checks you run by hand on a computer with the real things installed:
 
-# Check dependencies for security vulnerabilities
-npm audit
+```bash
+npm run test:voice     # a spoken conversation with a local AI: fake microphone → Whisper → Ollama → Piper
+                       #   (needs local voice, Ollama with a model, and Chrome; nothing leaves the computer)
+npm run test:desktop   # starts the real Electron window briefly and checks the page in it
+FRIENDS_TEST_VOICE=1 FRIENDS_VOICE_DIR=~/.config/friends/voice npm test   # adds the real-voice test
 ```
 
 Continuous Integration is automated via GitHub Actions (`.github/workflows/ci.yml`), testing on multiple Node.js LTS versions and validating Docker builds.
 
 ---
+
+## Private: AI models on your own computer
+
+Open **Settings → AI control**. Under **Privacy & local AI**, Friends lists the model servers it finds running on this computer and adds a model with one click. (Or **Add brain → Local AI** to give an address yourself.) Nothing is sent to Google or anyone else; chats, notes and files stay here.
+
+- **Private mode** (the switch there) makes it strict: only a local AI answers, and Gemini, Gemini Live, Google sign-in, Google tools, GitHub search and news are all off. Nothing is sent to the internet, and the page loads nothing from other websites.
+- **Ollama** is used through its own API, so each brain has a **context size** (default 8192 tokens; Ollama's own default of 4096 cuts long chats off) and **keep the model loaded** (how long it stays in memory). Other servers use their own settings.
+
+It works with every server that offers the OpenAI-compatible API, open source or closed source: **Ollama**, **LM Studio**, **llama.cpp** (`llama-server`), **Jan**, **vLLM**, **LocalAI**, **KoboldCpp**, text-generation-webui and more. Pick one of the presets (or "Other…" and type an address). Friends lists the models the server has, checks that the chosen one answers, and saves it like any other brain. An API key is optional; it is only ever sent to that server.
+
+```bash
+ollama pull llama3.1      # example; any model works
+npm start                 # then: Settings → AI control → Add brain → Local AI
+```
+
+What works with a local brain: chat with streaming replies, memory and notes, file tools, drafts, chat summaries, follow-up suggestions, edit/regenerate, images (with a vision model), and tool use (models that can't use tools still chat). Reasoning models' `<think>` text is hidden. What's different:
+
+- **Voice** — Gemini Live is Google's, so a local brain uses *Studio* voice. Click **Set up** under **Local voice** (same card; or run `npm run voice:setup`) to install Whisper (listening) and Piper (speaking): one download of about 1 GB into `~/.config/friends/voice`, no root needed, needs Python 3.9+ with `venv` (`sudo apt install python3 python3-venv`). Then you can talk to a local AI and hear it answer, in English, German and Arabic, with the two voices from *AI personality* (female/male), fully offline. It starts when you talk and quits when idle. Without it the AI speaks with your browser's own voice (also local) but can't listen, unless you give the brain your own speech-to-text server under **Voice (optional)** (OpenAI-style `/audio/transcriptions`). Whisper runs on the CPU: expect a second or two per sentence you say. Setup is refused in Private mode, because it downloads.
+- **Google tools** (Drive, Calendar, Gmail) are offered to a local AI only after you sign in with Google. PDFs can't be read by most local models.
+- **Memory and speed** — a larger context needs more (video) memory; on a small graphics card lower it, or the model runs partly on the CPU and slows down. Bigger models are slower on weak hardware; the first request loads the model, which can take a minute. For servers other than Ollama, set the context size in the server itself.
+- **Fast first reply** — when a local model becomes the one that answers, Friends loads it into memory right away (and the speech models when voice mode opens), so the first message doesn't wait for it.
+- Local voice isn't part of the Docker image (it needs Python); use the browser version or the desktop app for it. In Docker, reach a server on the host through `http://host.docker.internal:11434/v1`.
+
+## Choosing the AI: local, cloud, or both
+
+The model menu next to the message box (and **Settings → AI control → Which AI answers**) has these modes:
+
+| Mode | What it does |
+|---|---|
+| **One AI** | Every message goes to the one brain you pick (the old behaviour). |
+| **✨ Auto** | Short and ordinary messages go to a local AI. The cloud AI takes what a local model can't: a PDF (or a picture a local model can't see), a chat too long for the local model's memory, a hard question (long, detailed, code, multi-step). Each of these rules can be switched off. If one AI fails or sends nothing, the other answers. |
+| **🔄 Dynamic** | Auto, and it reacts to how things are going. A local AI that stays silent for too long (you set the patience), fails or sends an empty reply is replaced by the cloud, and left alone for 10 minutes; a cloud AI that had trouble is skipped for a while. |
+| **⚡ Fastest** | Asks the local and the cloud AI at once; whichever starts answering first wins and the other is cancelled. |
+| **🔒 Local only** | Only an AI on this computer. |
+| **☁️ Cloud only** | Only Gemini. |
+
+- **You stay in control of what goes online.** In Auto, Dynamic and Fastest your message only goes to the cloud after you agree (*once per chat*, *every time*, or *never ask*). Declining keeps it local. **Private mode** overrides every mode: it is always local, and the cloud is never called.
+- **You can see who answered.** Each reply in these modes shows `🔒 Local · name` or `☁️ Cloud · name`; hover for the reason ("report.pdf is a PDF, which local models can't read"). With both kinds of AI, a button under each reply answers again with the *other* AI.
+- An answer that has started is never taken over by another AI, and a tool (sending an email, changing a file) never runs twice.
+- The small jobs (follow-up suggestions, summaries of long chats) use a local AI when there is one. Spoken answers stay local for speed (a setting), so Auto and Dynamic use Studio voice with a local AI; Gemini Live is used where the cloud answers.
+- The default mode is *One AI*; switch to Auto in the model menu.
 
 ## Features & Capabilities
 
@@ -221,7 +288,7 @@ Root                  the whole robot, standing on the ground (optional)
   - `src/js/robot/` — the robot. Pure logic in `.mjs` modules that `node:test` checks (springs and the layer mixer, moods and gestures as poses, the mood classifier, the animator, the director that turns app events into moods, clicker keys, voice bands). The browser side: `engine.js` (one shared three.js renderer that draws only where the robot is visible), `model.js` (the robot and custom models), `face.js` (eyes and mouth drawn with signed distance functions into a texture), `scene.js`, `dock.js`, `facetrack.js`, `settings-pane.js`, and `index.js`, which loads three.js only when a robot is first shown.
   - `src/js/filming.js` — filming mode. `src/models/face/` — the face detector model for Follow my face.
   - three.js and MediaPipe are served from `node_modules` under `/vendor/`; an import map (allowed by its hash in the page's security policy) names `three` and `three/addons/`.
-- `server/` — Local Node.js service providing Gemini API integration, file sandboxing, and data persistence. `live.js` bridges voice mode to Gemini Live over a WebSocket (`/api/live`), so the API key stays on your computer. `robot.js` checks and keeps your own robot model and asks Gemini for Smarter moods; the robot tools live in `tools.js`.
+- `server/` — Local Node.js service providing Gemini API integration (`gemini.js`) and local/OpenAI-compatible AI servers (`openai.js`), file sandboxing, and data persistence. `live.js` bridges voice mode to Gemini Live over a WebSocket (`/api/live`), so the API key stays on your computer. `robot.js` checks and keeps your own robot model and asks Gemini for Smarter moods; the robot tools live in `tools.js`.
 - Data lives in `~/.config/friends/` (or `FRIENDS_DATA_DIR`):
   - `chats/` — JSON storage for conversations (including voice turns, drafts, and a summary of the older part of long chats).
   - `memory/` — AI long-term memory notes.

@@ -5,7 +5,7 @@
 import { api } from "./api.js";
 import { openSettings } from "./settings.js";
 import { getSettings } from "./store.js";
-import { getSelectedBrainId, attachmentsBusy, hasAttachments, takeAttachments } from "./composer.js";
+import { getSelectedBrainId, getSelectedBrain, attachmentsBusy, hasAttachments, takeAttachments } from "./composer.js";
 import { getAccessToken } from "./auth.js";
 import { promptConfirmation } from "./workspace.js";
 import { draftCard } from "./drafts.js";
@@ -32,6 +32,7 @@ const ICONS = {
   copy: '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>',
   check: '<svg viewBox="0 0 24 24"><polyline points="5 12 10 17 19 7"/></svg>',
   edit: '<svg viewBox="0 0 24 24"><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
+  swap: '<svg viewBox="0 0 24 24"><polyline points="17 3 21 7 17 11"/><line x1="3" y1="7" x2="21" y2="7"/><polyline points="7 21 3 17 7 13"/><line x1="21" y1="17" x2="3" y2="17"/></svg>',
   regenerate: '<svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><polyline points="20 4 20 11 13 11"/></svg>',
   speak: '<svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>',
   stop: '<svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>',
@@ -139,6 +140,7 @@ function addMessage(role, { id = null, at = Date.now(), isNew = false } = {}) {
     actions.append(
       actionBtn("copy", "copy", "Copy"),
       actionBtn("regenerate", "regenerate", "Answer again"),
+      actionBtn("swap", "swap", "Answer again with the other AI (local ↔ cloud)"),
       actionBtn("speak", "speak", "Read aloud"),
       actionBtn("like", "heart", "Like (or double-click the reply)"),
       actionBtn("pin", "pin", "Pin to the AI's memory"),
@@ -147,6 +149,22 @@ function addMessage(role, { id = null, at = Date.now(), isNew = false } = {}) {
   }
   messagesEl.append(msg);
   return msg;
+}
+
+// Who answered (Auto, Dynamic, Fastest, Local only, Cloud only): "Local · Llama", with the reason as a tooltip
+function setVia(msg, via) {
+  if (!via) return;
+  msg._via = via;
+  const actions = msg.querySelector(".msg-actions");
+  let badge = actions.querySelector(".msg-via");
+  if (!badge) {
+    badge = document.createElement("span");
+    badge.className = "msg-via";
+    actions.prepend(badge);
+  }
+  badge.dataset.kind = via.kind;
+  badge.textContent = `${via.kind === "local" ? "🔒 Local" : "☁️ Cloud"} · ${via.name}`;
+  badge.title = via.reason || "";
 }
 
 function addUserMessage(text, files = [], meta = {}) {
@@ -234,6 +252,7 @@ function addModelMessage(m) {
   finishRender(msg);
   addDrafts(msg, m.drafts || []);
   setMarks(msg, m);
+  if (m.via) setVia(msg, { ...m.via, reason: `${m.via.reason}${m.via.mode ? ` (${m.via.mode})` : ""}` });
   return msg;
 }
 
@@ -269,7 +288,7 @@ function showError(msg, message, retry) {
       ${noBrain ? '<button class="btn" data-action="settings">Open settings</button>' : ""}
       <button class="btn" data-action="retry">Try again</button>
     </div>`;
-  block.querySelector("span").textContent = noBrain ? "Add a Gemini brain first to start chatting." : message;
+  block.querySelector("span").textContent = noBrain ? "Add an AI brain first to start chatting." : message;
   block.querySelector(".msg-error-actions").addEventListener("click", (e) => {
     e.stopPropagation();
     const action = e.target.closest("[data-action]")?.dataset.action;
@@ -408,6 +427,9 @@ function ask(request, userMsg = null) {
       if (pace) {
         if (!paceTimer) typeMore();
       } else if (!frame) frame = requestAnimationFrame(draw);
+    },
+    onRoute(route) {
+      if (!stale()) setVia(msg, route);
     },
     onActivity(text) {
       if (stale()) return;
@@ -619,7 +641,7 @@ async function speak(msg) {
     await audio.play();
   } catch (err) {
     if (speaking === mine) stopSpeaking();
-    toast(err.message === "NO_BRAIN" ? "Add a Gemini brain first." : err.message);
+    toast(err.message === "NO_BRAIN" ? "Add an AI brain first." : err.message);
   }
 }
 
@@ -749,6 +771,14 @@ messagesEl.addEventListener("click", (e) => {
       stopSpeaking();
       removeFrom(msg);
       return ask({ chatId: currentChatId, retry: true, from: msg.dataset.id, brainId: getSelectedBrainId() });
+    case "swap": {
+      if (active || !msg.dataset.id || !msg.classList.contains("last")) return;
+      // The other kind than the one that answered (or than the chosen brain)
+      const kind = msg._via?.kind || (getSelectedBrain()?.provider === "local" ? "local" : "cloud");
+      stopSpeaking();
+      removeFrom(msg);
+      return ask({ chatId: currentChatId, retry: true, from: msg.dataset.id, force: kind === "local" ? "cloud" : "local", brainId: getSelectedBrainId() });
+    }
     case "speak":
       return speak(msg);
     case "like":

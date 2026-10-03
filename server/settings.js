@@ -19,6 +19,18 @@ const DEFAULTS = {
     askBeforeActing: true,
     useTrash: true,
   },
+  // Private mode: only a local AI answers, and nothing is sent to Google, GitHub
+  // or news sites (no Gemini, Live, Google sign-in, GitHub search or news)
+  privacy: { localOnly: false },
+  // Which AI answers (see router.js): "fixed" is the one brain you pick in the model menu
+  routing: {
+    mode: "fixed", // fixed | auto | dynamic | fastest | local | cloud
+    askBeforeCloud: "chat", // in auto, dynamic and fastest: "always" | "chat" (once per chat) | "never"
+    // Auto and Dynamic: what sends a message to the cloud AI (everything else stays local)
+    auto: { longChats: true, hardQuestions: true, attachments: true, voiceLocal: true },
+    // Dynamic: also reacts to how the local AI is doing
+    dynamic: { escalate: true, slowSeconds: 45 },
+  },
   // "Your memories": written by you, always given to the AI when enabled
   memory: { enabled: true, items: [] },
   // The AI's own notes (stored separately, see notes.js)
@@ -72,6 +84,8 @@ const DEFAULTS = {
 };
 
 // Allowed values of the robot's choices
+const ROUTING = { modes: ["fixed", "auto", "dynamic", "fastest", "local", "cloud"], ask: ["always", "chat", "never"] };
+
 const ROBOT = {
   shells: ["warm", "cloud", "graphite", "peach", "mint"],
   eyes: ["classic", "round", "wide"],
@@ -122,6 +136,10 @@ function sanitize(input) {
   s.aiControl.contextWindow = clamp(s.aiControl.contextWindow || 20, 5, 50);
   if (!/^#[0-9a-f]{6}$/i.test(s.theme.accent)) s.theme.accent = DEFAULTS.theme.accent;
 
+  s.routing.mode = ROUTING.modes.includes(s.routing.mode) ? s.routing.mode : "fixed";
+  s.routing.askBeforeCloud = ROUTING.ask.includes(s.routing.askBeforeCloud) ? s.routing.askBeforeCloud : "chat";
+  s.routing.dynamic.slowSeconds = clamp(s.routing.dynamic.slowSeconds, 5, 300);
+
   const r = s.robot;
   const oneOf = (value, allowed, fallback) => (allowed.includes(value) ? value : fallback);
   r.shell = oneOf(r.shell, ROBOT.shells, DEFAULTS.robot.shell);
@@ -155,4 +173,4 @@ function set(input) {
   return cache;
 }
 
-module.exports = { get, set, sanitize, DEFAULTS, ROBOT };
+module.exports = { get, set, sanitize, DEFAULTS, ROBOT, ROUTING };

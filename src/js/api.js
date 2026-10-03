@@ -52,6 +52,7 @@ async function streamChat(request, signal, handlers) {
         else if (event.type === "text") handlers.onText(event.text);
         else if (event.type === "activity") handlers.onActivity?.(event.text);
         else if (event.type === "draft") handlers.onDraft?.(event.draft);
+        else if (event.type === "route") handlers.onRoute?.(event);
         else if (event.type === "robot") handlers.onRobot?.({ mood: event.mood, gesture: event.gesture });
         else if (event.type === "confirm") handlers.onConfirm?.({ id: event.id, summary: event.summary, details: event.details });
         else if (event.type === "done") return handlers.onDone({ stopped: false });
@@ -90,6 +91,13 @@ export const api = {
     mark: (id, messageId, changes) =>
       call("PATCH", `/api/chats/${encodeURIComponent(id)}/messages/${encodeURIComponent(messageId)}`, changes),
     suggestions: (id) => call("POST", `/api/chats/${encodeURIComponent(id)}/suggestions`),
+  },
+  local: {
+    servers: () => call("GET", "/api/local/servers"),
+    voice: () => call("GET", "/api/voice/local"),
+    // Gets a local model (and, for voice mode, the speech models) ready before the first message
+    warm: (brainId, voice = false) => call("POST", "/api/local/warm", { brainId, voice }).catch(() => ({})),
+    installVoice: () => call("POST", "/api/voice/local/install"),
   },
   settings: {
     get: () => call("GET", "/api/settings"),

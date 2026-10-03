@@ -16,6 +16,9 @@ const prompt = require("./prompt");
 const summary = require("./summary");
 const live = require("./live");
 const robot = require("./robot");
+const local = require("./local");
+const router = require("./router");
+const voiceLocal = require("./voice");
 const { VOICES } = require("./voices");
 
 const PORT = defaultPort;
@@ -210,7 +213,7 @@ function toContents(messages, start = 0) {
 async function chat(req, res) {
   const authHeader = req.headers.authorization || "";
   const headerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  const { chatId = null, text = "", retry = false, from = null, brainId = null, voice = false, robot: robotOnScreen = false, attachments: files = [], googleAccessToken } = await readJson(req);
+  const { chatId = null, text = "", retry = false, from = null, force = null, brainId = null, voice = false, robot: robotOnScreen = false, attachments: files = [], googleAccessToken } = await readJson(req);
   const activeToken = googleAccessToken || headerToken;
   const attached = [];
   for (const id of Array.isArray(files) ? files.slice(0, 10) : []) {
@@ -221,6 +224,7 @@ async function chat(req, res) {
       return sendJson(res, 400, { error: "An attached file is missing. Attach it again." });
     }
   }
+  if (retry && !chatId) return sendJson(res, 400, { error: "Nothing to answer." });
   if (!retry && (typeof text !== "string" || (!text.trim() && !attached.length))) return sendJson(res, 400, { error: "The message is empty." });
 
   let conversation;
@@ -248,18 +252,6 @@ async function chat(req, res) {
   const send = (event) => !res.writableEnded && res.write(JSON.stringify(event) + "\n");
   send({ type: "chat", id: conversation.id, title: conversation.title, userId, replyId });
 
-  let brain;
-  try {
-    brain = brains.getForChat(brainId);
-  } catch (err) {
-    send({ type: "error", error: err.message });
-    return res.end();
-  }
-  if (!brain) {
-    send({ type: "error", error: "NO_BRAIN" });
-    return res.end();
-  }
-
   // Pressing stop closes the request; stop asking the provider too
   const controller = new AbortController();
   const closeHandlers = [];
@@ -269,13 +261,39 @@ async function chat(req, res) {
   });
 
   const current = settings.get();
-  const offered = tools.declarations(current, { voice, robot: robotOnScreen === true });
   const window = current.aiControl?.contextWindow || 20;
+  const lastUser = conversation.messages.at(-1);
+
+  // Which AI answers: see router.js (the routing mode in Settings → AI control)
+  let routePlan;
+  try {
+    routePlan = router.plan({
+      settings: current,
+      text: lastUser.text || "",
+      attachments: lastUser.attachments || [],
+      messages: conversation.messages.slice(0, -1),
+      voice: voice === true,
+      force: force === "local" || force === "cloud" ? force : null,
+      preferId: Number(brainId) || null,
+      deps: { has: brains.has, byKind: brains.getByKind, chosen: (id) => brains.getForChat(id), privateMode: current.privacy.localOnly === true },
+    });
+    if (!routePlan.steps.length) throw new Error("NO_BRAIN");
+  } catch (err) {
+    send({ type: "error", error: err.message });
+    return res.end();
+  }
+
   const activity = [];
   const drafts = [];
   let reply = "";
+  let answeredBy = null;
+  const lost = () => Object.assign(new Error("Another AI answered first."), { name: "AbortError" });
 
-  try {
+  // One AI call. started() must come before anything the page or your files can notice.
+  const run = async (step, { signal, started }) => {
+    const brain = step.brain;
+    // Google tools are left out for a local AI until you're signed in with Google
+    const offered = tools.declarations(current, { voice, robot: robotOnScreen === true, workspace: brain.provider !== "local" || Boolean(activeToken) });
     await brain.api.streamChat({
       key: brain.key,
       model: brain.model,
@@ -285,13 +303,15 @@ async function chat(req, res) {
       fast: voice || current.aiControl?.reasoningEffort === "fast",
       tools: offered,
       isFreeTool: tools.isRobotTool,
-      signal: controller.signal,
+      signal,
       onText: (piece) => {
+        if (!started()) throw lost();
         reply += piece;
         send({ type: "text", text: piece });
       },
-      runTool: (name, args) =>
-        tools.run(name, args, {
+      runTool: (name, args) => {
+        if (!started()) throw lost();
+        return tools.run(name, args, {
           settings: current,
           googleAccessToken: activeToken,
           onRobot: (event) => send({ type: "robot", ...event }),
@@ -309,37 +329,59 @@ async function chat(req, res) {
             drafts.push(draft);
             send({ type: "draft", draft });
           },
-        }),
+        });
+      },
     });
+  };
+
+  try {
+    const { step } = await router.execute(routePlan, {
+      run,
+      emit: (event) => routePlan.mode !== "fixed" && send(event), // one fixed brain needs no explaining
+      signal: controller.signal,
+      slowMs: Number(process.env.FRIENDS_ROUTER_SLOW_MS) || current.routing.dynamic.slowSeconds * 1000,
+      cloudAllowed: () => conversation.cloudOk === true,
+      allowCloud: () => (conversation.cloudOk = true),
+      // Before the cloud gets your message (Settings → "Ask before using the cloud")
+      confirmCloud: (step) => {
+        const id = crypto.randomUUID();
+        send({ type: "confirm", id, summary: `Send this message to ${step.brain.name}, a cloud AI?`, details: { type: "cloud", reason: step.reason, name: step.brain.name } });
+        return waitForConfirmation(id, (fn) => closeHandlers.push(fn));
+      },
+    });
+    answeredBy = step;
     send({ type: "done" });
   } catch (err) {
-    if (err.name !== "AbortError") send({ type: "error", error: err.message });
+    if (err.name !== "AbortError" && !controller.signal.aborted) send({ type: "error", error: err.message });
   } finally {
     // Keep whatever arrived, even if the reply was stopped halfway
     if (reply || activity.length || drafts.length) {
       const message = { id: replyId, role: "model", text: reply, at: Date.now() };
       if (activity.length) message.activity = activity;
       if (drafts.length) message.drafts = drafts;
+      if (answeredBy && routePlan.mode !== "fixed") message.via = { kind: answeredBy.kind, name: answeredBy.brain.name, model: answeredBy.brain.model, reason: answeredBy.reason, mode: routePlan.mode };
       conversation.messages.push(message);
-      chats.save(conversation);
     }
+    if (reply || activity.length || drafts.length || conversation.cloudOk) chats.save(conversation);
   }
   res.end();
-  // Long chats: summarize what dropped out of the window, in the background
-  summary.update(conversation.id, { key: brain.key, model: brain.model, window }).catch((err) => logger.debug("Summary skipped:", err.message));
+  // Long chats: summarize what dropped out of the window, in the background. With a choice
+  // of AIs a local one does it (private and free).
+  const summarizer = answeredBy && (routePlan.mode === "fixed" || routePlan.mode === "force") ? answeredBy.brain : brains.forTask() || answeredBy?.brain;
+  if (summarizer) summary.update(conversation.id, { api: summarizer.api, key: summarizer.key, model: summarizer.model, window }).catch((err) => logger.debug("Summary skipped:", err.message));
 }
 
 // ---------- Voice ----------
 async function transcribe(req) {
   const audio = await readBody(req, 15 * 1024 * 1024);
-  const brain = brains.getForChat(null);
+  const brain = brains.forVoice();
   if (!brain) throw new Error("NO_BRAIN");
   return { text: await brain.api.transcribe({ key: brain.key, model: brain.model, audio: audio.toString("base64") }) };
 }
 
 async function speak(req, res) {
   const { text, voice } = await readJson(req);
-  const brain = brains.getForChat(null);
+  const brain = brains.forVoice();
   if (!brain) return sendJson(res, 400, { error: "NO_BRAIN" });
   if (typeof text !== "string" || !text.trim()) return sendJson(res, 400, { error: "Nothing to say." });
   try {
@@ -386,8 +428,8 @@ async function markMessage(req, chatId, messageId) {
 // ---------- Follow-up suggestions ----------
 // Three short things you might say next, shown as chips under the last reply
 async function suggestions(chatId) {
-  const brain = brains.getForChat(null);
-  if (!brain || !brain.key) return { suggestions: [] };
+  const brain = brains.forTask();
+  if (!brain) return { suggestions: [] };
   const recent = chats.get(chatId).messages.slice(-6).filter((m) => m.text);
   if (recent.at(-1)?.role !== "model") return { suggestions: [] };
   const lines = recent.map((m) => `${m.role === "user" ? "User" : "AI"}: ${m.text.replace(/\s+/g, " ").slice(0, 1500)}`);
@@ -464,8 +506,8 @@ function sendModel(req, res) {
 // "Smarter moods": one small Gemini request per turn, only when it's switched on
 async function smartMood({ text, heard }) {
   if (!settings.get().robot.smartMoods) return { mood: null };
-  const brain = brains.getForChat(null);
-  if (!brain || !brain.key) return { mood: null };
+  const brain = brains.forTask();
+  if (!brain) return { mood: null };
   return { mood: await robot.readMood({ brain, text, heard }) };
 }
 
@@ -504,7 +546,18 @@ const routes = [
     return { ok: true };
   }],
 
+  ["GET", /^\/api\/voice\/local$/, () => voiceLocal.status()],
+  ["POST", /^\/api\/voice\/local\/install$/, async () => {
+    // The setup downloads from the internet (PyPI, Hugging Face)
+    if (settings.get().privacy.localOnly) throw new Error("Private mode is on, so nothing can be downloaded. Turn it off for the setup, then back on.");
+    voiceLocal.install();
+    return voiceLocal.status();
+  }],
+  ["POST", /^\/api\/local\/warm$/, async (req) => brains.warm(await readJson(req))],
+  ["GET", /^\/api\/local\/servers$/, async () => ({ servers: await local.detect() })],
+
   ["GET", /^\/api\/firebase-config$/, () => {
+    if (settings.get().privacy.localOnly) return {}; // Private mode: no Google sign-in
     try {
       return JSON.parse(fs.readFileSync(path.join(ROOT, "firebase-applet-config.json"), "utf8"));
     } catch {
@@ -513,6 +566,7 @@ const routes = [
   }],
 
   ["GET", /^\/api\/news$/, async (req, id, url) => {
+    if (settings.get().privacy.localOnly) throw new Error("Private mode is on, so the news is off.");
     const news = require("./news");
     return news.getNews(url.searchParams.get("q") || "");
   }],

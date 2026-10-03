@@ -38,7 +38,8 @@ const logger = {
     if (currentLevel() <= LEVELS.info) {
       const status = res.statusCode || 200;
       const method = req.method;
-      const url = req.url || "/";
+      // Without the query string: it can hold what you searched for
+      const url = (req.url || "/").split("?")[0];
       const timing = `${durationMs.toFixed(1)}ms`;
       console.log(formatMessage("info", `${method} ${url} ${status} - ${timing}`));
     }

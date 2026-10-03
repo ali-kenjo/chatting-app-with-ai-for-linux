@@ -134,6 +134,8 @@ const ROBOT_TOOLS = {
   ),
 };
 
+const ONLINE_TOOLS = new Set(Object.keys(WORKSPACE_TOOLS));
+
 const isRobotTool = (name) => Object.hasOwn(ROBOT_TOOLS, name);
 
 // The robot tools are offered when the robot is on screen (the page says so)
@@ -153,9 +155,13 @@ function robotEvent(name, args = {}) {
 // options.voice: a spoken conversation, which also gets write_draft.
 // options.robot: the robot body is on screen; options.nonBlocking: Gemini Live
 // may keep talking while robot calls are answered ("behavior": "NON_BLOCKING").
-function declarations(settings, { voice = false, robot: onScreen = false, nonBlocking = false } = {}) {
+// options.workspace: false leaves out the Google Drive, Calendar and Gmail tools
+// (they only work once a Google account is connected; fewer tools also keep
+// small local models focused and requests short).
+function declarations(settings, { voice = false, robot: onScreen = false, nonBlocking = false, workspace = true } = {}) {
   const p = settings.permissions;
   const list = [];
+  const online = settings.privacy?.localOnly !== true; // Private mode keeps everything on this computer
   if (p.folders.length) {
     if (p.dirs.read) list.push(FILE_TOOLS.list_folder);
     if (p.files.read) list.push(FILE_TOOLS.read_file);
@@ -166,16 +172,17 @@ function declarations(settings, { voice = false, robot: onScreen = false, nonBlo
     if (p.files.delete || p.dirs.delete) list.push(FILE_TOOLS.delete_item);
   }
 
-  list.push(
-    WORKSPACE_TOOLS.search_drive,
-    WORKSPACE_TOOLS.read_drive_file,
-    WORKSPACE_TOOLS.get_calendar_events,
-    WORKSPACE_TOOLS.create_calendar_event,
-    WORKSPACE_TOOLS.search_gmail,
-    WORKSPACE_TOOLS.send_gmail,
-    WORKSPACE_TOOLS.search_github,
-    WORKSPACE_TOOLS.get_news,
-  );
+  if (workspace && online) {
+    list.push(
+      WORKSPACE_TOOLS.search_drive,
+      WORKSPACE_TOOLS.read_drive_file,
+      WORKSPACE_TOOLS.get_calendar_events,
+      WORKSPACE_TOOLS.create_calendar_event,
+      WORKSPACE_TOOLS.search_gmail,
+      WORKSPACE_TOOLS.send_gmail,
+    );
+  }
+  if (online) list.push(WORKSPACE_TOOLS.search_github, WORKSPACE_TOOLS.get_news);
 
   if (settings.aiNotes?.enabled) {
     list.push(NOTE_TOOLS.save_note, NOTE_TOOLS.delete_note);
@@ -267,6 +274,10 @@ async function run(name, args, ctx) {
       return { error: err.message };
     }
   }
+  // Private mode: nothing leaves this computer, even if the AI asks
+  if (ctx.settings.privacy?.localOnly === true && ONLINE_TOOLS.has(name)) {
+    return { error: "Private mode is on: this tool needs the internet, so it's off." };
+  }
   // Gmail and Calendar changes follow "Confirm workspace actions"
   const confirmWorkspace = ctx.settings.aiControl?.confirmTools !== false;
   try {
@@ -278,8 +289,10 @@ async function run(name, args, ctx) {
         ctx.onActivity?.("Removed a memory note");
         return { ok: true };
       }
-      const note = notes.save(args);
-      ctx.onActivity?.(`${args.id ? "Updated" : "Saved"} a memory note: ${note.title}`);
+      // An id the AI made up (small models do) saves a new note instead of failing
+      const known = Boolean(args.id) && notes.list().some((n) => n.id === args.id);
+      const note = notes.save(known ? args : { ...args, id: undefined });
+      ctx.onActivity?.(`${known ? "Updated" : "Saved"} a memory note: ${note.title}`);
       return { ok: true, id: note.id };
     }
 

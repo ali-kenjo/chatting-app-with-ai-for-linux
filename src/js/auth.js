@@ -1,14 +1,17 @@
 // ---------- Authentication & Google OAuth ----------
 // Client-side authentication using Firebase Auth and in-memory access token cache.
 // Scopes: Gmail, Calendar, Drive, Docs, Sheets, Slides.
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import {
-  getAuth,
-  signInWithPopup,
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  signOut,
-} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+// Firebase is loaded from Google only when sign-in is set up and needed, never at
+// page load: the app starts offline, and in Private mode nothing contacts Google.
+const FIREBASE = "https://www.gstatic.com/firebasejs/10.13.0";
+let firebase = null; // { initializeApp, getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut }
+
+async function loadFirebase() {
+  if (firebase) return firebase;
+  const [app, auth] = await Promise.all([import(`${FIREBASE}/firebase-app.js`), import(`${FIREBASE}/firebase-auth.js`)]);
+  firebase = { initializeApp: app.initializeApp, ...auth };
+  return firebase;
+}
 
 const SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
@@ -36,6 +39,7 @@ export async function initAuth() {
       return null;
     }
 
+    const { initializeApp, getAuth, GoogleAuthProvider, onAuthStateChanged } = await loadFirebase();
     const app = initializeApp(firebaseConfig);
     authInstance = getAuth(app);
 
@@ -67,6 +71,7 @@ export async function googleSignIn() {
 
   try {
     isSigningIn = true;
+    const { signInWithPopup, GoogleAuthProvider } = await loadFirebase();
     const result = await signInWithPopup(authInstance, provider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     if (!credential?.accessToken) {
@@ -86,7 +91,7 @@ export async function googleSignIn() {
 
 export async function logout() {
   if (authInstance) {
-    await signOut(authInstance);
+    await (await loadFirebase()).signOut(authInstance);
   }
   cachedAccessToken = null;
   currentUser = null;

@@ -8,7 +8,6 @@ WORKDIR /app
 ENV NODE_ENV=production \
     PORT=3000 \
     HOST=0.0.0.0 \
-    ALLOWED_HOSTS=* \
     KEYRING_BACKEND=file
 
 # Create data directory with proper ownership for non-root node user

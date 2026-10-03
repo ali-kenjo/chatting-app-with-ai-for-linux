@@ -1,6 +1,6 @@
 {
   "name": "friends",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A personal AI chat app",
   "private": true,
   "main": "electron/main.js",
@@ -12,16 +12,21 @@
     "dev": "node --watch server/server.js",
     "build": "npm run check",
     "test": "node --test test/*.test.js",
-    "check": "node -e 'const fs = require(\"fs\"); for (const [dir, ext] of [[\"server\", \".js\"], [\"electron\", \".js\"], [\"src/js/robot\", \".mjs\"]]) for (const f of fs.readdirSync(dir)) if (f.endsWith(ext)) require(\"child_process\").execSync(`node --check ${dir}/${f}`, { stdio: \"inherit\" });'",
+    "check": "node scripts/check.js",
     "desktop": "electron . --no-sandbox",
-    "dist": "node scripts/build-deb.js"
+    "dist": "node scripts/build-deb.js",
+    "doctor": "node scripts/doctor.js",
+    "setup": "bash scripts/install.sh",
+    "voice:setup": "node scripts/local-voice.js",
+    "test:e2e": "node --test --test-concurrency=1 test/e2e/*.test.js",
+    "test:voice": "node scripts/e2e-voice.js",
+    "test:desktop": "node scripts/e2e-desktop.js"
   },
   "license": "MIT",
   "dependencies": {
     "@highlightjs/cdn-assets": "^11.12.0",
     "@mediapipe/tasks-vision": "^1.0.1",
     "dompurify": "^3.4.16",
-    "firebase": "^12.19.0",
     "katex": "^0.18.9",
     "marked": "^18.0.14",
     "mermaid": "^12.0.0",
@@ -32,11 +37,11 @@
     "@napi-rs/keyring": "^2.1.0"
   },
   "overrides": {
-    "lodash-es": "^4.18.1",
-    "@grpc/grpc-js": "^1.14.5"
+    "lodash-es": "^4.18.1"
   },
   "devDependencies": {
-    "electron": "^44.4.5"
+    "electron": "^44.4.5",
+    "puppeteer-core": "^25.12.0"
   },
   "desktopName": "friends.desktop"
 }

@@ -36,6 +36,11 @@ jobs:
       - name: Run Automated Test Suite
         run: npm test
 
+      - name: End-to-end tests (real Chrome)
+        run: npm run test:e2e
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+
       - name: Security Vulnerability Scan
         run: npm audit --audit-level=high
 

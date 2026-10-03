@@ -4,7 +4,7 @@ const os = require("os");
 const path = require("path");
 
 const pkgPath = path.join(__dirname, "..", "package.json");
-let version = "0.1.0";
+let version = "0.2.0";
 try {
   version = JSON.parse(fs.readFileSync(pkgPath, "utf8")).version || version;
 } catch {}

@@ -333,6 +333,122 @@
             </div>
             <div class="ai-ping-status" id="ai-ping-status" hidden></div>
 
+            <!-- Privacy & local AI -->
+            <div class="subhead">
+              <div>
+                <div class="subhead-title">Privacy & local AI</div>
+                <p class="hint">Run models on this computer, so your chats never leave it.</p>
+              </div>
+            </div>
+
+            <label class="row">
+              <div>
+                <div class="row-label">Private mode</div>
+                <div class="row-desc">Only a local AI answers. Gemini, Google sign-in, GitHub search and news are switched off; nothing is sent to the internet.</div>
+              </div>
+              <input type="checkbox" class="toggle" data-setting="privacy.localOnly" id="private-mode-toggle">
+            </label>
+            <p class="form-error" id="private-mode-note" hidden></p>
+
+            <div class="local-card" id="local-card" aria-live="polite">
+              <div class="local-card-head">
+                <div>
+                  <div class="row-label">Local AI on this computer</div>
+                  <div class="row-desc" id="local-card-status">Looking for AI model servers…</div>
+                </div>
+                <button type="button" class="btn small" id="local-refresh">Look again</button>
+              </div>
+              <div class="local-servers" id="local-servers"></div>
+              <div class="local-help" id="local-help" hidden>
+                <p>No local AI found yet. To get one:</p>
+                <ol>
+                  <li>Install <strong>Ollama</strong> from <a href="https://ollama.com/download" target="_blank" rel="noopener noreferrer">ollama.com/download</a> (or LM Studio, Jan, llama.cpp…).</li>
+                  <li>Get a model, e.g. run <code>ollama pull llama3.2</code> in a terminal.</li>
+                  <li>Click <em>Look again</em>. It appears here, one click adds it.</li>
+                </ol>
+              </div>
+              <button type="button" class="btn" id="local-add-manual">Add a local AI by address…</button>
+
+              <div class="local-voice" id="local-voice">
+                <div>
+                  <div class="row-label">Local voice</div>
+                  <div class="row-desc" id="local-voice-status">Talk to a local AI and hear it answer, all on this computer.</div>
+                </div>
+                <button type="button" class="btn small" id="local-voice-btn">Set up</button>
+              </div>
+            </div>
+
+            <!-- Which AI answers -->
+            <div class="subhead">
+              <div>
+                <div class="subhead-title">Which AI answers</div>
+                <p class="hint">Use a local AI, a cloud AI, or both, and let Friends choose per message.</p>
+              </div>
+            </div>
+
+            <label class="row">
+              <div>
+                <div class="row-label">Mode</div>
+                <div class="row-desc" id="routing-mode-desc">The same choice is in the model menu next to the message box.</div>
+              </div>
+              <select class="field" data-setting="routing.mode" id="routing-mode">
+                <option value="fixed">One AI (the one you pick)</option>
+                <option value="auto">✨ Auto</option>
+                <option value="dynamic">🔄 Dynamic</option>
+                <option value="fastest">⚡ Fastest</option>
+                <option value="local">🔒 Local only</option>
+                <option value="cloud">☁️ Cloud only</option>
+              </select>
+            </label>
+
+            <div class="routing-options" id="routing-options">
+              <label class="row" data-for="auto dynamic fastest">
+                <div>
+                  <div class="row-label">Ask before using the cloud</div>
+                  <div class="row-desc">In Auto, Dynamic and Fastest, your message only goes to Gemini after you agree</div>
+                </div>
+                <select class="field" data-setting="routing.askBeforeCloud">
+                  <option value="chat">Once per chat</option>
+                  <option value="always">Every time</option>
+                  <option value="never">Never ask</option>
+                </select>
+              </label>
+
+              <div class="row-label routing-sub" data-for="auto dynamic">Auto and Dynamic send a message to the cloud when…</div>
+              <label class="row" data-for="auto dynamic">
+                <div><div class="row-label">It has a PDF or picture</div><div class="row-desc">Local models can't read PDFs, and most can't see pictures</div></div>
+                <input type="checkbox" class="toggle" data-setting="routing.auto.attachments">
+              </label>
+              <label class="row" data-for="auto dynamic">
+                <div><div class="row-label">The chat is very long</div><div class="row-desc">When it no longer fits the local model's memory</div></div>
+                <input type="checkbox" class="toggle" data-setting="routing.auto.longChats">
+              </label>
+              <label class="row" data-for="auto dynamic">
+                <div><div class="row-label">It's a hard question</div><div class="row-desc">Long, detailed, code or multi-step requests</div></div>
+                <input type="checkbox" class="toggle" data-setting="routing.auto.hardQuestions">
+              </label>
+              <label class="row" data-for="auto dynamic">
+                <div><div class="row-label">Keep voice answers local</div><div class="row-desc">Spoken answers use the local AI when there is one, for speed</div></div>
+                <input type="checkbox" class="toggle" data-setting="routing.auto.voiceLocal">
+              </label>
+
+              <div class="row-label routing-sub" data-for="dynamic">Dynamic mode</div>
+              <label class="row" data-for="dynamic">
+                <div><div class="row-label">Switch when the local AI is slow or fails</div><div class="row-desc">If it stays silent, errors or sends nothing, the cloud answers instead, and the local AI is left alone for 10 minutes</div></div>
+                <input type="checkbox" class="toggle" data-setting="routing.dynamic.escalate">
+              </label>
+              <label class="row" data-for="dynamic">
+                <div><div class="row-label">Patience with the local AI</div><div class="row-desc">How long it may stay silent before the cloud takes over. Loading a model counts; slow thinkers need more</div></div>
+                <select class="field" data-setting="routing.dynamic.slowSeconds" data-type="number">
+                  <option value="15">15 seconds</option>
+                  <option value="30">30 seconds</option>
+                  <option value="45">45 seconds</option>
+                  <option value="90">90 seconds</option>
+                  <option value="180">3 minutes</option>
+                </select>
+              </label>
+            </div>
+
             <!-- AI Reasoning & Execution Policy -->
             <div class="subhead">
               <div>
@@ -393,6 +509,7 @@
               <button type="button" class="chip preset-btn" data-preset="flash">⚡ 2.5 Flash (Fast)</button>
               <button type="button" class="chip preset-btn" data-preset="pro">🧠 2.5 Pro (Deep)</button>
               <button type="button" class="chip preset-btn" data-preset="flash2">🎙️ 2.0 Flash (Voice)</button>
+              <button type="button" class="chip preset-btn" data-preset="local">🔒 Local AI (private)</button>
             </div>
 
             <ul class="brain-list" id="brain-list"></ul>
@@ -477,7 +594,18 @@
               <input class="field" name="name" placeholder="e.g. Gemini Fast or Claude Work" autocomplete="off">
             </label>
 
-            <div class="form-field">
+            <div class="form-field" id="local-presets-field" hidden>
+              <span class="row-label">Your AI server</span>
+              <div class="preset-row" id="local-presets"></div>
+              <span class="row-desc">Runs on this computer, so your chats never leave it. Any server that speaks the OpenAI API works, open source or not.</span>
+            </div>
+
+            <label class="form-field" id="baseurl-field" hidden>
+              <span class="row-label">Server address</span>
+              <input class="field" name="baseUrl" type="text" placeholder="http://127.0.0.1:11434/v1" autocomplete="off" spellcheck="false">
+            </label>
+
+            <div class="form-field" id="model-select-field">
               <span class="row-label">Model selection</span>
               <div class="model-curated-grid" id="model-curated-grid">
                 <button type="button" class="model-card selected" data-model="gemini-2.5-flash">
@@ -504,26 +632,51 @@
             </div>
 
             <label class="form-field" id="model-custom-wrapper" hidden>
-              <span class="row-label">Custom Model identifier</span>
+              <span class="row-label" id="model-label">Custom Model identifier</span>
               <input class="field" name="model" list="model-options" autocomplete="off" spellcheck="false" placeholder="Leave empty to pick automatically">
               <datalist id="model-options"></datalist>
             </label>
 
-            <label class="form-field">
-              <span class="row-label">API key</span>
+            <label class="form-field" id="key-field">
+              <span class="row-label" id="key-label">API key</span>
               <span class="key-input">
                 <input class="field" name="key" type="password" autocomplete="off" spellcheck="false">
                 <button type="button" class="icon-btn small" id="key-toggle" title="Show key">
                   <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
               </span>
-              <span class="row-desc">Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a></span>
+              <span class="row-desc" id="key-desc">Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a></span>
             </label>
 
-            <label class="form-field" id="baseurl-field">
-              <span class="row-label">Base URL</span>
-              <input class="field" name="baseUrl" type="url" placeholder="https://api.example.com/v1" autocomplete="off">
-            </label>
+            <div class="form-field" id="ollama-field" hidden>
+              <span class="row-label">Context size</span>
+              <select class="field" name="contextSize">
+                <option value="0">Ollama's default (4096)</option>
+                <option value="4096">4096 tokens</option>
+                <option value="8192" selected>8192 tokens (recommended)</option>
+                <option value="16384">16384 tokens</option>
+                <option value="32768">32768 tokens</option>
+                <option value="65536">65536 tokens</option>
+                <option value="131072">131072 tokens</option>
+              </select>
+              <span class="row-desc">How much of the chat the model sees at once. Too small and long chats get cut off; larger needs more memory.</span>
+              <span class="row-label">Keep the model loaded</span>
+              <select class="field" name="keepAlive">
+                <option value="0">Ollama's default (5 minutes)</option>
+                <option value="15">15 minutes</option>
+                <option value="60">1 hour</option>
+                <option value="240">4 hours</option>
+                <option value="1440">All day</option>
+              </select>
+              <span class="row-desc">Loaded models answer at once; unloading frees memory.</span>
+            </div>
+
+            <details class="form-field" id="speech-field" hidden>
+              <summary class="row-label">Voice (optional)</summary>
+              <span class="row-desc">Only for your own speech-to-text server (OpenAI-style <code>/audio/transcriptions</code>). Not needed if you set up <strong>Local voice</strong> under Privacy & local AI, which listens and speaks on this computer.</span>
+              <input class="field" name="speechUrl" type="text" placeholder="Speech server address, e.g. http://127.0.0.1:8000/v1" autocomplete="off" spellcheck="false">
+              <input class="field" name="speechModel" type="text" placeholder="Speech model, e.g. Systran/faster-whisper-small" autocomplete="off" spellcheck="false">
+            </details>
 
             <div class="form-test-bar">
               <button type="button" class="btn small" id="brain-test-btn">

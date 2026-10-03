@@ -1788,6 +1788,10 @@ label.row {
   gap: 8px;
 }
 
+.ai-ping-status[hidden] {
+  display: none;
+}
+
 .ai-ping-status.ok {
   background: color-mix(in srgb, #34d399 10%, var(--bg-main));
   border-color: color-mix(in srgb, #34d399 30%, transparent);
@@ -1808,6 +1812,194 @@ label.row {
   flex-wrap: wrap;
   margin-top: -4px;
   margin-bottom: 2px;
+}
+
+/* Privacy & local AI */
+.local-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-subtle);
+}
+
+.local-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.local-servers {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.local-server {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.local-server-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.local-server-name .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3fa56b;
+}
+
+.local-server-name .meta {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.local-models {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.local-model {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 4px 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-main);
+  font-size: 12.5px;
+}
+
+.local-model .btn {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.local-model .added {
+  padding: 0 8px 0 2px;
+  color: #3fa56b;
+}
+
+.local-voice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.local-help {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.local-help ol {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.local-help code {
+  background: var(--bg-main);
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+
+/* Which AI answers */
+.model-menu-heading {
+  padding: 8px 12px 2px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.model-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.msg-via {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.msg-via[data-kind="local"] {
+  color: #3fa56b;
+}
+
+/* "Answer again with the other AI" needs both a local and a cloud AI */
+:root:not([data-both-kinds="true"]) .msg-action[data-action="swap"] {
+  display: none;
+}
+
+.routing-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.routing-options .is-inactive {
+  opacity: 0.4;
+}
+
+.routing-options .routing-sub {
+  margin-top: 8px;
+  color: var(--text-muted);
+}
+
+/* Private mode: nothing here needs Google, GitHub or the news */
+:root[data-private="true"] .prompt-chip[data-prompt*="Google"],
+:root[data-private="true"] .prompt-chip[data-prompt*="Gmail"],
+:root[data-private="true"] .prompt-chip[data-prompt*="Drive"],
+:root[data-private="true"] .prompt-chip[data-prompt*="news"],
+:root[data-private="true"] .prompt-chip[data-prompt*="GitHub"],
+:root[data-private="true"] .ws-pill,
+:root[data-private="true"] .ws-status-indicator {
+  display: none;
+}
+
+.brain.is-blocked {
+  opacity: 0.5;
+}
+
+.preset-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.preset-row .preset-btn.selected {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+details.form-field > summary {
+  cursor: pointer;
+}
+
+details.form-field[open] {
+  gap: 8px;
 }
 
 .preset-label {

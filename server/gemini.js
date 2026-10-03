@@ -227,22 +227,31 @@ async function readStream(res, onText) {
   let buffer = "";
   let blocked = false;
 
+  const handle = (line) => {
+    if (!line.startsWith("data:")) return;
+    let chunk;
+    try {
+      chunk = JSON.parse(line.slice(5));
+    } catch {
+      return; // a damaged event shouldn't throw away the rest of the reply
+    }
+    const candidate = chunk.candidates?.[0];
+    for (const part of candidate?.content?.parts || []) {
+      parts.push(part);
+      if (part.text && !part.thought) onText(part.text);
+    }
+    if (chunk.promptFeedback?.blockReason || candidate?.finishReason === "SAFETY") blocked = true;
+  };
+
   for await (const bytes of res.body) {
     buffer += decoder.decode(bytes, { stream: true });
     const lines = buffer.split(/\r?\n/);
     buffer = lines.pop();
-
-    for (const line of lines) {
-      if (!line.startsWith("data:")) continue;
-      const chunk = JSON.parse(line.slice(5));
-      const candidate = chunk.candidates?.[0];
-      for (const part of candidate?.content?.parts || []) {
-        parts.push(part);
-        if (part.text && !part.thought) onText(part.text);
-      }
-      if (chunk.promptFeedback?.blockReason || candidate?.finishReason === "SAFETY") blocked = true;
-    }
+    lines.forEach(handle);
   }
+  // The last event may arrive without a final newline
+  buffer += decoder.decode();
+  if (buffer) handle(buffer);
   if (blocked) throw new GeminiError("Gemini stopped this reply because of its safety filters.");
   return parts;
 }
@@ -257,6 +266,7 @@ async function streamChat({ key, model, contents, system, temperature, fast = fa
     const url = `${API}/models/${encodeURIComponent(currentModel)}:streamGenerateContent?alt=sse`;
     const history = [...contents];
     let streamedAnyText = false;
+    let ranTool = false;
 
     try {
       let rounds = 0;
@@ -280,6 +290,7 @@ async function streamChat({ key, model, contents, system, temperature, fast = fa
         history.push({ role: "model", parts });
         const responses = [];
         for (const { functionCall } of calls) {
+          ranTool = true;
           const result = await runTool(functionCall.name, functionCall.args || {});
           const response = { name: functionCall.name, response: result };
           if (functionCall.id) response.id = functionCall.id;
@@ -289,8 +300,9 @@ async function streamChat({ key, model, contents, system, temperature, fast = fa
         free = calls.every(({ functionCall }) => isFreeTool(functionCall.name));
       }
     } catch (err) {
-      // Part of the reply is already on screen: another model can't continue it
-      if (streamedAnyText) err.final = true;
+      // Part of the reply is already on screen, or a tool already ran (an email
+      // sent, a file changed): another model must not start over and repeat it
+      if (streamedAnyText || ranTool) err.final = true;
       throw err;
     }
   });
@@ -391,7 +403,7 @@ async function speak({ key, text, voice }) {
     } catch (err) {
       lastErr = err;
       if (err.status === 429 || err.status === 404 || /quota|rate limit|not found/i.test(err.message)) {
-        console.warn(`[Gemini TTS] Model ${model} returned ${err.status || err.message}, trying fallback TTS candidate...`);
+        logger.warn(`Gemini TTS model ${model} returned ${err.status || err.message}, trying the next one`);
         continue;
       }
       throw err;
