@@ -1,6 +1,7 @@
 // ---------- Workspace Client UI & Integrations ----------
 import { getAccessToken, isConnected, googleSignIn, logout, getCurrentUser, initAuth } from "./auth.js";
 import { openSettings, closeSettings } from "./settings.js";
+import { getSettings } from "./store.js";
 
 // Custom confirmation dialog for Workspace mutations
 let confirmModal = null;
@@ -40,9 +41,11 @@ export function promptConfirmation(summary, details = {}) {
     const confirmBtn = modal.querySelector("#ws-modal-confirm");
 
     const isFile = details.type === "file";
+    const isCloud = details.type === "cloud"; // Auto, Dynamic or Fastest wants to use the cloud AI
     desc.textContent = isFile ? `Allow the AI to ${summary}?` : summary;
-    cancelBtn.textContent = isFile ? "Deny" : "Cancel";
-    confirmBtn.textContent = isFile ? "Allow" : "Confirm & Proceed";
+    cancelBtn.textContent = isFile ? "Deny" : isCloud ? "Keep it local" : "Cancel";
+    confirmBtn.textContent = isFile ? "Allow" : isCloud ? "Send to the cloud" : "Confirm & Proceed";
+    modal.querySelector("#ws-modal-title").textContent = isCloud ? "Use the cloud AI?" : "Confirm Action";
     detailsEl.innerHTML = "";
 
     // The details come from the AI, so they're added as text, never as HTML
@@ -57,7 +60,10 @@ export function promptConfirmation(summary, details = {}) {
       detailsEl.append(el);
     };
 
-    if (details.type === "gmail") {
+    if (details.type === "cloud") {
+      row("Why:", details.reason);
+      row("Goes to:", details.name, true);
+    } else if (details.type === "gmail") {
       row("To:", details.to, true);
       row("Subject:", details.subject, true);
       const body = document.createElement("div");
@@ -218,6 +224,7 @@ document.addEventListener("friends:auth-changed", (e) => {
 // Why signing in didn't work, in words a person can act on (null: they closed the popup)
 function signInProblem(err) {
   const code = err?.code || "";
+  if (getSettings()?.privacy?.localOnly) return "Private mode is on, so Google sign-in is off. Turn it off in Settings → AI control.";
   if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return null;
   if (code === "auth/unauthorized-domain") {
     return `Google sign-in isn't allowed from ${location.hostname} yet. In the Firebase console, open Authentication → Settings → Authorized domains and add "${location.hostname}", then try again.`;

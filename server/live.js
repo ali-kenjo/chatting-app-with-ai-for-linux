@@ -43,6 +43,8 @@ const newTurn = () => ({ user: "", model: "", activity: [], drafts: [] });
 // Why a Live connection failed, in words a person can act on
 function liveError(reason) {
   if (reason === "NO_BRAIN") return reason;
+  if (reason === "PRIVATE_MODE") return "Private mode is on, so Gemini Live is off. Studio voice is used.";
+  if (reason === "LIVE_NEEDS_GEMINI") return "Live voice needs a Gemini brain. With a local AI, Studio voice is used.";
   if (/api key|api_key|permission|unauthori[sz]ed|401|403/i.test(reason)) return "Gemini Live didn't accept your API key.";
   if (/quota|exhausted|rate limit|429/i.test(reason)) return "Gemini Live's quota is used up for now.";
   if (/model|not found|not supported|unsupported|404/i.test(reason)) return "Your key can't use a Gemini Live model.";
@@ -125,11 +127,14 @@ class LiveSession {
     this.robot = robot === true;
     this.googleAccessToken = typeof googleAccessToken === "string" ? googleAccessToken : null;
     try {
-      this.brain = brains.getForChat(Number(brainId) || null);
+      // Gemini Live is the cloud: in the routing modes the cloud brain is used (the page only starts Live when that's wanted)
+      this.brain = settings.get().routing.mode === "fixed" ? brains.getForChat(Number(brainId) || null) : brains.getByKind("cloud", Number(brainId) || null);
     } catch (err) {
       return this.fail(err.message);
     }
-    if (!this.brain) return this.fail("NO_BRAIN");
+    if (!this.brain) return this.fail(brains.has("local") ? "LIVE_NEEDS_GEMINI" : "NO_BRAIN");
+    if (settings.get().privacy.localOnly) return this.fail("PRIVATE_MODE");
+    if (this.brain.provider !== "gemini") return this.fail("LIVE_NEEDS_GEMINI");
     if (chatId) {
       try {
         chats.get(chatId);

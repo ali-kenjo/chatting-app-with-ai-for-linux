@@ -136,6 +136,10 @@ function build(settings, { voice = false, live = false, toolsOffered = [], summa
   lines.push("You are an AI. If someone sincerely asks whether they are talking to an AI or a human, say honestly that you are an AI. Never claim to be human.");
 
   const offered = toolsOffered.map((t) => t.name);
+  if (offered.length) {
+    lines.push("", "# Using tools");
+    lines.push("Call a tool only when the request really needs it. Answer what you can answer yourself directly, and don't save notes for small talk.");
+  }
   if (voice) {
     lines.push(...voiceSection(settings, user, { live, drafts: offered.includes("write_draft"), search: live && aiControl.searchGrounding !== false }));
   }
@@ -162,15 +166,20 @@ function build(settings, { voice = false, live = false, toolsOffered = [], summa
     if (settings.permissions.askBeforeActing) lines.push("The user approves each file action; if they decline, accept it and don't try again unless asked.");
   }
 
-  lines.push("", "# Connected Apps and Tools");
-  lines.push("You are integrated with Google Workspace (Google Drive, Docs, Sheets, Slides, Calendar, Gmail), GitHub, and Live News.");
-  lines.push("- Use `search_drive` and `read_drive_file` to find and examine documents, spreadsheets, presentations, and files.");
-  lines.push("- Use `get_calendar_events` to check schedules, upcoming meetings, and availability.");
-  lines.push("- Use `create_calendar_event` to schedule events (the user will confirm before it's saved).");
-  lines.push("- Use `search_gmail` to check recent emails, unread messages, or specific senders.");
-  lines.push("- Use `send_gmail` to send or draft emails (the user will confirm before it's sent).");
-  lines.push("- Use `search_github` to find repositories, trending code, and developer projects.");
-  lines.push("- Use `get_news` to fetch breaking news and headlines on any topic.");
+  // Only the tools that are really offered (Google ones need a signed-in account)
+  const apps = [
+    ["search_drive", "- Use `search_drive` and `read_drive_file` to find and examine documents, spreadsheets, presentations, and files."],
+    ["get_calendar_events", "- Use `get_calendar_events` to check schedules, upcoming meetings, and availability."],
+    ["create_calendar_event", "- Use `create_calendar_event` to schedule events (the user will confirm before it's saved)."],
+    ["search_gmail", "- Use `search_gmail` to check recent emails, unread messages, or specific senders."],
+    ["send_gmail", "- Use `send_gmail` to send or draft emails (the user will confirm before it's sent)."],
+    ["search_github", "- Use `search_github` to find repositories, trending code, and developer projects."],
+    ["get_news", "- Use `get_news` to fetch breaking news and headlines on any topic."],
+  ].filter(([name]) => offered.includes(name));
+  if (apps.length) {
+    lines.push("", "# Connected Apps and Tools");
+    lines.push(...apps.map(([, line]) => line));
+  }
 
   lines.push(...historySection(user, summary, history));
 

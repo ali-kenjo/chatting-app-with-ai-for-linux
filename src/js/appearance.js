@@ -21,6 +21,8 @@ function applyTheme() {
 }
 
 onSettings((s) => {
+  // Private mode: the page hides what needs the internet (see style.css)
+  root.dataset.private = s.privacy?.localOnly === true ? "true" : "false";
   current = s.theme.appearance;
   applyTheme();
   root.style.setProperty("--accent", s.theme.accent);

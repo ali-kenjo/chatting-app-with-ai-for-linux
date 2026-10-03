@@ -7,11 +7,16 @@ services:
     container_name: friends-chat
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      # Only this computer can open it. Use "3000:3000" (and set ALLOWED_HOSTS)
+      # only if you want other devices on your network to reach it.
+      - "127.0.0.1:3000:3000"
+    # Lets the container reach an AI server on this computer, e.g. Ollama at
+    # http://host.docker.internal:11434 (then run Ollama with OLLAMA_HOST=0.0.0.0)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - HOST=0.0.0.0
       - PORT=3000
-      - ALLOWED_HOSTS=*
       - LOG_LEVEL=info
       - KEYRING_BACKEND=file
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}

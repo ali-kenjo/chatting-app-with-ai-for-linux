@@ -13,7 +13,7 @@ export function playbackRate(settings) {
 
 // Messages for voice errors that need explaining
 export function voiceErrorText(message) {
-  if (message === "NO_BRAIN") return "Add a Gemini brain first (Settings → AI control).";
+  if (message === "NO_BRAIN") return "Add an AI brain first (Settings → AI control).";
   if (message === "NO_TTS") return "Your Gemini key has no speech model, so the voices can't be played.";
   return message;
 }

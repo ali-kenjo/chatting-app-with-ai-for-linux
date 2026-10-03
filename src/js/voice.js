@@ -19,7 +19,7 @@ import { askFromVoice, stopReply, getCurrentChatId, adoptChat, reloadChat } from
 import { getSettings } from "./store.js";
 import { playbackRate, voiceErrorText } from "./personality.js";
 import { promptConfirmation } from "./workspace.js";
-import { getSelectedBrainId } from "./composer.js";
+import { getSelectedBrainId, liveWanted, getLocalBrainId } from "./composer.js";
 import { getAccessToken } from "./auth.js";
 import { LiveVoice } from "./live.js";
 import { VoiceRecorder, videoType, download } from "./recorder.js";
@@ -771,6 +771,12 @@ function toggleMute() {
 async function startEngine() {
   stopEngine();
   if (engineChoice !== "live") return startClassic(engineChoice);
+  // Gemini Live is Google's; a local AI speaks through Studio voice
+  if (!liveWanted()) {
+    const local = getLocalBrainId();
+    if (local) api.local.warm(local, true); // the speech models too
+    return startClassic("studio");
+  }
 
   setState("connecting");
   const voice = new LiveVoice({ audioCtx, micSource, output: aiBus, handlers: liveHandlers() });

@@ -74,6 +74,18 @@ function setKey(id, key) {
   saveFileSecrets(secrets);
 }
 
+// The key of a brain that may have none (local AI servers). Never falls back to
+// GEMINI_API_KEY: that key must not be sent to anything but Google.
+function getOptionalKey(id) {
+  let key = null;
+  if (isSystemKeyringOperational()) {
+    try {
+      key = entry(id)?.getPassword();
+    } catch {}
+  }
+  return key || loadFileSecrets()[String(id)] || "";
+}
+
 function getKey(id) {
   let key = null;
 
@@ -117,4 +129,4 @@ function deleteKey(id) {
   } catch {}
 }
 
-module.exports = { setKey, getKey, deleteKey, isSystemKeyringOperational };
+module.exports = { setKey, getKey, getOptionalKey, deleteKey, isSystemKeyringOperational };

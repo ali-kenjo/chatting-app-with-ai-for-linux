@@ -39,3 +39,20 @@ settingsModal.addEventListener("click", (e) => {
 document.querySelectorAll(".modal-nav .tab").forEach((tab) => {
   tab.addEventListener("click", () => switchTab(tab.dataset.tab));
 });
+
+// Screen readers: controls that sit next to their title (not inside a <label>)
+// get that title as their name
+function nameControls() {
+  for (const el of settingsModal.querySelectorAll("input, select, textarea")) {
+    if (el.type === "hidden" || el.labels?.length || el.getAttribute("aria-label") || el.getAttribute("aria-labelledby")) continue;
+    let text = "";
+    for (let node = el, hops = 0; node && node !== settingsModal && hops < 4 && !text; node = node.parentElement, hops++) {
+      for (let prev = node.previousElementSibling; prev && !text; prev = prev.previousElementSibling) {
+        text = (prev.matches(".row-label") ? prev : prev.querySelector(".row-label"))?.textContent.trim() || "";
+      }
+      if (!text && node.parentElement?.matches(".row")) text = node.parentElement.querySelector(".row-label")?.textContent.trim() || "";
+    }
+    if (text) el.setAttribute("aria-label", text);
+  }
+}
+nameControls();

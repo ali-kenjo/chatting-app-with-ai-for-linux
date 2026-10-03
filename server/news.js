@@ -1,29 +1,42 @@
 // Live news fetching helper using Google News RSS feeds
 const https = require("https");
 
-function fetchXml(url) {
+const MAX_REDIRECTS = 3;
+const TIMEOUT_MS = 15000;
+
+function fetchXml(url, redirects = 0) {
   return new Promise((resolve, reject) => {
-    https.get(
+    const req = https.get(
       url,
       {
         headers: {
           "User-Agent": "Mozilla/5.0 (compatible; FriendsApp/1.0)",
         },
+        timeout: TIMEOUT_MS,
       },
       (res) => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          return fetchXml(res.headers.location).then(resolve, reject);
+          res.resume();
+          if (redirects >= MAX_REDIRECTS) return reject(new Error("Too many redirects from the news feed."));
+          return fetchXml(new URL(res.headers.location, url).href, redirects + 1).then(resolve, reject);
         }
         if (res.statusCode !== 200) {
+          res.resume();
           return reject(new Error(`Failed to fetch news feed (status ${res.statusCode})`));
         }
+        res.setEncoding("utf8"); // keeps characters that span two chunks intact
         let data = "";
         res.on("data", (chunk) => (data += chunk));
         res.on("end", () => resolve(data));
       }
-    ).on("error", reject);
+    );
+    req.on("timeout", () => req.destroy(new Error("The news feed took too long to answer.")));
+    req.on("error", reject);
   });
 }
+
+// &amp; last, so "&amp;quot;" stays "&quot;" instead of becoming a quote mark
+const decodeEntities = (text) => text.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
 
 function parseRss(xml) {
   const items = [];
@@ -36,7 +49,7 @@ function parseRss(xml) {
     const pubDateMatch = itemXml.match(/<pubDate>(.*?)<\/pubDate>/);
     const sourceMatch = itemXml.match(/<source[^>]*>(.*?)<\/source>/);
 
-    const title = titleMatch ? titleMatch[1].replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'") : "Untitled";
+    const title = titleMatch ? decodeEntities(titleMatch[1]) : "Untitled";
     const link = linkMatch ? linkMatch[1] : "";
     const pubDate = pubDateMatch ? pubDateMatch[1] : "";
     const source = sourceMatch ? sourceMatch[1] : "News";
@@ -47,6 +60,7 @@ function parseRss(xml) {
 }
 
 async function getNews(query = "") {
+  query = String(query ?? "");
   try {
     const encoded = encodeURIComponent(query.trim());
     const url = query.trim()

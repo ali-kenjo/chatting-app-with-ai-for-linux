@@ -31,7 +31,7 @@ try {
 
   // The app, with only its runtime dependencies
   fs.mkdirSync(app, { recursive: true });
-  for (const dir of ["electron", "server", "src"]) fs.cpSync(path.join(root, dir), path.join(app, dir), { recursive: true });
+  for (const dir of ["electron", "server", "src", "voice"]) fs.cpSync(path.join(root, dir), path.join(app, dir), { recursive: true });
   fs.mkdirSync(path.join(app, "build"));
   fs.copyFileSync(path.join(root, "build", "icon.png"), path.join(app, "build", "icon.png"));
   const appPkg = { ...pkg, scripts: undefined, devDependencies: undefined, build: undefined };
@@ -82,9 +82,10 @@ try {
       "Priority: optional",
       "Architecture: amd64",
       `Installed-Size: ${kb}`,
-      `Maintainer: ${pkg.author}`,
-      `Homepage: ${pkg.homepage}`,
+      `Maintainer: ${pkg.author || "Friends contributors <noreply@example.com>"}`,
+      ...(pkg.homepage ? [`Homepage: ${pkg.homepage}`] : []),
       "Depends: libgtk-3-0t64 | libgtk-3-0, libnotify4, libnss3, libxss1, libxtst6, xdg-utils, libatspi2.0-0t64 | libatspi2.0-0, libuuid1, libsecret-1-0, libasound2t64 | libasound2",
+      "Recommends: python3, python3-venv",
       "Description: Friends, a personal AI chat app",
       " Chat, voice conversation and a 3D companion robot, running on this",
       " computer. Your chats, settings and keys stay in ~/.config/friends.",
