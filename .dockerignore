@@ -1,0 +1,13 @@
+.git
+.github
+node_modules
+test
+dist
+out
+*.tmp
+*.log
+.env*
+.DS_Store
+README.md
+.editorconfig
+firebase-applet-config.json

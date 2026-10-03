@@ -1,0 +1,106 @@
+// ---------- Authentication & Google OAuth ----------
+// Client-side authentication using Firebase Auth and in-memory access token cache.
+// Scopes: Gmail, Calendar, Drive, Docs, Sheets, Slides.
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth,
+  signInWithPopup,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  signOut,
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+const SCOPES = [
+  "https://www.googleapis.com/auth/gmail.readonly",
+  "https://www.googleapis.com/auth/gmail.send",
+  "https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/drive.readonly",
+  "https://www.googleapis.com/auth/documents.readonly",
+  "https://www.googleapis.com/auth/spreadsheets.readonly",
+  "https://www.googleapis.com/auth/presentations.readonly",
+];
+
+let authInstance = null;
+let provider = null;
+let cachedAccessToken = null; // Stored in-memory ONLY
+let currentUser = null;
+let isSigningIn = false;
+
+export async function initAuth() {
+  if (authInstance) return authInstance;
+  try {
+    const res = await fetch("/api/firebase-config");
+    const firebaseConfig = await res.json();
+    if (!firebaseConfig.apiKey) {
+      console.warn("Firebase config not available yet.");
+      return null;
+    }
+
+    const app = initializeApp(firebaseConfig);
+    authInstance = getAuth(app);
+
+    provider = new GoogleAuthProvider();
+    for (const scope of SCOPES) {
+      provider.addScope(scope);
+    }
+    provider.setCustomParameters({ prompt: "select_account" });
+
+    onAuthStateChanged(authInstance, (user) => {
+      currentUser = user;
+      if (!user) {
+        cachedAccessToken = null;
+      }
+      document.dispatchEvent(new CustomEvent("friends:auth-changed", { detail: { user, hasToken: !!cachedAccessToken } }));
+    });
+
+    return authInstance;
+  } catch (err) {
+    console.error("Failed to initialize auth:", err);
+    return null;
+  }
+}
+
+export async function googleSignIn() {
+  if (isSigningIn) return null;
+  await initAuth();
+  if (!authInstance || !provider) throw new Error("Authentication is not ready.");
+
+  try {
+    isSigningIn = true;
+    const result = await signInWithPopup(authInstance, provider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (!credential?.accessToken) {
+      throw new Error("Could not obtain access token from Google.");
+    }
+    cachedAccessToken = credential.accessToken;
+    currentUser = result.user;
+    document.dispatchEvent(new CustomEvent("friends:auth-changed", { detail: { user: currentUser, hasToken: true } }));
+    return { user: currentUser, accessToken: cachedAccessToken };
+  } catch (err) {
+    console.error("Sign-in failed:", err);
+    throw err;
+  } finally {
+    isSigningIn = false;
+  }
+}
+
+export async function logout() {
+  if (authInstance) {
+    await signOut(authInstance);
+  }
+  cachedAccessToken = null;
+  currentUser = null;
+  document.dispatchEvent(new CustomEvent("friends:auth-changed", { detail: { user: null, hasToken: false } }));
+}
+
+export function getAccessToken() {
+  return cachedAccessToken;
+}
+
+export function getCurrentUser() {
+  return currentUser;
+}
+
+export function isConnected() {
+  return !!currentUser && !!cachedAccessToken;
+}

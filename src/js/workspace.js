@@ -1,0 +1,303 @@
+// ---------- Workspace Client UI & Integrations ----------
+import { getAccessToken, isConnected, googleSignIn, logout, getCurrentUser, initAuth } from "./auth.js";
+import { openSettings, closeSettings } from "./settings.js";
+
+// Custom confirmation dialog for Workspace mutations
+let confirmModal = null;
+
+function ensureConfirmModal() {
+  if (confirmModal) return confirmModal;
+  const el = document.createElement("div");
+  el.className = "ws-modal-backdrop";
+  el.hidden = true;
+  el.innerHTML = `
+    <div class="ws-modal" role="dialog" aria-modal="true" aria-labelledby="ws-modal-title">
+      <div class="ws-modal-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+      </div>
+      <div class="ws-modal-content">
+        <h3 id="ws-modal-title">Confirm Action</h3>
+        <p class="ws-modal-desc" id="ws-modal-desc"></p>
+        <div class="ws-modal-details" id="ws-modal-details"></div>
+      </div>
+      <div class="ws-modal-actions">
+        <button type="button" class="btn" id="ws-modal-cancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="ws-modal-confirm">Confirm & Proceed</button>
+      </div>
+    </div>
+  `;
+  document.body.append(el);
+  confirmModal = el;
+  return el;
+}
+
+export function promptConfirmation(summary, details = {}) {
+  return new Promise((resolve) => {
+    const modal = ensureConfirmModal();
+    const desc = modal.querySelector("#ws-modal-desc");
+    const detailsEl = modal.querySelector("#ws-modal-details");
+    const cancelBtn = modal.querySelector("#ws-modal-cancel");
+    const confirmBtn = modal.querySelector("#ws-modal-confirm");
+
+    const isFile = details.type === "file";
+    desc.textContent = isFile ? `Allow the AI to ${summary}?` : summary;
+    cancelBtn.textContent = isFile ? "Deny" : "Cancel";
+    confirmBtn.textContent = isFile ? "Allow" : "Confirm & Proceed";
+    detailsEl.innerHTML = "";
+
+    // The details come from the AI, so they're added as text, never as HTML
+    const row = (label, value, strong = false) => {
+      const el = document.createElement("div");
+      el.className = "ws-detail-row";
+      const name = document.createElement("span");
+      name.textContent = label;
+      const val = document.createElement(strong ? "strong" : "span");
+      val.textContent = value || "";
+      el.append(name, " ", val);
+      detailsEl.append(el);
+    };
+
+    if (details.type === "gmail") {
+      row("To:", details.to, true);
+      row("Subject:", details.subject, true);
+      const body = document.createElement("div");
+      body.className = "ws-detail-body";
+      body.textContent = (details.body || "").slice(0, 300);
+      detailsEl.append(body);
+    } else if (details.type === "calendar") {
+      row("Event:", details.summary, true);
+      row("Time:", `${details.start || ""} → ${details.end || ""}`);
+      if (details.location) row("Location:", details.location);
+    }
+
+    const cleanUp = (allowed) => {
+      modal.hidden = true;
+      cancelBtn.onclick = null;
+      confirmBtn.onclick = null;
+      resolve(allowed);
+    };
+
+    cancelBtn.onclick = () => cleanUp(false);
+    confirmBtn.onclick = () => cleanUp(true);
+    modal.hidden = false;
+  });
+}
+
+// Quick action shortcuts
+function sendPrompt(text) {
+  const input = document.getElementById("composer-input");
+  const sendBtn = document.getElementById("send-btn");
+  if (input && sendBtn) {
+    input.value = text;
+    input.dispatchEvent(new Event("input"));
+    sendBtn.click();
+  }
+}
+
+export async function quickCheckCalendar() {
+  if (!isConnected()) {
+    try {
+      await googleSignIn();
+    } catch {
+      return;
+    }
+  }
+  sendPrompt("What is on my Google Calendar for today and upcoming this week?");
+}
+
+export async function quickCheckGmail() {
+  if (!isConnected()) {
+    try {
+      await googleSignIn();
+    } catch {
+      return;
+    }
+  }
+  sendPrompt("Check my recent unread Gmail messages and summarize any important updates.");
+}
+
+export async function quickSearchDrive(term = "") {
+  if (!isConnected()) {
+    try {
+      await googleSignIn();
+    } catch {
+      return;
+    }
+  }
+  sendPrompt(term ? `Search my Google Drive for "${term}" and tell me what you find.` : "List my recent Google Drive documents, sheets, and presentations.");
+}
+
+export function quickSearchNews(topic = "") {
+  sendPrompt(topic ? `What is the latest news regarding ${topic}?` : "Summarize the top breaking news stories today.");
+}
+
+export function quickSearchGitHub(query = "trending") {
+  sendPrompt(`Search GitHub for ${query} repositories and summarize the top results.`);
+}
+
+function avatarImage(src, alt) {
+  const img = document.createElement("img");
+  img.src = src;
+  img.alt = alt;
+  img.style.cssText = "width:100%;height:100%;border-radius:50%;object-fit:cover;";
+  return img;
+}
+
+// Update UI with Auth State
+function updateAuthUI(user, hasToken) {
+  const sidebarAvatar = document.getElementById("user-avatar");
+  const sidebarName = document.getElementById("user-name");
+  const sidebarEmail = document.getElementById("user-email");
+  const sidebarAuthBtn = document.getElementById("sidebar-auth-btn");
+  const statusText = document.getElementById("status-text");
+
+  const wsAvatar = document.getElementById("ws-account-avatar");
+  const wsName = document.getElementById("ws-account-name");
+  const wsEmail = document.getElementById("ws-account-email");
+  const signinBtn = document.getElementById("gsi-signin-btn");
+  const signoutBtn = document.getElementById("gsi-signout-btn");
+
+  if (user && hasToken) {
+    const displayName = user.displayName || user.email?.split("@")[0] || "User";
+    const email = user.email || "";
+    const initial = displayName.charAt(0).toUpperCase();
+
+    if (sidebarAvatar) {
+      if (user.photoURL) {
+        sidebarAvatar.replaceChildren(avatarImage(user.photoURL, displayName));
+      } else {
+        sidebarAvatar.textContent = initial;
+      }
+    }
+    if (sidebarName) sidebarName.textContent = displayName;
+    if (sidebarEmail) sidebarEmail.textContent = email;
+    if (sidebarAuthBtn) {
+      sidebarAuthBtn.title = "Connected to Google Workspace";
+      sidebarAuthBtn.classList.add("connected");
+    }
+    if (statusText) statusText.textContent = "Google Connected";
+
+    if (wsAvatar) {
+      if (user.photoURL) {
+        wsAvatar.replaceChildren(avatarImage(user.photoURL, displayName));
+      } else {
+        wsAvatar.textContent = initial;
+      }
+    }
+    if (wsName) wsName.textContent = displayName;
+    if (wsEmail) wsEmail.textContent = email;
+    if (signinBtn) signinBtn.hidden = true;
+    if (signoutBtn) signoutBtn.hidden = false;
+  } else {
+    // Signed out (or the access token is gone after a reload): nothing may look connected
+    if (sidebarEmail) sidebarEmail.textContent = user ? "Google: sign in again" : "Google not connected";
+    if (sidebarAuthBtn) {
+      sidebarAuthBtn.title = "Connect Google Account";
+      sidebarAuthBtn.classList.remove("connected");
+    }
+    if (statusText) statusText.textContent = "Cloud Ready";
+    if (wsAvatar) wsAvatar.textContent = "?";
+    if (wsName) wsName.textContent = user ? user.displayName || user.email || "Signed out" : "Not connected";
+    if (wsEmail) wsEmail.textContent = user ? "Sign in again to use Gmail, Calendar and Drive" : "Sign in to use Gmail, Calendar and Drive";
+
+    if (signinBtn) signinBtn.hidden = false;
+    if (signoutBtn) signoutBtn.hidden = true;
+  }
+}
+
+// Bind clicks & lifecycle on load
+document.addEventListener("DOMContentLoaded", () => {
+  initAuth();
+});
+
+document.addEventListener("friends:auth-changed", (e) => {
+  const { user, hasToken } = e.detail || {};
+  updateAuthUI(user, hasToken);
+});
+
+// Why signing in didn't work, in words a person can act on (null: they closed the popup)
+function signInProblem(err) {
+  const code = err?.code || "";
+  if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return null;
+  if (code === "auth/unauthorized-domain") {
+    return `Google sign-in isn't allowed from ${location.hostname} yet. In the Firebase console, open Authentication → Settings → Authorized domains and add "${location.hostname}", then try again.`;
+  }
+  if (code === "auth/popup-blocked") return "The browser blocked the sign-in window. Allow pop-ups for this page and try again.";
+  if (code === "auth/network-request-failed") return "Couldn't reach Google. Check your internet connection.";
+  return `Signing in didn't work: ${err?.message || "unknown error"}`;
+}
+
+async function signIn() {
+  const errorEl = document.getElementById("gsi-error");
+  if (errorEl) errorEl.hidden = true;
+  try {
+    await googleSignIn();
+  } catch (err) {
+    console.warn("Sign in cancelled or failed:", err);
+    const message = signInProblem(err);
+    if (!message || !errorEl) return;
+    errorEl.textContent = message;
+    errorEl.hidden = false;
+    openSettings("integrations");
+  }
+}
+
+// Sidebar Google sign-in button
+document.getElementById("sidebar-auth-btn")?.addEventListener("click", () => {
+  if (isConnected()) openSettings("integrations");
+  else signIn();
+});
+
+// Settings Google Sign-In & Sign-Out
+document.getElementById("gsi-signin-btn")?.addEventListener("click", signIn);
+
+document.getElementById("gsi-signout-btn")?.addEventListener("click", async () => {
+  try {
+    await logout();
+  } catch (err) {
+    console.error("Logout failed:", err);
+  }
+});
+
+// Settings test buttons
+document.getElementById("test-cal-btn")?.addEventListener("click", () => {
+  closeSettings();
+  quickCheckCalendar();
+});
+document.getElementById("test-gmail-btn")?.addEventListener("click", () => {
+  closeSettings();
+  quickCheckGmail();
+});
+document.getElementById("test-drive-btn")?.addEventListener("click", () => {
+  closeSettings();
+  quickSearchDrive();
+});
+document.getElementById("test-github-btn")?.addEventListener("click", () => {
+  closeSettings();
+  quickSearchGitHub("trending");
+});
+document.getElementById("test-news-btn")?.addEventListener("click", () => {
+  closeSettings();
+  quickSearchNews();
+});
+
+// Workspace quick pill bar
+document.getElementById("workspace-bar")?.addEventListener("click", (e) => {
+  const pill = e.target.closest(".ws-pill");
+  if (!pill) return;
+  const app = pill.dataset.app;
+  if (app === "calendar") quickCheckCalendar();
+  else if (app === "gmail") quickCheckGmail();
+  else if (app === "drive") quickSearchDrive();
+  else if (app === "news") quickSearchNews();
+  else if (app === "github") quickSearchGitHub();
+});
+
+// Voice Hero prompt chips
+document.getElementById("hero-prompts")?.addEventListener("click", (e) => {
+  const chip = e.target.closest(".prompt-chip");
+  if (!chip) return;
+  const promptText = chip.dataset.prompt;
+  if (promptText) sendPrompt(promptText);
+});
+

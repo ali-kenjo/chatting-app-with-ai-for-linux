@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- script-src: the import map below is allowed by its hash (recompute it if the map changes;
+       test/robot-page.test.js checks it); 'wasm-unsafe-eval' is for the robot's local face detector -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'sha256-4baXyVKBWNrAfBOL458fqX6NxYT4oapgdytghrdQz4A=' 'wasm-unsafe-eval' https://www.gstatic.com https://apis.google.com https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://accounts.google.com https://api.github.com; frame-src 'self' https://accounts.google.com https://*.firebaseapp.com; object-src 'none'; base-uri 'none'">
+  <title>Friends</title>
+  <meta name="description" content="A personal AI chat app">
+  <meta property="og:title" content="Friends">
+  <meta property="og:description" content="A personal AI chat app">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z' fill='%236f9cf5'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js","three/addons/":"/vendor/three/addons/"}}</script>
+</head>
+<body>
+  <div class="app">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <span>Friends</span>
+        </div>
+        <button class="icon-btn" id="sidebar-toggle" title="Hide sidebar">
+          <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><line x1="9" y1="4" x2="9" y2="20"/></svg>
+        </button>
+      </div>
+
+      <nav class="nav">
+        <a href="#" class="nav-item" id="new-chat">
+          <svg viewBox="0 0 24 24"><path d="M12 20h8"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+          <span>New chat</span>
+        </a>
+        <a href="#" class="nav-item active" id="chats-nav" title="Show or hide your chats">
+          <svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>
+          <span>Chats</span>
+        </a>
+        <a href="#" class="nav-item" id="search-open" title="Search (Ctrl+K)">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/></svg>
+          <span>Search</span>
+        </a>
+        <a href="#" class="nav-item nav-voice-hero" id="voice-open">
+          <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg>
+          <span>Voice Conversation</span>
+          <span class="badge-hero">Hero</span>
+        </a>
+      </nav>
+
+      <!-- Saved chats, grouped by date (filled by chats.js) -->
+      <div class="section chat-history" id="chat-history"></div>
+
+      <div class="sidebar-footer">
+        <div class="user" id="user-profile-row">
+          <div class="avatar" id="user-avatar">Y</div>
+          <div class="user-info">
+            <div class="user-name" id="user-name">You</div>
+            <div class="user-email" id="user-email">Google not connected</div>
+          </div>
+          <button class="icon-btn auth-status-btn" id="sidebar-auth-btn" title="Sign in with Google">
+            <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6a4 4 0 1 0 4 4 4 4 0 0 0-4-4zm0 6a2 2 0 1 1 2-2 2 2 0 0 1-2 2z"/></svg>
+          </button>
+          <button class="icon-btn" id="settings-btn" title="Settings">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+    <!-- Main -->
+    <main class="main" id="main">
+      <button class="icon-btn sidebar-show" id="sidebar-open" title="Show sidebar">
+        <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><line x1="9" y1="4" x2="9" y2="20"/></svg>
+      </button>
+      <!-- Find in this chat (Ctrl+F) -->
+      <button class="icon-btn find-open" id="find-open" title="Find in this chat (Ctrl+F)">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/></svg>
+      </button>
+      <div class="find-bar" id="find-bar" role="search" hidden>
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/></svg>
+        <input type="text" id="find-input" placeholder="Find in this chat" autocomplete="off" spellcheck="false" aria-label="Find in this chat">
+        <span class="find-count" id="find-count" aria-live="polite"></span>
+        <button type="button" class="icon-btn" data-find="prev" title="Older match (Enter)">
+          <svg viewBox="0 0 24 24"><polyline points="6 15 12 9 18 15"/></svg>
+        </button>
+        <button type="button" class="icon-btn" data-find="next" title="Newer match (Shift+Enter)">
+          <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <button type="button" class="icon-btn" data-find="close" title="Close (Esc)">
+          <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="messages" id="messages" aria-live="polite"></div>
+
+      <!-- The robot next to your chats (src/js/robot/dock.js) -->
+      <div class="robot-dock" id="robot-dock" hidden>
+        <div class="robot-dock-stage" id="robot-dock-stage" role="button" tabindex="0" aria-label="The AI's robot: click to say hi" title="Say hi"></div>
+        <button type="button" class="robot-dock-toggle" id="robot-dock-toggle" aria-label="Fold the robot away" title="Fold the robot away">
+          <svg viewBox="0 0 24 24"><polyline points="7 10 12 15 17 10"/></svg>
+        </button>
+      </div>
+      <button type="button" class="robot-dock-open" id="robot-dock-open" aria-label="Show the robot" title="Show the robot" hidden>
+        <svg class="face-mini" viewBox="0 0 24 24" aria-hidden="true"><rect class="face-shell" x="1" y="3" width="22" height="18" rx="7"/><rect class="face-screen" x="3.6" y="5.6" width="16.8" height="12.8" rx="5"/><rect class="face-eye" x="7.6" y="8.6" width="2.8" height="5.4" rx="1.4"/><rect class="face-eye" x="13.6" y="8.6" width="2.8" height="5.4" rx="1.4"/><path class="face-mouth" d="M10.2 15.4q1.8 1.2 3.6 0"/></svg>
+      </button>
+
+
+      <div class="center">
+        <button type="button" class="jump-latest" id="jump-latest" title="Jump to the latest message" hidden>
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="6 13 12 19 18 13"/></svg>
+        </button>
+        <h1 class="greeting" id="greeting">Hello</h1>
+
+        <!-- Hero Voice Conversation Showcase -->
+        <div class="voice-hero-card" id="voice-hero-card">
+          <div class="voice-hero-head">
+            <span class="live-dot"></span>
+            <span class="voice-hero-badge">Voice Conversation · Hero Experience</span>
+          </div>
+          <h2 class="voice-hero-title">Speak Naturally with Your Companion</h2>
+          <p class="voice-hero-sub">Calming audio-reactive soundwaves, instant barge-in intelligence, and zero typing required.</p>
+
+          <div class="voice-hero-visual-preview">
+            <div class="hero-wave-bars">
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+          </div>
+
+          <div class="voice-hero-actions" style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;">
+            <button type="button" class="btn btn-primary btn-hero-voice" id="hero-voice-btn">
+              <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg>
+              <span>Start Voice Conversation</span>
+            </button>
+            <a href="/?voice=true" target="_blank" rel="noopener noreferrer" class="btn btn-outline" id="hero-voice-tab-btn" style="border-radius:999px;font-size:14px;padding:11px 20px;text-decoration:none;" title="Open in Standalone Browser Tab (Direct Mic Prompt)">
+              <span>Open in Full Tab ↗</span>
+            </a>
+          </div>
+
+          <div class="voice-hero-prompts" id="hero-prompts">
+            <button type="button" class="prompt-chip" data-prompt="What's on my Google Calendar today?">📅 Calendar schedule</button>
+            <button type="button" class="prompt-chip" data-prompt="Check my unread Gmail messages">✉️ Check Gmail</button>
+            <button type="button" class="prompt-chip" data-prompt="Search my Google Drive for recent project files">📂 Drive docs</button>
+            <button type="button" class="prompt-chip" data-prompt="Summarize the top news headlines today">📰 Top news</button>
+            <button type="button" class="prompt-chip" data-prompt="Search GitHub for trending open source repositories">🐙 GitHub trends</button>
+          </div>
+        </div>
+
+        <!-- Connected Apps Quick Bar -->
+        <div class="workspace-bar" id="workspace-bar">
+          <button type="button" class="ws-pill" data-app="calendar" title="Google Calendar">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span>Calendar</span>
+          </button>
+          <button type="button" class="ws-pill" data-app="gmail" title="Gmail">
+            <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <span>Gmail</span>
+          </button>
+          <button type="button" class="ws-pill" data-app="drive" title="Google Drive">
+            <svg viewBox="0 0 24 24"><path d="M12 2L2 19h20L12 2z"/></svg>
+            <span>Drive</span>
+          </button>
+          <button type="button" class="ws-pill" data-app="news" title="Live News">
+            <svg viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1m2 13a2 2 0 0 1-2-2V7m2 13a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2m-4-3H9M7 16h6M7 8h6m-6 4h10"/></svg>
+            <span>News</span>
+          </button>
+          <button type="button" class="ws-pill" data-app="github" title="GitHub">
+            <svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+            <span>GitHub</span>
+          </button>
+          <div class="ws-status-indicator" id="ws-status-indicator">
+            <span class="status-circle"></span>
+            <span class="status-text" id="status-text">Cloud Ready</span>
+          </div>
+        </div>
+
+        <div class="attachments" id="attachments" hidden></div>
+        <form class="composer" id="composer">
+          <button type="button" class="icon-btn" id="attach-btn" title="Attach files (images, PDFs, text)">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+          <input type="file" id="attach-input" multiple hidden
+            accept="image/png,image/jpeg,image/webp,application/pdf,text/*,.md,.csv,.json,.xml,.yml,.yaml,.js,.ts,.py,.sh,.sql,.log">
+          <input type="text" id="composer-input" placeholder="Ask anything, or tap Voice Conversation above" autocomplete="off">
+          <div class="model-menu-wrap">
+            <button type="button" class="model-picker" id="model-picker" aria-haspopup="menu" aria-expanded="false">
+              <strong>Model</strong> <span></span>
+              <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="model-menu" id="model-menu" role="menu" hidden></div>
+          </div>
+          <button type="submit" class="send-btn" id="send-btn" title="Send" disabled>
+            <svg class="i-send" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+            <svg class="i-stop" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>
+          </button>
+        </form>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Settings panel -->
+  <div class="modal-backdrop" id="settings-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+
+      <div class="modal-nav">
+        <h2 id="settings-title">Settings</h2>
+        <button class="tab active" data-tab="font">
+          <svg viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+          <span>Chat look</span>
+        </button>
+        <button class="tab" data-tab="theme">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg>
+          <span>Theme</span>
+        </button>
+        <button class="tab" data-tab="ai-control">
+          <svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><polyline points="9 12 11 14 15 10"/></svg>
+          <span>AI control</span>
+        </button>
+        <button class="tab" data-tab="memory">
+          <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><line x1="9" y1="2" x2="9" y2="6"/><line x1="15" y1="2" x2="15" y2="6"/><line x1="9" y1="18" x2="9" y2="22"/><line x1="15" y1="18" x2="15" y2="22"/><line x1="2" y1="9" x2="6" y2="9"/><line x1="2" y1="15" x2="6" y2="15"/><line x1="18" y1="9" x2="22" y2="9"/><line x1="18" y1="15" x2="22" y2="15"/></svg>
+          <span>Memory</span>
+        </button>
+        <button class="tab" data-tab="personality">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14a4 4 0 0 0 8 0"/><line x1="9" y1="9.5" x2="9" y2="9.5"/><line x1="15" y1="9.5" x2="15" y2="9.5"/></svg>
+          <span>AI personality</span>
+        </button>
+        <button class="tab" data-tab="robot">
+          <svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="4"/><line x1="9.5" y1="12.5" x2="9.5" y2="14.5"/><line x1="14.5" y1="12.5" x2="14.5" y2="14.5"/><path d="M7.5 8 6 4.5M16.5 8 18 4.5"/></svg>
+          <span>Robot</span>
+        </button>
+        <button class="tab" data-tab="integrations">
+          <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <span>Connected Apps</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <button class="icon-btn modal-close" id="settings-close" title="Close">
+          <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+        </button>
+
+        <!-- Chat font -->
+        <section class="pane active" data-pane="font">
+          <h3>Chat look</h3>
+          <div class="row">
+            <div class="row-label">Font family</div>
+            <select class="field" data-setting="font.family">
+              <option value="default">Default</option>
+              <option value="sans">Sans-serif</option>
+              <option value="serif">Serif</option>
+              <option value="mono">Monospace</option>
+            </select>
+          </div>
+          <div class="row">
+            <div class="row-label">Font size</div>
+            <div class="slider"><span>Small</span><input type="range" class="range" min="12" max="22" value="15" data-setting="font.size"><span>Large</span></div>
+          </div>
+          <div class="row">
+            <div>
+              <div class="row-label">Message style</div>
+              <div class="row-desc">Minimal puts only your messages in bubbles</div>
+            </div>
+            <select class="field" data-setting="chat.style">
+              <option value="minimal">Minimal</option>
+              <option value="bubbles">Bubbles</option>
+            </select>
+          </div>
+          <div class="row">
+            <div class="row-label">Spacing</div>
+            <select class="field" data-setting="chat.density">
+              <option value="comfortable">Comfortable</option>
+              <option value="compact">Compact</option>
+            </select>
+          </div>
+          <label class="row">
+            <div>
+              <div class="row-label">Suggest follow-ups</div>
+              <div class="row-desc">Three quick replies under the AI's last answer (one extra small request)</div>
+            </div>
+            <input type="checkbox" class="toggle" checked data-setting="chat.suggestions">
+          </label>
+          <div class="preview chat-preview" aria-hidden="true">
+            <div class="msg user"><div class="bubble">How will my chats look?</div></div>
+            <div class="msg model">
+              <div class="msg-avatar"><svg class="face-mini" viewBox="0 0 24 24"><rect class="face-shell" x="1" y="3" width="22" height="18" rx="7"/><rect class="face-screen" x="3.6" y="5.6" width="16.8" height="12.8" rx="5"/><rect class="face-eye" x="7.6" y="8.6" width="2.8" height="5.4" rx="1.4"/><rect class="face-eye" x="13.6" y="8.6" width="2.8" height="5.4" rx="1.4"/><path class="face-mouth" d="M10.2 15.4q1.8 1.2 3.6 0"/></svg></div>
+              <div class="msg-main"><div class="msg-body markdown"><p>Like this. Change the font, size, style and spacing above to see it here.</p></div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Theme -->
+        <section class="pane" data-pane="theme">
+          <h3>Theme</h3>
+          <div class="row-label">Appearance</div>
+          <div class="choice-grid" id="appearance">
+            <button class="choice selected" data-appearance="dark"><span class="swatch dark"></span>Dark</button>
+            <button class="choice" data-appearance="light"><span class="swatch light"></span>Light</button>
+            <button class="choice" data-appearance="system"><span class="swatch system"></span>System</button>
+          </div>
+          <div class="row-label">Accent color</div>
+          <div class="colors" id="accent-colors">
+            <button class="color selected" data-color="#6f9cf5" style="background:#6f9cf5" aria-label="Blue"></button>
+            <button class="color" data-color="#a78bfa" style="background:#a78bfa" aria-label="Violet"></button>
+            <button class="color" data-color="#34d399" style="background:#34d399" aria-label="Green"></button>
+            <button class="color" data-color="#f59e0b" style="background:#f59e0b" aria-label="Amber"></button>
+            <button class="color" data-color="#f472b6" style="background:#f472b6" aria-label="Pink"></button>
+          </div>
+        </section>
+
+
+        <!-- AI control -->
+        <section class="pane" data-pane="ai-control">
+          <h3>AI control & intelligence</h3>
+
+          <div class="ai-overview" id="ai-overview">
+            <!-- Diagnostics & Live Status Banner -->
+            <div class="ai-status-card" id="ai-status-card">
+              <div class="ai-status-left">
+                <div class="ai-status-indicator">
+                  <span class="status-pulse-dot"></span>
+                  <span class="ai-status-title" id="ai-active-brain-name">Gemini (Default)</span>
+                </div>
+                <div class="ai-status-subtitle" id="ai-active-brain-meta">Google AI Studio · gemini-2.5-flash</div>
+              </div>
+              <button type="button" class="btn small" id="ai-ping-btn" title="Ping the AI to verify latency and model status">
+                <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                <span>Test Ping</span>
+              </button>
+            </div>
+            <div class="ai-ping-status" id="ai-ping-status" hidden></div>
+
+            <!-- AI Reasoning & Execution Policy -->
+            <div class="subhead">
+              <div>
+                <div class="subhead-title">Reasoning & intelligence</div>
+                <p class="hint">Fine-tune how your companion thinks and processes your chats.</p>
+              </div>
+            </div>
+
+            <div class="row-label">Reasoning effort</div>
+            <div class="choice-grid" id="reasoning-effort-grid">
+              <button type="button" class="choice" data-effort="fast">
+                <span class="choice-title">⚡ Fast</span>
+                <span class="choice-desc">Concise, low-latency</span>
+              </button>
+              <button type="button" class="choice selected" data-effort="balanced">
+                <span class="choice-title">⚖️ Balanced</span>
+                <span class="choice-desc">Recommended</span>
+              </button>
+              <button type="button" class="choice" data-effort="deep">
+                <span class="choice-title">🧠 Deep</span>
+                <span class="choice-desc">Step-by-step analysis</span>
+              </button>
+            </div>
+
+            <div class="row">
+              <div>
+                <div class="row-label">Context memory window</div>
+                <div class="row-desc">Number of recent messages passed to the model</div>
+              </div>
+              <div class="slider">
+                <span id="context-val-label" class="slider-badge">20</span>
+                <input type="range" class="range" min="5" max="50" step="5" value="20" data-setting="aiControl.contextWindow" id="context-window-slider">
+              </div>
+            </div>
+
+            <label class="row">
+              <div>
+                <div class="row-label">Confirm workspace actions</div>
+                <div class="row-desc">Prompt for approval before modifying Google Calendar or Gmail</div>
+              </div>
+              <input type="checkbox" class="toggle" checked data-setting="aiControl.confirmTools">
+            </label>
+
+            <!-- Brains Management -->
+            <div class="subhead">
+              <div>
+                <div class="subhead-title">Configured AI brains</div>
+                <p class="hint">Switch models or add keys for your conversations.</p>
+              </div>
+              <button class="btn btn-primary" id="brain-add">
+                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Add brain</span>
+              </button>
+            </div>
+
+            <div class="preset-chips">
+              <span class="preset-label">Quick add preset:</span>
+              <button type="button" class="chip preset-btn" data-preset="flash">⚡ 2.5 Flash (Fast)</button>
+              <button type="button" class="chip preset-btn" data-preset="pro">🧠 2.5 Pro (Deep)</button>
+              <button type="button" class="chip preset-btn" data-preset="flash2">🎙️ 2.0 Flash (Voice)</button>
+            </div>
+
+            <ul class="brain-list" id="brain-list"></ul>
+            <p class="form-error" id="brain-list-error" hidden></p>
+
+            <div class="subhead">
+              <div>
+                <div class="subhead-title">Permissions</div>
+                <p class="hint">Choose what the AI is allowed to do on your computer.</p>
+              </div>
+            </div>
+
+            <div class="form-field">
+              <div>
+                <div class="row-label">Allowed folders</div>
+                <div class="row-desc">The AI can only work inside these folders.</div>
+              </div>
+              <ul class="folder-list" id="folder-list"></ul>
+              <form class="folder-add" id="folder-add" hidden>
+                <input class="field" name="path" placeholder="e.g. ~/Documents/Projects" autocomplete="off" spellcheck="false" required>
+                <button type="submit" class="btn btn-primary">Add</button>
+                <button type="button" class="btn" id="folder-add-cancel">Cancel</button>
+              </form>
+              <button class="btn add-folder-btn" id="folder-add-open">
+                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Add folder</span>
+              </button>
+            </div>
+
+            <div class="perm-grid" id="perm-grid">
+              <span></span>
+              <span class="perm-head">Create</span>
+              <span class="perm-head">Read</span>
+              <span class="perm-head">Edit</span>
+              <span class="perm-head">Delete</span>
+
+              <span class="perm-row-label">
+                <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/></svg>
+                Files
+              </span>
+              <input type="checkbox" class="perm-check" data-row="files" data-perm="create" aria-label="Create files">
+              <input type="checkbox" class="perm-check" data-row="files" data-perm="read" aria-label="Read files" checked>
+              <input type="checkbox" class="perm-check" data-row="files" data-perm="edit" aria-label="Edit files">
+              <input type="checkbox" class="perm-check" data-row="files" data-perm="delete" aria-label="Delete files">
+
+              <span class="perm-row-label">
+                <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                Folders
+              </span>
+              <input type="checkbox" class="perm-check" data-row="folders" data-perm="create" aria-label="Create folders">
+              <input type="checkbox" class="perm-check" data-row="folders" data-perm="read" aria-label="Read folders" checked>
+              <input type="checkbox" class="perm-check" data-row="folders" data-perm="edit" aria-label="Edit folders">
+              <input type="checkbox" class="perm-check" data-row="folders" data-perm="delete" aria-label="Delete folders">
+            </div>
+            <p class="row-desc">Read = open files and see what's inside folders. Edit includes renaming and moving.</p>
+
+            <label class="row">
+              <div><div class="row-label">Ask before acting</div><div class="row-desc">Confirm each action before the AI does it</div></div>
+              <input type="checkbox" class="toggle" checked data-setting="permissions.askBeforeActing">
+            </label>
+            <label class="row">
+              <div><div class="row-label">Use the trash</div><div class="row-desc">Deleted items go to the trash so you can restore them</div></div>
+              <input type="checkbox" class="toggle" checked data-setting="permissions.useTrash">
+            </label>
+          </div>
+
+          <!-- Add / edit an AI brain -->
+          <form class="brain-form" id="brain-form" hidden>
+            <button type="button" class="back-link" id="brain-back">
+              <svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>
+              <span>Back to AI control</span>
+            </button>
+            <div class="subhead-title" id="brain-form-title">Add AI brain</div>
+
+            <div class="form-field">
+              <span class="row-label">Provider</span>
+              <div class="provider-grid" id="provider-grid"></div>
+            </div>
+
+            <label class="form-field">
+              <span class="row-label">Name</span>
+              <input class="field" name="name" placeholder="e.g. Gemini Fast or Claude Work" autocomplete="off">
+            </label>
+
+            <div class="form-field">
+              <span class="row-label">Model selection</span>
+              <div class="model-curated-grid" id="model-curated-grid">
+                <button type="button" class="model-card selected" data-model="gemini-2.5-flash">
+                  <div class="model-card-badge">Fast & Voice</div>
+                  <div class="model-card-name">Gemini 2.5 Flash</div>
+                  <div class="model-card-desc">Lowest latency, ideal for daily chats & voice</div>
+                </button>
+                <button type="button" class="model-card" data-model="gemini-2.5-pro">
+                  <div class="model-card-badge">Deep Logic</div>
+                  <div class="model-card-name">Gemini 2.5 Pro</div>
+                  <div class="model-card-desc">Advanced reasoning, research & coding</div>
+                </button>
+                <button type="button" class="model-card" data-model="gemini-2.0-flash">
+                  <div class="model-card-badge">Multimodal</div>
+                  <div class="model-card-name">Gemini 2.0 Flash</div>
+                  <div class="model-card-desc">Next-gen multimodal speed & audio</div>
+                </button>
+                <button type="button" class="model-card" data-model="custom">
+                  <div class="model-card-badge">Custom</div>
+                  <div class="model-card-name">Other Model…</div>
+                  <div class="model-card-desc">Choose from API or type custom ID</div>
+                </button>
+              </div>
+            </div>
+
+            <label class="form-field" id="model-custom-wrapper" hidden>
+              <span class="row-label">Custom Model identifier</span>
+              <input class="field" name="model" list="model-options" autocomplete="off" spellcheck="false" placeholder="Leave empty to pick automatically">
+              <datalist id="model-options"></datalist>
+            </label>
+
+            <label class="form-field">
+              <span class="row-label">API key</span>
+              <span class="key-input">
+                <input class="field" name="key" type="password" autocomplete="off" spellcheck="false">
+                <button type="button" class="icon-btn small" id="key-toggle" title="Show key">
+                  <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </span>
+              <span class="row-desc">Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a></span>
+            </label>
+
+            <label class="form-field" id="baseurl-field">
+              <span class="row-label">Base URL</span>
+              <input class="field" name="baseUrl" type="url" placeholder="https://api.example.com/v1" autocomplete="off">
+            </label>
+
+            <div class="form-test-bar">
+              <button type="button" class="btn small" id="brain-test-btn">
+                <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                <span>Verify Key & Connection</span>
+              </button>
+              <span class="test-feedback" id="brain-test-feedback"></span>
+            </div>
+
+            <p class="form-error" id="brain-form-error" hidden></p>
+            <div class="form-actions">
+              <button type="button" class="btn" id="brain-cancel">Cancel</button>
+              <button type="submit" class="btn btn-primary" id="brain-save">Save brain</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- Memory -->
+        <section class="pane" data-pane="memory">
+          <h3>Memory</h3>
+
+          <div class="subhead">
+            <div>
+              <div class="subhead-title">Your memories</div>
+              <p class="hint">Written by you.</p>
+            </div>
+          </div>
+          <label class="row">
+            <div><div class="row-label">Enable memory</div><div class="row-desc">Let the AI remember things across chats</div></div>
+            <input type="checkbox" class="toggle" checked data-setting="memory.enabled">
+          </label>
+          <div class="row-label">Saved memories</div>
+          <ul class="memory-list" id="memory-list"></ul>
+          <form class="memory-add" id="memory-add">
+            <input class="field" name="text" placeholder="Something the AI should always remember…" autocomplete="off" maxlength="2000">
+            <button type="submit" class="btn btn-primary">Add</button>
+          </form>
+          <div class="row">
+            <div class="row-label">Clear all memory</div>
+            <button class="btn btn-danger" id="memory-clear">Clear</button>
+          </div>
+
+          <div class="subhead">
+            <div>
+              <div class="subhead-title">AI memory</div>
+              <p class="hint">Notes the AI keeps for itself, so it can help you better over time.</p>
+            </div>
+          </div>
+          <label class="row">
+            <div><div class="row-label">Let the AI keep notes</div><div class="row-desc">It saves what it learns about you and your work, and reads it in new chats</div></div>
+            <input type="checkbox" class="toggle" id="ai-notes-toggle" checked data-setting="aiNotes.enabled">
+          </label>
+          <div class="storage-line">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><line x1="8" y1="20" x2="16" y2="20"/><line x1="12" y1="16" x2="12" y2="20"/></svg>
+            <span>Stored on this device in <code id="notes-dir">~/.config/friends/memory</code></span>
+          </div>
+
+          <div class="ai-notes" id="ai-notes">
+            <div class="chips" id="note-filters"></div>
+            <ul class="note-list" id="note-list"></ul>
+          </div>
+
+          <div class="row">
+            <div class="row-label">Clear AI memory</div>
+            <button class="btn btn-danger" id="notes-clear">Clear</button>
+          </div>
+        </section>
+
+        <!-- AI personality -->
+        <section class="pane" data-pane="personality">
+          <h3>AI personality</h3>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Identity</div>
+            <p class="hint">Who you're talking to.</p>
+          </div></div>
+          <div class="row">
+            <div><div class="row-label">Name</div><div class="row-desc">What the AI calls itself</div></div>
+            <input type="text" class="field" placeholder="e.g. Sam" autocomplete="off" maxlength="40" data-setting="personality.name">
+          </div>
+          <div class="row">
+            <div><div class="row-label">Your name</div><div class="row-desc">What the AI calls you</div></div>
+            <input type="text" class="field" placeholder="e.g. Sam" autocomplete="off" maxlength="40" data-setting="personality.userName">
+          </div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Voice</div>
+            <p class="hint">How it sounds in voice conversations.</p>
+          </div></div>
+          <div class="voice-grid" id="voice-grid">
+            <div class="voice-card selected" role="radio" aria-checked="true" tabindex="0" data-voice="1" style="--c: #ffb074">
+              <div class="voice-bars"><span></span><span></span><span></span><span></span><span></span></div>
+              <div class="voice-info"><div class="row-label">Voice 1</div><div class="row-desc">Warm · bright</div></div>
+              <button class="icon-btn small voice-play" title="Play sample"><svg class="i-play" viewBox="0 0 24 24"><polygon points="7 4 20 12 7 20"/></svg><svg class="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
+            </div>
+            <div class="voice-card" role="radio" aria-checked="false" tabindex="0" data-voice="2" style="--c: #f07c7c">
+              <div class="voice-bars"><span></span><span></span><span></span><span></span><span></span></div>
+              <div class="voice-info"><div class="row-label">Voice 2</div><div class="row-desc">Calm · deep</div></div>
+              <button class="icon-btn small voice-play" title="Play sample"><svg class="i-play" viewBox="0 0 24 24"><polygon points="7 4 20 12 7 20"/></svg><svg class="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
+            </div>
+          </div>
+          <p class="form-error" id="voice-error" hidden></p>
+          <div class="row">
+            <div class="row-label">Speaking speed</div>
+            <div class="slider"><span>Slow</span><input type="range" class="range" min="0" max="10" value="5" data-setting="personality.speed"><span>Fast</span></div>
+          </div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Personality</div>
+            <p class="hint">The overall character.</p>
+          </div></div>
+          <div class="chips" id="style-chips">
+            <button class="chip selected">Friendly</button>
+            <button class="chip">Professional</button>
+            <button class="chip">Funny</button>
+            <button class="chip">Calm</button>
+            <button class="chip" data-custom>Custom</button>
+          </div>
+          <div class="row">
+            <div class="row-label">Response length</div>
+            <div class="slider"><span>Short</span><input type="range" class="range" min="1" max="3" value="2" data-setting="personality.length"><span>Long</span></div>
+          </div>
+          <div class="row">
+            <div class="row-label">Creativity</div>
+            <div class="slider"><span>Focused</span><input type="range" class="range" min="0" max="10" value="5" data-setting="personality.creativity"><span>Creative</span></div>
+          </div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Human touch</div>
+            <p class="hint">Make conversations feel natural, like talking to a friend.</p>
+          </div></div>
+          <label class="row">
+            <div><div class="row-label">Everyday language</div><div class="row-desc">Contractions, casual words, and short replies when that fits</div></div>
+            <input type="checkbox" class="toggle" checked data-setting="personality.everydayLanguage">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Natural pauses</div><div class="row-desc">Says things like "hmm" or "well" and pauses while speaking</div></div>
+            <input type="checkbox" class="toggle" checked data-setting="personality.naturalPauses">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Emotions</div><div class="row-desc">Laughs, sounds surprised, and shows empathy</div></div>
+            <input type="checkbox" class="toggle" checked data-setting="personality.emotions">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Curious about you</div><div class="row-desc">Asks questions back and follows up on earlier chats</div></div>
+            <input type="checkbox" class="toggle" checked data-setting="personality.curious">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Human typing pace</div><div class="row-desc">Replies appear as if they're being typed</div></div>
+            <input type="checkbox" class="toggle" data-setting="personality.typingPace">
+          </label>
+          <div class="honesty-note">
+            <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <span>Always honest when asked: if someone sincerely asks whether they're talking to an AI, it says yes.</span>
+          </div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Custom instructions</div>
+            <p class="hint">Anything else about how it should talk and behave.</p>
+          </div></div>
+          <textarea class="field textarea" id="custom-instructions" maxlength="5000" data-setting="personality.customInstructions" placeholder="e.g. Talk like an old friend from school. Keep it short and joke around a bit."></textarea>
+        </section>
+
+        <!-- Robot: the AI's 3D body (src/js/robot/) -->
+        <section class="pane" data-pane="robot">
+          <h3>Robot</h3>
+          <p class="hint">A small robot that is the AI's body: pick "Robot" in voice mode's style bar, and it also sits next to your text chats.</p>
+
+          <div class="robot-preview-wrap">
+            <div class="robot-preview" id="robot-preview" role="img" aria-label="Live preview of the robot"></div>
+            <p class="robot-preview-note" id="robot-preview-note" hidden></p>
+            <div class="robot-try">
+              <label class="robot-try-field">
+                <span>Try a mood</span>
+                <select class="field" id="robot-try-mood" aria-label="Try a mood">
+                  <option value="">Choose…</option>
+                  <option value="neutral">Neutral</option><option value="happy">Happy</option><option value="excited">Excited</option>
+                  <option value="laughing">Laughing</option><option value="curious">Curious</option><option value="thinking">Thinking</option>
+                  <option value="focused">Focused</option><option value="surprised">Surprised</option><option value="confused">Confused</option>
+                  <option value="skeptical">Skeptical</option><option value="sad">Sad</option><option value="affectionate">Affectionate</option>
+                  <option value="proud">Proud</option><option value="sleepy">Sleepy</option>
+                </select>
+              </label>
+              <label class="robot-try-field">
+                <span>Try a move</span>
+                <select class="field" id="robot-try-gesture" aria-label="Try a move">
+                  <option value="">Choose…</option>
+                  <option value="wave">Wave</option><option value="nod">Nod</option><option value="head_shake">Head shake</option>
+                  <option value="tilt">Tilt</option><option value="shrug">Shrug</option><option value="bounce">Bounce</option>
+                  <option value="celebrate">Celebrate spin</option><option value="look_around">Look around</option><option value="lean_in">Lean in</option>
+                  <option value="point_left">Point left</option><option value="point_right">Point right</option>
+                  <option value="double_take">Double-take</option><option value="shy">Shy</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <label class="row">
+            <div><div class="row-label">Robot in text chat</div><div class="row-desc">A small live robot next to your chats (on wide windows)</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.chatDock">
+          </label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Looks</div>
+            <p class="hint">Its glow is your accent color (Settings → Theme).</p>
+          </div></div>
+          <div class="row">
+            <div class="row-label" id="robot-shell-label">Shell color</div>
+            <div class="colors robot-shells" role="radiogroup" aria-labelledby="robot-shell-label" data-choice="robot.shell">
+              <button type="button" class="color" role="radio" data-value="warm" style="background:#ede4d6" aria-label="Warm white" title="Warm white"></button>
+              <button type="button" class="color" role="radio" data-value="cloud" style="background:#e2e7ee" aria-label="Cloud" title="Cloud"></button>
+              <button type="button" class="color" role="radio" data-value="graphite" style="background:#50555f" aria-label="Graphite" title="Graphite"></button>
+              <button type="button" class="color" role="radio" data-value="peach" style="background:#f0ccb6" aria-label="Peach" title="Peach"></button>
+              <button type="button" class="color" role="radio" data-value="mint" style="background:#c9e5d6" aria-label="Mint" title="Mint"></button>
+            </div>
+          </div>
+          <div class="row-label" id="robot-eyes-label">Eyes</div>
+          <div class="choice-grid robot-eye-choices" role="radiogroup" aria-labelledby="robot-eyes-label" data-choice="robot.eyes">
+            <button type="button" class="choice" role="radio" data-value="classic"><span class="face-icon-big" data-eyes="classic"><i></i><i></i></span>Classic</button>
+            <button type="button" class="choice" role="radio" data-value="round"><span class="face-icon-big" data-eyes="round"><i></i><i></i></span>Round</button>
+            <button type="button" class="choice" role="radio" data-value="wide"><span class="face-icon-big" data-eyes="wide"><i></i><i></i></span>Wide</button>
+          </div>
+          <label class="row">
+            <div><div class="row-label">Mouth</div><div class="row-desc">Shows when it's talking; off for just the eyes</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.mouth">
+          </label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Scene and camera</div>
+            <p class="hint">How voice mode shows it, on screen and in recordings.</p>
+          </div></div>
+          <div class="row">
+            <div><div class="row-label">Background</div><div class="row-desc" id="robot-bg-hint">Chroma green and blue are flat, for keying out in a video editor</div></div>
+            <select class="field" data-setting="robot.background" aria-label="Background">
+              <option value="studio">Studio (dark)</option>
+              <option value="accent">Accent glow</option>
+              <option value="desk">Desk</option>
+              <option value="green">Chroma green</option>
+              <option value="blue">Chroma blue</option>
+            </select>
+          </div>
+          <div class="row">
+            <div class="row-label" id="robot-shot-label">Camera shot</div>
+            <div class="seg" role="radiogroup" aria-labelledby="robot-shot-label" data-choice="robot.shot">
+              <button type="button" role="radio" data-value="close">Close-up</button>
+              <button type="button" role="radio" data-value="medium">Medium</button>
+              <button type="button" role="radio" data-value="wide">Wide</button>
+            </div>
+          </div>
+          <div class="row">
+            <div><div class="row-label" id="robot-position-label">Place in the picture</div><div class="row-desc">Leave room for yourself or for overlays</div></div>
+            <div class="seg" role="radiogroup" aria-labelledby="robot-position-label" data-choice="robot.position">
+              <button type="button" role="radio" data-value="left">Left third</button>
+              <button type="button" role="radio" data-value="center">Center</button>
+              <button type="button" role="radio" data-value="right">Right third</button>
+            </div>
+          </div>
+          <label class="row">
+            <div><div class="row-label">Roam the room</div><div class="row-desc">In voice mode it moves about: closer while you talk, back while it thinks. Tap it, hold it, or drag the view (off while filming)</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.roam">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Room effects</div><div class="row-desc">A glossy floor with its reflection, drifting light, and rings that follow the voice (studio and glow backgrounds)</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.world">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Cinematic camera</div><div class="row-desc">A gentle drift, and a small push-in when it stresses a word (off with reduced motion)</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.cinematic">
+          </label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">You and the robot</div>
+            <p class="hint">It turns to you when you talk, and looks out of the screen when it talks to your audience.</p>
+          </div></div>
+          <div class="row">
+            <div><div class="row-label" id="robot-seat-label">Where do you sit?</div><div class="row-desc">As you look at the screen</div></div>
+            <div class="seg" role="radiogroup" aria-labelledby="robot-seat-label" data-choice="robot.seat">
+              <button type="button" role="radio" data-value="left">Left</button>
+              <button type="button" role="radio" data-value="front">In front</button>
+              <button type="button" role="radio" data-value="right">Right</button>
+            </div>
+          </div>
+          <label class="row">
+            <div><div class="row-label">Follow my face</div><div class="row-desc" id="robot-face-status">Its eyes follow you through the webcam. Everything stays on this computer.</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.followFace">
+          </label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">The AI moves it</div>
+            <p class="hint">Without these, the robot still reads the mood from the words.</p>
+          </div></div>
+          <label class="row">
+            <div><div class="row-label">In voice mode</div><div class="row-desc">The AI can choose moods and gestures itself</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.aiGestures.voice">
+          </label>
+          <label class="row">
+            <div><div class="row-label">In text chat</div><div class="row-desc">Each move adds a moment before the reply appears</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.aiGestures.chat">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Smarter moods</div><div class="row-desc">Gemini reads the mood of each turn: one small extra request per turn (uses quota)</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.smartMoods">
+          </label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Quality</div>
+          </div></div>
+          <div class="row">
+            <div><div class="row-label">Quality</div><div class="row-desc" id="robot-quality-status">Auto starts high and steps down if it gets slow</div></div>
+            <select class="field" data-setting="robot.quality" aria-label="Quality">
+              <option value="auto">Auto</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Filming mode</div>
+            <p class="hint">For filming the screen with a camera or phone: in voice mode, press F or the 🎬 button.</p>
+          </div></div>
+          <div class="row">
+            <div><div class="row-label">Start delay</div><div class="row-desc">Time to get to your camera before the conversation starts</div></div>
+            <select class="field" data-setting="robot.filming.delay" data-type="number" aria-label="Start delay">
+              <option value="0">Off</option>
+              <option value="3">3 seconds</option>
+              <option value="5">5 seconds</option>
+              <option value="10">10 seconds</option>
+            </select>
+          </div>
+          <label class="row">
+            <div><div class="row-label">Camera-friendly look</div><div class="row-desc">No flicker, no fine lines or glaring white, steadier frames</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.filming.cameraFriendly">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Large captions</div><div class="row-desc">Readable from a distance, inside the phone's 9:16 frame</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.filming.largeCaptions">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Bigger face</div><div class="row-desc">Slightly larger eyes and mouth</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.filming.largerFace">
+          </label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Your own model</div>
+            <p class="hint">A robot you made in Blender, as one .glb file (up to 30 MB). The README explains the part names it needs.</p>
+          </div></div>
+          <div class="robot-model">
+            <div class="robot-model-status" id="robot-model-status" aria-live="polite">Built-in robot</div>
+            <div class="robot-model-actions">
+              <button type="button" class="btn" id="robot-model-upload">Upload .glb…</button>
+              <button type="button" class="btn" id="robot-model-reset" hidden>Reset to built-in robot</button>
+              <input type="file" id="robot-model-file" accept=".glb,model/gltf-binary" hidden>
+            </div>
+          </div>
+        </section>
+
+        <!-- Connected Apps & Workspace -->
+        <section class="pane" data-pane="integrations" id="integrations-pane">
+          <h3>Connected Apps</h3>
+
+          <div class="subhead">
+            <div>
+              <div class="subhead-title">Google Workspace</div>
+              <p class="hint">Connect your Google account with OAuth to enable Gmail, Calendar, Drive, Docs, Sheets, and Slides.</p>
+            </div>
+          </div>
+
+          <div class="ws-account-card" id="ws-account-card">
+            <div class="ws-account-info">
+              <div class="avatar" id="ws-account-avatar">A</div>
+              <div>
+                <div class="ws-account-name" id="ws-account-name">Not connected</div>
+                <div class="ws-account-email" id="ws-account-email">Sign in to use Gmail, Calendar and Drive</div>
+              </div>
+            </div>
+            <div class="ws-account-actions">
+              <button type="button" class="gsi-material-button" id="gsi-signin-btn">
+                <div class="gsi-material-button-state"></div>
+                <div class="gsi-material-button-content-wrapper">
+                  <div class="gsi-material-button-icon">
+                    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style="display: block;">
+                      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                      <path fill="none" d="M0 0h48v48H0z"></path>
+                    </svg>
+                  </div>
+                  <span class="gsi-material-button-contents">Sign in with Google</span>
+                </div>
+              </button>
+              <button type="button" class="btn btn-danger" id="gsi-signout-btn" hidden>Disconnect</button>
+            </div>
+          </div>
+          <p class="form-error" id="gsi-error" hidden></p>
+
+          <div class="subhead">
+            <div>
+              <div class="subhead-title">Enabled Capabilities</div>
+              <p class="hint">The companion can access your cloud tools on your behalf. Any action that sends emails or adds events requires explicit dialog confirmation.</p>
+            </div>
+          </div>
+
+          <div class="ws-features-list">
+            <div class="ws-feature-item">
+              <div class="ws-feature-icon">📅</div>
+              <div class="ws-feature-content">
+                <strong>Google Calendar</strong>
+                <span>Check upcoming events, schedules, and plan calendar appointments.</span>
+              </div>
+              <button type="button" class="btn btn-sm" id="test-cal-btn">Test</button>
+            </div>
+
+            <div class="ws-feature-item">
+              <div class="ws-feature-icon">✉️</div>
+              <div class="ws-feature-content">
+                <strong>Gmail</strong>
+                <span>Search inbox, read unread messages, and send replies with explicit confirmation.</span>
+              </div>
+              <button type="button" class="btn btn-sm" id="test-gmail-btn">Test</button>
+            </div>
+
+            <div class="ws-feature-item">
+              <div class="ws-feature-icon">📁</div>
+              <div class="ws-feature-content">
+                <strong>Google Drive, Docs, Sheets & Slides</strong>
+                <span>Find and read cloud documents, spreadsheets, and presentation files.</span>
+              </div>
+              <button type="button" class="btn btn-sm" id="test-drive-btn">Test</button>
+            </div>
+
+            <div class="ws-feature-item">
+              <div class="ws-feature-icon">🐙</div>
+              <div class="ws-feature-content">
+                <strong>GitHub</strong>
+                <span>Search repositories, explore trending code, and discover developers.</span>
+              </div>
+              <button type="button" class="btn btn-sm" id="test-github-btn">Test</button>
+            </div>
+
+            <div class="ws-feature-item">
+              <div class="ws-feature-icon">📰</div>
+              <div class="ws-feature-content">
+                <strong>Live Breaking News</strong>
+                <span>Search world headlines, technology news, and current events.</span>
+              </div>
+              <button type="button" class="btn btn-sm" id="test-news-btn">Test</button>
+            </div>
+          </div>
+
+          <div class="honesty-note">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>Cloud security: OAuth access tokens are kept strictly in browser memory only and never written to localStorage. All data mutations require your explicit confirmation. Zero local filesystem access.</span>
+          </div>
+        </section>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Search chats -->
+  <div class="search-backdrop" id="search-modal" hidden>
+    <div class="search-panel" role="dialog" aria-modal="true" aria-label="Search chats">
+      <div class="search-input-row">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/></svg>
+        <input type="text" id="search-input" placeholder="Search chats" autocomplete="off" spellcheck="false">
+        <kbd>Esc</kbd>
+      </div>
+      <ul class="search-results" id="search-results"></ul>
+    </div>
+  </div>
+
+  <!-- Voice mode -->
+  <div class="voice-mode" id="voice-mode" hidden>
+    <canvas class="voice-waves" id="voice-waves"></canvas>
+    <!-- The Robot style: the shared 3D canvas is placed here (src/js/robot/) -->
+    <div class="voice-robot" id="voice-robot" aria-hidden="true"></div>
+
+    <div class="voice-top">
+      <div class="voice-status"><span class="voice-dot"></span><span id="voice-status">Listening</span></div>
+      <div class="voice-theme-bar" id="voice-theme-bar">
+        <button type="button" class="voice-theme-btn active" data-theme="sunset" title="Warm Sunset Waves">🌅 Sunset Waves</button>
+        <button type="button" class="voice-theme-btn" data-theme="aurora" title="Warm Aurora">✨ Aurora</button>
+        <button type="button" class="voice-theme-btn" data-theme="cosmic" title="Cosmic Pulse">🌌 Cosmic</button>
+        <button type="button" class="voice-theme-btn" data-theme="zen" title="Zen Ripples">💧 Zen</button>
+        <button type="button" class="voice-theme-btn" data-theme="hearth" title="Firefly Hearth">🔥 Hearth</button>
+        <button type="button" class="voice-theme-btn" data-theme="robot" title="Robot: a 3D robot that is the AI's body">🤖 Robot</button>
+      </div>
+      <span class="voice-rec-badge" id="voice-rec-badge"><span class="voice-rec-dot"></span>REC <span id="voice-rec-time">0:00</span></span>
+      <button type="button" class="voice-speed-pill" id="voice-engine">
+        <span class="speed-bolt" id="voice-engine-icon">⚡</span>
+        <span id="voice-engine-label">Live</span>
+      </button>
+      <button type="button" class="voice-top-btn voice-robot-only" id="voice-scene" title="Robot scene: background and camera" aria-label="Robot scene: background and camera" aria-expanded="false" aria-controls="voice-scene-pop">
+        <svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/></svg>
+      </button>
+      <button type="button" class="voice-top-btn" id="voice-filming" title="Filming mode (F): for filming the screen with a camera or phone" aria-label="Filming mode">
+        <svg viewBox="0 0 24 24"><path d="M4 10h16v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="m4 10-.6-3.2 15.7-2.9.6 3.2z"/><path d="m8.2 5.9 2 3.2M13 5l2 3.3"/></svg>
+      </button>
+      <button class="voice-top-btn" id="voice-fullscreen" title="Toggle Fullscreen" aria-label="Toggle fullscreen">
+        <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+      </button>
+    </div>
+
+    <!-- The robot's scene (the same settings as Settings → Robot) -->
+    <div class="voice-scene-pop" id="voice-scene-pop" role="dialog" aria-label="Robot scene" hidden>
+      <div class="voice-record-title">Robot scene</div>
+      <div class="voice-record-row">
+        <span id="voice-scene-bg">Background</span>
+        <div class="voice-seg" role="radiogroup" aria-labelledby="voice-scene-bg" data-choice="robot.background">
+          <button type="button" role="radio" data-value="studio">Studio</button>
+          <button type="button" role="radio" data-value="accent">Glow</button>
+          <button type="button" role="radio" data-value="desk">Desk</button>
+          <button type="button" role="radio" data-value="green" title="Chroma green">Green</button>
+          <button type="button" role="radio" data-value="blue" title="Chroma blue">Blue</button>
+        </div>
+      </div>
+      <div class="voice-record-row">
+        <span id="voice-scene-shot">Shot</span>
+        <div class="voice-seg" role="radiogroup" aria-labelledby="voice-scene-shot" data-choice="robot.shot">
+          <button type="button" role="radio" data-value="close">Close</button>
+          <button type="button" role="radio" data-value="medium">Medium</button>
+          <button type="button" role="radio" data-value="wide">Wide</button>
+        </div>
+      </div>
+      <div class="voice-record-row">
+        <span id="voice-scene-place">Place</span>
+        <div class="voice-seg" role="radiogroup" aria-labelledby="voice-scene-place" data-choice="robot.position">
+          <button type="button" role="radio" data-value="left" title="Left third">Left</button>
+          <button type="button" role="radio" data-value="center">Center</button>
+          <button type="button" role="radio" data-value="right" title="Right third">Right</button>
+        </div>
+      </div>
+      <div class="voice-record-row">
+        <span id="voice-scene-seat">You sit</span>
+        <div class="voice-seg" role="radiogroup" aria-labelledby="voice-scene-seat" data-choice="robot.seat">
+          <button type="button" role="radio" data-value="left">Left</button>
+          <button type="button" role="radio" data-value="front">In front</button>
+          <button type="button" role="radio" data-value="right">Right</button>
+        </div>
+      </div>
+      <label class="voice-record-row"><span>Roam the room</span><input type="checkbox" class="toggle" data-setting="robot.roam"></label>
+      <label class="voice-record-row"><span>Room effects</span><input type="checkbox" class="toggle" data-setting="robot.world"></label>
+      <label class="voice-record-row"><span>Cinematic camera</span><input type="checkbox" class="toggle" data-setting="robot.cinematic"></label>
+      <label class="voice-record-row"><span>Follow my face</span><input type="checkbox" class="toggle" data-setting="robot.followFace"></label>
+    </div>
+
+    <div class="voice-middle">
+      <p class="voice-caption" id="voice-caption" aria-live="polite"></p>
+
+      <div class="voice-perm-banner" id="voice-perm-banner" hidden>
+        <div class="perm-banner-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/></svg>
+        </div>
+        <div class="perm-banner-content">
+          <strong id="voice-perm-title">Microphone Access Needed</strong>
+          <p id="voice-perm-text">Allow the microphone for this page in your browser, then click 'Try Allow'.</p>
+        </div>
+        <div class="perm-banner-actions">
+          <button type="button" class="btn btn-sm" id="voice-perm-retry-btn">Try Allow</button>
+          <button type="button" class="btn btn-sm" id="voice-perm-type-btn">Type & Speak</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="voice-hint" id="voice-hint" hidden aria-hidden="true">Tap it &middot; hold it &middot; drag to look around &middot; <kbd>M</kbd> mutes</div>
+
+    <div class="voice-controls">
+      <button class="voice-ctrl" id="voice-drafts-btn" title="Drafts and transcript">
+        <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+        <span class="voice-ctrl-badge" id="voice-drafts-badge" hidden></span>
+      </button>
+      <button class="voice-ctrl" id="voice-keyboard-btn" title="Type in Voice Mode">
+        <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M8 16h8"/></svg>
+      </button>
+      <button class="voice-ctrl" id="voice-mute" title="Microphone (M)">
+        <svg class="mic-on" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg>
+        <svg class="mic-off" viewBox="0 0 24 24"><path d="M15 10V6a3 3 0 0 0-5.7-1.3"/><path d="M9 9v2a3 3 0 0 0 5 2.2"/><path d="M19 11a7 7 0 0 1-1.2 3.9M5 11a7 7 0 0 0 11 5.7"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
+      </button>
+      <button class="voice-ctrl rec" id="voice-record" title="Record a video">
+        <span class="rec-dot"></span>
+      </button>
+      <button class="voice-ctrl end" id="voice-end" title="End conversation">
+        <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- What the AI wrote (drafts) and what you both said (transcript) -->
+    <aside class="voice-drawer" id="voice-drawer" aria-label="Drafts and transcript" hidden>
+      <div class="voice-drawer-head">
+        <div class="voice-drawer-tabs" role="tablist">
+          <button type="button" class="voice-drawer-tab active" data-tab="drafts" role="tab">Drafts</button>
+          <button type="button" class="voice-drawer-tab" data-tab="transcript" role="tab">Transcript</button>
+        </div>
+        <button type="button" class="icon-btn small" id="voice-drawer-close" title="Close">
+          <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="voice-drawer-pane" id="voice-drafts"></div>
+      <div class="voice-drawer-pane" id="voice-transcript" hidden></div>
+    </aside>
+
+    <!-- Recording a video: only the visualizer and the voices are recorded -->
+    <div class="voice-record-pop" id="voice-record-pop" hidden>
+      <div class="voice-record-title">Record a video</div>
+      <div class="voice-record-row">
+        <span>Format</span>
+        <div class="voice-seg" id="voice-rec-frame">
+          <button type="button" data-frame="screen">Screen</button>
+          <button type="button" data-frame="16:9">16:9</button>
+          <button type="button" data-frame="9:16">9:16</button>
+        </div>
+      </div>
+      <label class="voice-record-row"><span>Include my voice</span><input type="checkbox" class="toggle" id="voice-rec-mic" checked></label>
+      <label class="voice-record-row"><span>Captions in the video</span><input type="checkbox" class="toggle" id="voice-rec-captions" checked></label>
+      <p class="voice-record-hint">The video shows only the visualizer (and captions), never the buttons. Headphones keep the AI's voice out of your mic.</p>
+      <button type="button" class="btn btn-primary" id="voice-rec-start">Start recording</button>
+    </div>
+
+    <!-- Hides everything else, so only the visualizer is left; stays visible to bring it all back -->
+    <button type="button" class="voice-hide-btn" id="voice-hide" title="Hide everything" aria-pressed="false">
+      <svg class="eye-off" viewBox="0 0 24 24"><path d="M17.9 17.9A10 10 0 0 1 12 19c-6.5 0-10-7-10-7a18 18 0 0 1 4.1-5.1M9.9 5.2A9 9 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-2.2 3.2"/><path d="M14.1 14.1a3 3 0 0 1-4.2-4.2"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+      <svg class="eye-on" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+
+    <!-- "Follow my face" is using the camera (click to switch it off) -->
+    <button type="button" class="face-indicator" id="face-indicator" hidden>
+      <span class="face-indicator-dot" aria-hidden="true"></span><span id="face-indicator-text">Camera on</span>
+    </button>
+
+    <!-- Filming mode (src/js/filming.js): framing guide, countdown, key confirmations -->
+    <div class="filming-overlay" id="filming-overlay" hidden>
+      <div class="filming-frame f169" aria-hidden="true"><span>16:9</span></div>
+      <div class="filming-frame f916" aria-hidden="true"><span>9:16</span></div>
+      <div class="filming-setup" id="filming-setup" role="dialog" aria-labelledby="filming-title">
+        <div class="filming-title" id="filming-title">Filming mode</div>
+        <p>Line your camera or phone up with a frame, then press Start, Space or your clicker.</p>
+        <p class="filming-note" id="filming-delay"></p>
+        <p class="filming-note" id="filming-wake"></p>
+        <dl class="filming-keys">
+          <div><dt>Start / pause</dt><dd>Space, S, F5</dd></div>
+          <div><dt>Mic on / off</dt><dd>M, Page Up, ←</dd></div>
+          <div><dt>Cut it off</dt><dd>I, Page Down, →</dd></div>
+          <div><dt>Captions</dt><dd>C, B, period</dd></div>
+          <div><dt>Leave</dt><dd>Esc</dd></div>
+        </dl>
+        <div class="filming-actions">
+          <button type="button" class="btn btn-primary" id="filming-start">Start</button>
+          <button type="button" class="btn" id="filming-exit">Leave</button>
+        </div>
+      </div>
+      <div class="filming-countdown" id="filming-countdown" aria-live="assertive" hidden></div>
+    </div>
+    <div class="filming-toast" id="filming-toast" role="status" aria-live="polite"></div>
+
+    <form class="voice-type-bar" id="voice-type-form" hidden>
+      <input type="text" id="voice-type-input" placeholder="Type a message or question to hear it spoken…" autocomplete="off">
+      <button type="submit" class="voice-type-submit" title="Send">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+      </button>
+    </form>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

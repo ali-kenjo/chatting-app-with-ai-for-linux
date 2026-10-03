@@ -1,0 +1,42 @@
+{
+  "name": "friends",
+  "version": "0.1.0",
+  "description": "A personal AI chat app",
+  "private": true,
+  "main": "electron/main.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node --watch server/server.js",
+    "build": "npm run check",
+    "test": "node --test test/*.test.js",
+    "check": "node -e 'const fs = require(\"fs\"); for (const [dir, ext] of [[\"server\", \".js\"], [\"electron\", \".js\"], [\"src/js/robot\", \".mjs\"]]) for (const f of fs.readdirSync(dir)) if (f.endsWith(ext)) require(\"child_process\").execSync(`node --check ${dir}/${f}`, { stdio: \"inherit\" });'",
+    "desktop": "electron . --no-sandbox",
+    "dist": "node scripts/build-deb.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@highlightjs/cdn-assets": "^11.12.0",
+    "@mediapipe/tasks-vision": "^1.0.1",
+    "dompurify": "^3.4.16",
+    "firebase": "^12.19.0",
+    "katex": "^0.18.9",
+    "marked": "^18.0.14",
+    "mermaid": "^12.0.0",
+    "three": "^0.186.1",
+    "ws": "^8.22.0"
+  },
+  "optionalDependencies": {
+    "@napi-rs/keyring": "^2.1.0"
+  },
+  "overrides": {
+    "lodash-es": "^4.18.1",
+    "@grpc/grpc-js": "^1.14.5"
+  },
+  "devDependencies": {
+    "electron": "^44.4.5"
+  },
+  "desktopName": "friends.desktop"
+}
