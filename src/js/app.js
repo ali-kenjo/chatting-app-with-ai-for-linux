@@ -11,6 +11,7 @@ import "./personality.js";
 import "./characters.js";
 import "./activities.js";
 import "./episodes.js";
+import "./life.js";
 import "./composer.js";
 import "./chat.js";
 import "./auth.js";
@@ -27,6 +28,9 @@ try {
 } catch (e) {
   console.warn("Auto-voice launch check:", e);
 }
+
+// The tray's "Voice conversation" (the address #voice)
+document.addEventListener("friends:open-voice", () => openVoice());
 
 // Escape closes whatever is open on top
 document.addEventListener("keydown", (e) => {

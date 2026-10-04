@@ -5,6 +5,7 @@ const os = require("os");
 const notes = require("./notes");
 const characters = require("./characters");
 const episodes = require("./episodes");
+const life = require("./life");
 const { ACTIVITIES } = require("./activities");
 
 // Starting tones for a new character (characters.js TEMPLATES); kept for old settings
@@ -137,6 +138,25 @@ function bodySection(user, { voice }) {
   ];
 }
 
+// Tasks, reminders, habits and the journal: only when those tools are offered
+function lifeSection(user, offered) {
+  if (!offered.includes("add_task")) return [];
+  const lines = [
+    "",
+    "# Helping run their life",
+    `You help ${user} run their everyday life: tasks, reminders, habits and a journal, all kept on this computer.`,
+    `- Today's date is ${life.dayOf()} (${new Date().toLocaleDateString("en-GB", { weekday: "long" })}). Write dates as YYYY-MM-DD (due dates also take "today", "tomorrow" or a weekday).`,
+    "- When they mention something they need to do, offer to put it on their list; when they ask, just add it. Anything at a specific time is a reminder (set_reminder; \"in 20 minutes\" is in_minutes). Use local times.",
+    "- When they say they did one of their habits, log it, and cheer a streak in a few words.",
+    "- Help them plan: break big things into small tasks, suggest what to do first, and nudge kindly about overdue things (once, not every turn).",
+    "- Journal only when they want something journaled. Their journal is private; quote it back only when they ask.",
+    "- After using these tools, confirm in a few words; don't read the whole list back unless they ask.",
+  ];
+  const agenda = life.agenda();
+  if (agenda.length) lines.push("Their day so far:", ...agenda.map((l) => `- ${l}`));
+  return lines;
+}
+
 // What it remembers of earlier conversations (episodes.js) and what to ask about
 function rememberSection(settings, user, { chatId, offered }) {
   const c = settings.companion || {};
@@ -252,6 +272,7 @@ function build(settings, { voice = false, live = false, toolsOffered = [], summa
   }
 
   if (!hidden) lines.push(...rememberSection(settings, user, { chatId, offered }));
+  if (!hidden) lines.push(...lifeSection(user, offered));
 
   const fileTools = toolsOffered.filter((t) => FILE_TOOLS.includes(t.name));
   if (fileTools.length) {
@@ -308,4 +329,10 @@ function greeting(settings, { chatId = null, onAir = false } = {}) {
   return parts.join(" ");
 }
 
-module.exports = { build, greeting, temperature, userName, privateOnAir, FORMATS };
+// Something the app tells the AI in voice mode (a reminder went off); never saved as yours
+function appNote(settings, text) {
+  const user = userName(settings);
+  return `(App note, not from ${user}: ${text} Tell ${user} in one short, natural sentence, in your own voice.)`;
+}
+
+module.exports = { build, greeting, appNote, temperature, userName, privateOnAir, FORMATS };

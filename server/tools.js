@@ -9,6 +9,7 @@ const workspace = require("./workspace");
 const news = require("./news");
 const robot = require("./robot");
 const episodes = require("./episodes");
+const life = require("./life");
 
 const str = (description) => ({ type: "STRING", description });
 const num = (description) => ({ type: "NUMBER", description });
@@ -119,6 +120,78 @@ const NOTE_TOOLS = {
   delete_note: fn("delete_note", "Delete one of your memory notes that is wrong or no longer useful.", { id: str("Note id") }),
 };
 
+// Your life (life.js): tasks, reminders, habits, journal; all on this computer
+const bool = (description) => ({ type: "BOOLEAN", description });
+const LIFE_TOOLS = {
+  add_task: fn(
+    "add_task",
+    "Add a task to the user's to-do list.",
+    {
+      title: str("What to do, short, e.g. 'Call the bank'"),
+      due: str("Optional: when it's due: YYYY-MM-DD, YYYY-MM-DDTHH:MM, today, tomorrow or a weekday"),
+      list: str("Optional list name, e.g. work, shopping, home (default: inbox)"),
+      priority: { type: "STRING", enum: life.PRIORITIES, description: "Optional priority" },
+      notes: str("Optional details"),
+    },
+    ["title"]
+  ),
+  list_tasks: fn(
+    "list_tasks",
+    "List the user's open tasks (and done ones if asked), soonest due first.",
+    { list: str("Optional: only this list"), include_done: bool("Also show done tasks") },
+    []
+  ),
+  update_task: fn(
+    "update_task",
+    "Change a task, or mark it done or not done.",
+    {
+      task: str("The task's id, or words from its title"),
+      done: bool("true when it's done"),
+      title: str("New title"),
+      due: str("New due date (YYYY-MM-DD or YYYY-MM-DDTHH:MM), or empty to remove it"),
+      list: str("Move to this list"),
+      priority: { type: "STRING", enum: life.PRIORITIES, description: "New priority" },
+      notes: str("New details"),
+    },
+    ["task"]
+  ),
+  delete_task: fn("delete_task", "Delete a task (when it's no longer needed, not when it's done).", { task: str("The task's id, or words from its title") }),
+  set_reminder: fn(
+    "set_reminder",
+    "Remind the user of something at a time: a notification pops up on this computer (and you say it out loud in voice mode). Give either at or in_minutes.",
+    {
+      text: str("What to remind them of, e.g. 'Take the pizza out'"),
+      at: str("When, as local time YYYY-MM-DDTHH:MM"),
+      in_minutes: num("Or: in how many minutes from now"),
+      repeat: { type: "STRING", enum: life.REPEATS, description: "Optional: repeat it (default none)" },
+    },
+    ["text"]
+  ),
+  list_reminders: fn("list_reminders", "List the reminders that are still to come.", {}, []),
+  cancel_reminder: fn("cancel_reminder", "Cancel a reminder.", { reminder: str("The reminder's id, or words from its text") }),
+  add_habit: fn("add_habit", "Start tracking a habit the user wants to build (e.g. Gym, Read 20 minutes, No sugar).", { name: str("The habit"), emoji: str("Optional: one emoji for it") }, ["name"]),
+  log_habit: fn(
+    "log_habit",
+    "Mark a habit as done today (or on another day), or undo that. Use it when the user says they did it.",
+    { habit: str("The habit's id or name"), done: bool("false to undo (default true)"), date: str("Optional: YYYY-MM-DD, default today") },
+    ["habit"]
+  ),
+  list_habits: fn("list_habits", "The user's habits, whether each is done today, and their streaks.", {}, []),
+  write_journal: fn(
+    "write_journal",
+    "Save a journal entry for the user: their day, thoughts or feelings, in their words or summarized with them. Only when they want it journaled.",
+    { text: str("The entry"), mood: { type: "STRING", enum: life.MOODS, description: "Optional: how they feel" } },
+    ["text"]
+  ),
+  read_journal: fn("read_journal", "Read the user's recent journal entries (only when they ask about them).", { days: num("How many days back (default 7)") }, []),
+  daily_briefing: fn(
+    "daily_briefing",
+    "Everything for a daily briefing in one go: today's tasks and reminders, habits, follow-ups, and (when connected) calendar, weather and headlines. Use it when they ask what's on today or for a briefing.",
+    {},
+    []
+  ),
+};
+
 // Memory of earlier conversations (episodes.js); all on this computer
 const RECALL_TOOLS = {
   recall_conversations: fn(
@@ -150,6 +223,7 @@ const ROBOT_TOOLS = {
 };
 
 const ONLINE_TOOLS = new Set(Object.keys(WORKSPACE_TOOLS));
+const LIFE_NAMES = new Set(Object.keys(LIFE_TOOLS));
 
 const isRobotTool = (name) => Object.hasOwn(ROBOT_TOOLS, name);
 
@@ -206,6 +280,7 @@ function declarations(settings, { voice = false, robot: onScreen = false, nonBlo
   if (settings.aiNotes?.enabled) {
     list.push(NOTE_TOOLS.save_note, NOTE_TOOLS.delete_note);
   }
+  if (settings.life?.enabled !== false && !hidden) list.push(...Object.values(LIFE_TOOLS));
   if (settings.companion?.recall !== false && !hidden) {
     list.push(RECALL_TOOLS.recall_conversations);
     if (settings.companion?.followUps !== false) list.push(RECALL_TOOLS.resolve_follow_up);
@@ -284,6 +359,105 @@ async function planFileAction(name, args, settings) {
   return null;
 }
 
+// ---------- Your life (life.js) ----------
+const timeOf = (ms) => new Date(ms).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const dueText = (due) => (due ? ` (due ${due.replace("T", " ")})` : "");
+
+// Everything for a briefing; the parts that need the internet only when allowed and connected
+async function briefing(ctx) {
+  const s = ctx.settings;
+  const online = s.privacy?.localOnly !== true;
+  const t = life.today();
+  const out = {
+    date: new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }),
+    time: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+    overdue: t.overdue.map((x) => ({ id: x.id, title: x.title, due: x.due })),
+    dueToday: t.dueToday.map((x) => ({ id: x.id, title: x.title, due: x.due, priority: x.priority })),
+    otherOpenTasks: t.open.length,
+    remindersToday: t.reminders.map((r) => ({ text: r.text, at: timeOf(r.at) })),
+    habits: t.habits.map((h) => ({ name: h.name, doneToday: h.today, streak: h.streak })),
+    followUps: s.companion?.followUps === false ? [] : episodes.followUps().map((f) => f.text),
+  };
+  const extras = [];
+  if (online && ctx.googleAccessToken) {
+    extras.push(
+      workspace
+        .getCalendarEvents(ctx.googleAccessToken, 10)
+        .then((events) => (out.calendar = events.filter((e) => String(e.start).slice(0, 10) <= life.dayOf()).map((e) => ({ summary: e.summary, start: e.start, end: e.end, location: e.location }))))
+        .catch(() => (out.calendar = "couldn't be read"))
+    );
+  }
+  if (online && s.life?.briefingNews !== false) {
+    extras.push(news.getNews("").then((r) => (out.headlines = r.articles.slice(0, 5).map((a) => a.title))).catch(() => {}));
+  }
+  for (const extra of briefingSources) extras.push(Promise.resolve(extra(ctx, out)).catch(() => {}));
+  await Promise.all(extras);
+  return out;
+}
+
+// Other parts of a briefing (weather…), added by their modules
+const briefingSources = [];
+const addBriefingSource = (fn) => briefingSources.push(fn);
+
+async function runLife(name, args, ctx) {
+  const say = (line) => ctx.onActivity?.(line);
+  switch (name) {
+    case "add_task": {
+      const task = life.addTask(args);
+      say(`Added a task: ${task.title}${dueText(task.due)}`);
+      return { ok: true, task };
+    }
+    case "list_tasks":
+      return { ok: true, tasks: life.listTasks({ list: args.list, includeDone: args.include_done === true }).slice(0, 50) };
+    case "update_task": {
+      const { task: ref, ...changes } = args;
+      const task = life.updateTask(ref, changes);
+      say(changes.done === true ? `Done: ${task.title}` : `Updated the task: ${task.title}`);
+      return { ok: true, task };
+    }
+    case "delete_task": {
+      const task = life.removeTask(args.task);
+      say(`Deleted the task: ${task.title}`);
+      return { ok: true };
+    }
+    case "set_reminder": {
+      const r = life.addReminder({ text: args.text, at: args.at, inMinutes: args.in_minutes, repeat: args.repeat });
+      say(`Reminder set for ${timeOf(r.at)}${r.repeat !== "none" ? ` (${r.repeat})` : ""}: ${r.text}`);
+      return { ok: true, reminder: { ...r, when: timeOf(r.at) } };
+    }
+    case "list_reminders":
+      return { ok: true, reminders: life.listReminders().slice(0, 30).map((r) => ({ ...r, when: timeOf(r.at) })) };
+    case "cancel_reminder": {
+      const r = life.removeReminder(args.reminder);
+      say(`Cancelled the reminder: ${r.text}`);
+      return { ok: true };
+    }
+    case "add_habit": {
+      const h = life.addHabit(args);
+      say(`Tracking a new habit: ${h.emoji} ${h.name}`);
+      return { ok: true, habit: h };
+    }
+    case "log_habit": {
+      const h = life.logHabit(args.habit, { date: args.date, done: args.done !== false });
+      say(`${args.done === false ? "Undid" : "Logged"} ${h.emoji} ${h.name}${h.streak > 1 ? ` · ${h.streak}-day streak` : ""}`);
+      return { ok: true, habit: { name: h.name, streak: h.streak } };
+    }
+    case "list_habits":
+      return { ok: true, habits: life.listHabits().map((h) => ({ id: h.id, name: h.name, emoji: h.emoji, doneToday: h.today, streak: h.streak })) };
+    case "write_journal": {
+      const e = life.addEntry(args);
+      say("Saved a journal entry");
+      return { ok: true, id: e.id };
+    }
+    case "read_journal":
+      return { ok: true, entries: life.listEntries({ days: args.days }).map((e) => ({ when: timeOf(e.at), mood: e.mood || undefined, text: e.text })) };
+    case "daily_briefing":
+      say("Put together your briefing");
+      return { ok: true, briefing: await briefing(ctx) };
+  }
+  throw new Error(`Unknown tool ${name}.`);
+}
+
 // Runs one tool call. ctx: { settings, googleAccessToken, confirm(summary, details) → Promise<boolean>,
 // onActivity(text), onDraft(draft), onRobot({ mood } | { gesture }) }.
 // Always returns an object for the model; errors are reported, not thrown.
@@ -318,6 +492,9 @@ async function run(name, args, ctx) {
       ctx.onActivity?.(`${known ? "Updated" : "Saved"} a memory note: ${note.title}`);
       return { ok: true, id: note.id };
     }
+
+    // Tasks, reminders, habits, journal
+    if (LIFE_NAMES.has(name)) return await runLife(name, args, ctx);
 
     // Earlier conversations
     if (name === "recall_conversations") {
@@ -454,4 +631,4 @@ async function run(name, args, ctx) {
   }
 }
 
-module.exports = { declarations, run, isRobotTool, robotEvent };
+module.exports = { declarations, run, isRobotTool, robotEvent, briefing, addBriefingSource };

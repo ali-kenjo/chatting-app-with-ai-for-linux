@@ -30,6 +30,7 @@ import { createFilming } from "./filming.js";
 import { characterName, activeCharacter } from "./characters.js";
 import { isOnAir, onOnAir, toggleOnAir, autoOnAir, resetOnAir } from "./onair.js";
 import { activityPrompt } from "./activities.js";
+import { setVoiceHooks } from "./life.js";
 
 const voiceMode = document.getElementById("voice-mode");
 const voiceStatus = document.getElementById("voice-status");
@@ -407,6 +408,16 @@ document.addEventListener("friends:character", () => {
   caption("", "");
   note(`${characterName()} is here.`, 2000);
   startEngine({ greet: true });
+});
+
+// A reminder went off while you're talking: the character says it
+setVoiceHooks({
+  isOpen: () => !voiceMode.hidden,
+  speak(text) {
+    if (live) live.send({ type: "note", text });
+    else if (classicTts && state !== "speaking") askInVoice("", { note: text });
+    else note(text, 6000);
+  },
 });
 
 const onAirButton = document.getElementById("voice-onair");
@@ -1002,8 +1013,10 @@ function greetInVoice() {
 }
 
 // Something you said (or typed): the AI answers, and its reply is spoken.
-// greet: nothing was said; the AI opens the conversation.
-export async function askInVoice(text, { greet = false } = {}) {
+// greet: nothing was said; the AI opens the conversation. note: the app tells
+// the AI something to say (a reminder went off); it isn't yours either.
+export async function askInVoice(text, { greet = false, note: appNote = "" } = {}) {
+  if (appNote) greet = true;
   if (!greet && (!text || !text.trim())) return;
   const said = String(text || "").trim();
   if (live && !greet) {
@@ -1105,6 +1118,7 @@ export async function askInVoice(text, { greet = false } = {}) {
     const { error } = await (greet ? greetFromVoice : askFromVoice)(said, {
       robot: robotOnScreen(),
       onAir: isOnAir(),
+      note: appNote,
       onChunk(chunk) {
         if (mine !== turn) return;
         fullReply += chunk;

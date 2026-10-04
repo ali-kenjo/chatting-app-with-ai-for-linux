@@ -7,7 +7,8 @@
 //   (robot: true when the robot body is on screen); then binary 16 kHz 16-bit
 //   mono PCM (your voice), {type:"text", text}, {type:"audio-end"} (mic
 //   paused), {type:"confirm", id, allow}, {type:"robot", on} (the robot body
-//   appeared or went away: the AI gets or loses its robot tools)
+//   appeared or went away: the AI gets or loses its robot tools), {type:"on-air", on}
+//   (co-host mode), {type:"note", text} (the app tells the AI something, e.g. a reminder)
 // Helper → page: {type:"ready", model, robotTools}; binary 16-bit mono PCM (the AI's voice,
 //   24 kHz unless {type:"audio-format", rate} says otherwise);
 //   {type:"transcript", role:"user"|"model", text} (pieces as they come),
@@ -109,6 +110,10 @@ class LiveSession {
     else if (msg.type === "confirm") this.confirmations.get(msg.id)?.(msg.allow === true);
     else if (msg.type === "robot") this.setRobot(msg.on === true);
     else if (msg.type === "on-air") this.setOnAir(msg.on === true);
+    // Something the app tells the AI (a reminder went off): it says it, and it isn't saved as yours
+    else if (msg.type === "note" && typeof msg.text === "string" && msg.text.trim() && this.ready) {
+      this.toGemini({ realtimeInput: { text: prompt.appNote(this.settings || settings.get(), msg.text.trim().slice(0, 1000)) } });
+    }
   }
 
   // Co-host mode went on or off (filming, recording, or the On air button).
