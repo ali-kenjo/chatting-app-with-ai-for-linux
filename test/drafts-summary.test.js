@@ -101,16 +101,17 @@ describe("Drafts, summaries and the voice prompt", () => {
     assert.strictEqual(saved.messages.length, 5);
   });
 
-  test("the voice prompt: a personal JARVIS, drafts only when offered", () => {
+  test("the voice prompt: the active character, drafts only when offered", () => {
     const s = settings.get();
     s.personality.userName = "Sam";
     const withDrafts = prompt.build(s, { voice: true, toolsOffered: [{ name: "write_draft" }] });
-    assert.match(withDrafts, /JARVIS/);
+    assert.match(withDrafts, /You are Atlas/);
+    assert.match(withDrafts, /# Voice conversation/);
     assert.match(withDrafts, /Use Sam's name now and then/);
     assert.match(withDrafts, /write_draft/);
     assert.match(withDrafts, /language they speak to you/);
     assert.doesNotMatch(prompt.build(s, { voice: true }), /write_draft/);
-    assert.doesNotMatch(prompt.build(s, {}), /JARVIS/);
+    assert.doesNotMatch(prompt.build(s, {}), /# Voice conversation/);
   });
 
   test("the text chat gets the summary of a long conversation", () => {

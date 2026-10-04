@@ -316,13 +316,14 @@ function create({ baseUrl, speechUrl = "", speechModel = "" } = {}) {
 
   // Text to speech, with Friends' own local voice. Without it the page uses
   // your browser's own voice, which is local too.
-  async function speak({ text, voice: wanted } = {}) {
+  async function speak({ text, voice: wanted, gender } = {}) {
     const own = speechBase ? null : await voice.ensure();
     if (!own) throw new LocalAiError("NO_TTS");
     const res = await request(`${own}/audio/speech`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ input: text, voice: wanted === "Charon" ? "male" : "female" }),
+      // Piper has a female and a male voice per language: the character's gender picks one
+      body: JSON.stringify({ input: text, voice: gender === "male" || (!gender && wanted === "Charon") ? "male" : "female" }),
     });
     return Buffer.from(await res.arrayBuffer());
   }

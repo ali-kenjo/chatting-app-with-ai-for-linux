@@ -115,7 +115,7 @@ describe("Gemini Live bridge", () => {
     assert.strictEqual(setup.model, "models/gemini-3.8-live");
     assert.deepStrictEqual(setup.generationConfig.responseModalities, ["AUDIO"]);
     assert.strictEqual(setup.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName, "Charon");
-    assert.match(setup.systemInstruction.parts[0].text, /JARVIS/);
+    assert.match(setup.systemInstruction.parts[0].text, /You are Atlas/);
     assert.match(setup.systemInstruction.parts[0].text, /Sam/);
     assert.deepStrictEqual(setup.tools[0], { googleSearch: {} });
     assert.ok(setup.tools[1].functionDeclarations.some((f) => f.name === "write_draft"));

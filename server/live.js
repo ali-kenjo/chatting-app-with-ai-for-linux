@@ -25,7 +25,7 @@ const tools = require("./tools");
 const prompt = require("./prompt");
 const gemini = require("./gemini");
 const summary = require("./summary");
-const { VOICES } = require("./voices");
+const characters = require("./characters");
 
 const UPSTREAM = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent";
 const MIC_TYPE = "audio/pcm;rate=16000";
@@ -108,6 +108,19 @@ class LiveSession {
     else if (msg.type === "audio-end") this.toGemini({ realtimeInput: { audioStreamEnd: true } });
     else if (msg.type === "confirm") this.confirmations.get(msg.id)?.(msg.allow === true);
     else if (msg.type === "robot") this.setRobot(msg.on === true);
+    else if (msg.type === "on-air") this.setOnAir(msg.on === true);
+  }
+
+  // Co-host mode went on or off (filming, recording, or the On air button).
+  // What the AI may say and use changes, so the session is resumed with a new
+  // setup between turns, the same way as for the robot.
+  setOnAir(on) {
+    if (!this.started || on === this.onAir) return;
+    this.onAir = on;
+    if (!this.everReady) return;
+    this.system = null; // rebuilt for the new mode
+    this.switchSetup = true;
+    if (this.ready && !this.turn.model && !this.toolsRunning) this.reconnect({ quiet: true });
   }
 
   // The robot body appeared or went away (e.g. the Robot style was picked after
@@ -122,9 +135,10 @@ class LiveSession {
     if (this.ready && !this.turn.model && !this.toolsRunning) this.reconnect({ quiet: true });
   }
 
-  async start({ chatId, brainId, googleAccessToken, robot }) {
+  async start({ chatId, brainId, googleAccessToken, robot, onAir }) {
     this.started = true;
     this.robot = robot === true;
+    this.onAir = onAir === true;
     this.googleAccessToken = typeof googleAccessToken === "string" ? googleAccessToken : null;
     try {
       // Gemini Live is the cloud: in the routing modes the cloud brain is used (the page only starts Live when that's wanted)
@@ -187,7 +201,7 @@ class LiveSession {
     // answered; the others would pause mid-sentence (see gemini.liveAsyncTools).
     // There, the robot follows the captions instead.
     const robotTools = this.robot && gemini.liveAsyncTools(model);
-    this.offered = tools.declarations(current, { voice: true, robot: robotTools, nonBlocking: true });
+    this.offered = tools.declarations(current, { voice: true, robot: robotTools, nonBlocking: true, onAir: this.onAir });
     this.robotTools = this.offered.some((t) => tools.isRobotTool(t.name));
     if (!this.system || this.systemRobot !== this.robotTools) {
       this.systemRobot = this.robotTools;
@@ -203,6 +217,8 @@ class LiveSession {
         toolsOffered: this.offered,
         summary: chat?.summary?.text,
         history: chat ? chat.messages.slice(summary.windowStart(chat, HISTORY)) : [],
+        onAir: this.onAir,
+        chatId: this.chatId,
       });
     }
     const toolList = [];
@@ -215,7 +231,8 @@ class LiveSession {
         // Lowest latency; gemini-3.8-live doesn't take a thinking level at all
         ...(/^gemini-3\.1-flash-live/.test(model) ? { thinkingConfig: { thinkingLevel: "minimal" } } : {}),
         temperature: prompt.temperature(current),
-        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOICES[current.personality.voice] || VOICES[1] } } },
+        // The active character's voice (a session keeps the voice it started with)
+        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: (this.voiceName ||= characters.voiceOf(characters.active(current)).name) } } },
       },
       systemInstruction: { parts: [{ text: this.system }] },
       tools: toolList,
@@ -255,7 +272,7 @@ class LiveSession {
     gemini.preferLiveModel(this.brain.key, model);
     if (first) {
       this.toPage({ type: "ready", model, robotTools: this.robotTools });
-      this.greet();
+      if ((this.settings || settings.get()).companion?.greeting !== false) this.greet();
     } else {
       this.toPage({ type: "resumed" });
     }
@@ -266,12 +283,7 @@ class LiveSession {
   // It speaks first, like someone picking up. The note is from the app, and
   // isn't saved: only what you say (transcribed) or type counts as yours.
   greet() {
-    const user = prompt.userName(this.settings || settings.get());
-    const time = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-    const situation = this.chatId
-      ? "You talked earlier in this conversation; welcome them back, and if you were in the middle of something, offer to pick it up."
-      : "Greet them.";
-    this.toGemini({ realtimeInput: { text: `(App note, not from ${user}: they just opened voice mode; it's ${time}. ${situation} One short, natural sentence, the way a friend would. Don't list what you can do.)` } });
+    this.toGemini({ realtimeInput: { text: prompt.greeting(this.settings || settings.get(), { chatId: this.chatId, onAir: this.onAir }) } });
   }
 
   onContent(content) {
@@ -331,7 +343,7 @@ class LiveSession {
     const at = Date.now();
     if (user) chat.messages.push({ role: "user", text: user, at, voice: true });
     if (model || turn.activity.length || turn.drafts.length) {
-      const message = { role: "model", text: model, at, voice: true };
+      const message = { role: "model", text: model, at, voice: true, by: (this.settings || settings.get()).characters.active };
       if (turn.activity.length) message.activity = turn.activity;
       if (turn.drafts.length) message.drafts = turn.drafts;
       chat.messages.push(message);

@@ -114,6 +114,16 @@ export const api = {
     remove: (id) => call("DELETE", `/api/notes/${id}`),
     clear: () => call("DELETE", "/api/notes"),
   },
+  characters: {
+    meta: () => call("GET", "/api/characters/meta"),
+  },
+  activities: () => call("GET", "/api/activities"),
+  episodes: {
+    list: () => call("GET", "/api/episodes"),
+    remove: (chatId) => call("DELETE", `/api/episodes/${encodeURIComponent(chatId)}`),
+    clear: () => call("DELETE", "/api/episodes"),
+    resolve: (id) => call("DELETE", `/api/follow-ups/${encodeURIComponent(id)}`),
+  },
   backups: {
     list: () => call("GET", "/api/backups"),
     create: () => call("POST", "/api/backups"),

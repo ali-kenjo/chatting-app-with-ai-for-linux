@@ -8,6 +8,7 @@ const notes = require("./notes");
 const workspace = require("./workspace");
 const news = require("./news");
 const robot = require("./robot");
+const episodes = require("./episodes");
 
 const str = (description) => ({ type: "STRING", description });
 const num = (description) => ({ type: "NUMBER", description });
@@ -118,6 +119,20 @@ const NOTE_TOOLS = {
   delete_note: fn("delete_note", "Delete one of your memory notes that is wrong or no longer useful.", { id: str("Note id") }),
 };
 
+// Memory of earlier conversations (episodes.js); all on this computer
+const RECALL_TOOLS = {
+  recall_conversations: fn(
+    "recall_conversations",
+    "Look back through your earlier conversations with the user: what you talked about, when, and how they were. Use it when they refer to something from before that isn't in this chat.",
+    { query: str("What to look for, e.g. 'job interview', 'trip to Berlin', 'video ideas'") }
+  ),
+  resolve_follow_up: fn(
+    "resolve_follow_up",
+    "Mark one of your follow-ups as talked about, so you don't bring it up again.",
+    { id: str("The follow-up's id") }
+  ),
+};
+
 // The robot body on screen (Settings → Robot). These only move the robot, so
 // they answer at once, never ask, never show up as steps in the chat, and
 // don't count toward the tool rounds of a reply (see gemini.streamChat).
@@ -158,11 +173,15 @@ function robotEvent(name, args = {}) {
 // options.workspace: false leaves out the Google Drive, Calendar and Gmail tools
 // (they only work once a Google account is connected; fewer tools also keep
 // small local models focused and requests short).
-function declarations(settings, { voice = false, robot: onScreen = false, nonBlocking = false, workspace = true } = {}) {
+// options.onAir: co-host mode; with "nothing private on camera" the tools that
+// read your files, mail, calendar and memories are left out.
+function declarations(settings, { voice = false, robot: onScreen = false, nonBlocking = false, workspace = true, onAir = false } = {}) {
   const p = settings.permissions;
   const list = [];
   const online = settings.privacy?.localOnly !== true; // Private mode keeps everything on this computer
-  if (p.folders.length) {
+  const hidden = onAir === true && settings.onAir?.hidePrivate !== false;
+  if (hidden) workspace = false;
+  if (p.folders.length && !hidden) {
     if (p.dirs.read) list.push(FILE_TOOLS.list_folder);
     if (p.files.read) list.push(FILE_TOOLS.read_file);
     if (p.files.create) list.push(FILE_TOOLS.create_file);
@@ -186,6 +205,10 @@ function declarations(settings, { voice = false, robot: onScreen = false, nonBlo
 
   if (settings.aiNotes?.enabled) {
     list.push(NOTE_TOOLS.save_note, NOTE_TOOLS.delete_note);
+  }
+  if (settings.companion?.recall !== false && !hidden) {
+    list.push(RECALL_TOOLS.recall_conversations);
+    if (settings.companion?.followUps !== false) list.push(RECALL_TOOLS.resolve_follow_up);
   }
   if (voice) list.push(DRAFT_TOOL);
   if (robotToolsOn(settings, { voice, robot: onScreen })) {
@@ -294,6 +317,17 @@ async function run(name, args, ctx) {
       const note = notes.save(known ? args : { ...args, id: undefined });
       ctx.onActivity?.(`${known ? "Updated" : "Saved"} a memory note: ${note.title}`);
       return { ok: true, id: note.id };
+    }
+
+    // Earlier conversations
+    if (name === "recall_conversations") {
+      if (ctx.settings.companion?.recall === false) throw new Error("Remembering conversations is turned off.");
+      const found = episodes.search(args.query);
+      ctx.onActivity?.(`Remembered ${found.length ? `${found.length} earlier conversation${found.length === 1 ? "" : "s"}` : "nothing about that"}`);
+      return { ok: true, conversations: found };
+    }
+    if (name === "resolve_follow_up") {
+      return episodes.resolve(args.id);
     }
 
     // Drafts (voice conversations)

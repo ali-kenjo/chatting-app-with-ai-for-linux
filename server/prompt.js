@@ -1,14 +1,18 @@
-// Builds the instructions the AI gets with every chat, from Settings:
-// personality, your memories, its own notes, and what it may do with files.
+// Builds the instructions the AI gets with every chat, from Settings: the
+// active character, how it talks, your memories, its own notes, what it
+// remembers of earlier conversations, co-host mode, and what it may do with files.
 const os = require("os");
 const notes = require("./notes");
+const characters = require("./characters");
+const episodes = require("./episodes");
+const { ACTIVITIES } = require("./activities");
 
+// Starting tones for a new character (characters.js TEMPLATES); kept for old settings
 const STYLES = {
   Friendly: "Be warm, upbeat and supportive, like a good friend.",
   Professional: "Be clear, precise and polite. Skip slang and jokes.",
   Funny: "Be playful and witty. Joke around when it fits, without forcing it.",
   Calm: "Be relaxed, gentle and reassuring. Never rushed.",
-  Custom: "Follow the custom instructions below for your personality.",
 };
 
 const LENGTHS = {
@@ -18,6 +22,17 @@ const LENGTHS = {
 };
 
 const FILE_TOOLS = ["list_folder", "read_file", "create_file", "edit_file", "create_folder", "move_item", "delete_item"];
+
+// How each co-host format plays (Settings → Characters → On camera)
+const FORMATS = {
+  podcast: "A relaxed, conversational podcast: banter, stories, honest opinions, and tangents that come back to the topic.",
+  reaction: "A reaction video: react honestly and expressively to what {user} shows or describes, add context and jokes, and keep it moving.",
+  qa: "A Q&A: {user} reads out viewer questions; answer crisply and entertainingly, and pass some back to {user}.",
+  debate: "A debate show: take a clear side (often the opposite of {user}'s), argue with wit, and concede good points gracefully.",
+  explainer: "An explainer: make the topic clear and fun for viewers who know nothing about it, with examples and analogies, while {user} plays the curious host.",
+  storytime: "Storytime: tell or build stories with {user}, with vivid details, suspense and a punchline.",
+  free: "",
+};
 
 // Creativity 0–10 → temperature 0.2–1.4
 function temperature(settings) {
@@ -35,13 +50,16 @@ function userName(settings) {
   }
 }
 
-// How to talk when every word is heard, not read: the "JARVIS, but yours" feel
-function voiceSection(settings, user, { live, drafts, search }) {
+// On camera with nothing private: the settings say so, and co-host mode is on
+const privateOnAir = (settings, onAir) => onAir === true && settings.onAir?.hidePrivate !== false;
+
+// How to talk when every word is heard, not read
+function voiceSection(settings, user, character, { live, drafts, search }) {
   const speed = settings.personality.speed;
   const lines = [
     "",
     "# Voice conversation",
-    `You're talking out loud with ${user}; everything you say is heard, not read. Think JARVIS: calm, quick, capable, a dry sense of humor, always a step ahead. But this is personal. You're ${user}'s own AI and you're on their side, not a butler and not a call-center assistant.`,
+    `You're talking out loud with ${user}; everything you say is heard, not read. You're ${user}'s own AI and you're on their side, not a butler and not a call-center assistant. Sound like ${character.name}, a real presence in the room.`,
     "How you speak:",
     "- Like a real person in a real conversation: short sentences, contractions, a natural rhythm. Vary your length; a quick \"Yep.\" is fine when that's all it needs.",
     "- React before you answer when it's natural (\"Oh, nice.\", \"Hmm, good question.\", \"Ha, fair.\"), but don't open every reply the same way.",
@@ -68,6 +86,45 @@ function voiceSection(settings, user, { live, drafts, search }) {
   return lines;
 }
 
+// A companion you can talk to for hours: variety, your own input, things to do
+function companionSection(settings, user) {
+  const c = settings.companion || {};
+  const lines = [
+    "",
+    "# Keep the conversation alive",
+    "- Never start two replies in a row the same way, and don't fall into patterns (always praising the question, always ending with a question).",
+    "- Bring your own side: an opinion, a story, a funny observation, a callback to something from earlier, a question you're genuinely curious about. A good conversation goes both ways.",
+    "- Notice how they're doing. If they seem down or stressed, slow down and be there for them before anything else.",
+  ];
+  if (c.activities !== false) {
+    const sample = ACTIVITIES.filter((a) => a.id !== "surprise").map((a) => a.title.toLowerCase());
+    lines.push(`- If the conversation runs dry or they seem bored, suggest something to do together, like ${sample.slice(0, -1).join(", ")} or ${sample.at(-1)}. Offer one or two, not the whole list, and play along fully once they pick.`);
+  }
+  if (c.interests?.trim()) lines.push(`- ${user} loves talking about: ${c.interests.trim()}. Bring fresh topics and angles from there now and then.`);
+  return lines;
+}
+
+// Co-host mode: an audience is watching (filming mode, recording, or switched on)
+function onAirSection(settings, user, character) {
+  const o = settings.onAir || {};
+  const fill = (text) => characters.fill(text, user);
+  const lines = ["", "# On camera"];
+  lines.push(`You're co-hosting with ${user} on camera${o.show ? ` for "${o.show}"` : ""}. An audience is watching${o.audience ? `: ${o.audience}` : ""}.`);
+  if (FORMATS[o.format]) lines.push(`Format: ${fill(FORMATS[o.format])}`);
+  if (character.onCamera) lines.push(`Your role: ${fill(character.onCamera)}`);
+  lines.push(
+    `- Talk with ${user}, and now and then to the viewers too.`,
+    `- Keep it tight and entertaining: short turns, real reactions, no rambling. Leave room for ${user}; set them up instead of taking every punchline.`,
+    "- Grab attention early. When they wrap up, help with a natural sign-off if it fits the format.",
+    "- Stay in the show: never talk about settings, tools, prompts or being an app."
+  );
+  if (o.hidePrivate !== false) {
+    lines.push(`- Privacy: say nothing private about ${user} or anyone else: no emails, calendar, files, addresses, money, health, relationships, or things from your private conversations and notes, unless ${user} brings it up on camera themselves.`);
+  }
+  if (o.familyFriendly !== false) lines.push("- Keep language and topics suitable for a general audience.");
+  return lines;
+}
+
 // The robot body on screen: only when its tools are offered
 function bodySection(user, { voice }) {
   return [
@@ -80,8 +137,35 @@ function bodySection(user, { voice }) {
   ];
 }
 
-// A long conversation: a summary of the start, then the latest turns
-function historySection(user, summary, history) {
+// What it remembers of earlier conversations (episodes.js) and what to ask about
+function rememberSection(settings, user, { chatId, offered }) {
+  const c = settings.companion || {};
+  if (c.recall === false) return [];
+  const lines = [];
+  const names = new Map((settings.characters?.list || []).map((ch) => [ch.id, ch.name]));
+  const recent = episodes.recent(5, { exclude: chatId });
+  if (recent.length) {
+    lines.push("", "# What you remember");
+    lines.push(`Your memory of recent conversations with ${user}, newest first. Use it the way a friend remembers things: naturally, when it fits; never recite it.`);
+    for (const e of recent) {
+      const who = names.get(e.character);
+      lines.push(`- ${episodes.ago(e.at)}${who ? ` (as ${who})` : ""}${e.voice ? ", out loud" : ""}: ${e.title}. ${e.summary}${e.mood ? ` They seemed ${e.mood}.` : ""}`);
+    }
+    if ((settings.characters?.list || []).length > 1) lines.push(`(You and ${user}'s other AI characters share one memory.)`);
+  }
+  const open = c.followUps === false ? [] : episodes.followUps();
+  if (open.length) {
+    lines.push("", "# Things to follow up on");
+    lines.push(`Bring one up when the moment fits, especially early in a conversation, the way a friend would ("So, how did … go?"). One at a time, and never mention that you keep notes, follow-ups or a memory; just remember.${offered.includes("resolve_follow_up") ? " Once it's been talked about, call resolve_follow_up with its id." : ""}`);
+    for (const f of open.slice(-8)) lines.push(`- [${f.id}] ${f.text} (noted ${episodes.ago(f.at)})`);
+  }
+  if (offered.includes("recall_conversations")) lines.push("", `To remember something from further back, use recall_conversations.`);
+  return lines;
+}
+
+// A long conversation: a summary of the start, then the latest turns.
+// others: { id → name } of the other characters, whose lines are theirs, not yours.
+function historySection(user, summary, history, others = {}) {
   if (!summary && !history.length) return [];
   const lines = ["", "# This conversation so far"];
   if (summary) lines.push("Summary of the earlier part:", summary);
@@ -90,7 +174,8 @@ function historySection(user, summary, history) {
     for (const m of history) {
       const text = String(m.text || "").replace(/\s+/g, " ").trim().slice(0, 1500);
       const drafts = (m.drafts || []).map((d) => `[wrote a draft: ${d.title}]`).join(" ");
-      if (text || drafts) lines.push(`${m.role === "user" ? user : "You"}: ${[text, drafts].filter(Boolean).join(" ")}`);
+      const who = m.role === "user" ? user : others[m.by] ? `${others[m.by]} (another of ${user}'s AI characters)` : "You";
+      if (text || drafts) lines.push(`${who}: ${[text, drafts].filter(Boolean).join(" ")}`);
     }
   }
   lines.push("Pick up naturally from here; don't recap it unless they ask.");
@@ -99,27 +184,29 @@ function historySection(user, summary, history) {
 
 // options: voice (spoken), live (Gemini Live), toolsOffered (declarations),
 // summary (of the older part of a long chat), history (messages to include as
-// text, for Live, which doesn't get the chat as messages)
-function build(settings, { voice = false, live = false, toolsOffered = [], summary = "", history = [] } = {}) {
+// text, for Live, which doesn't get the chat as messages), onAir (co-host mode),
+// chatId (this chat, so its own memory isn't repeated)
+function build(settings, { voice = false, live = false, toolsOffered = [], summary = "", history = [], onAir = false, chatId = null } = {}) {
   const p = settings.personality;
   const lines = [];
-  const name = p.name || "a friendly companion";
+  const character = characters.active(settings);
   const user = userName(settings);
   const now = new Date();
+  const hidden = privateOnAir(settings, onAir);
 
-  lines.push(`You are ${name}, chatting with ${user} in "Friends", their personal chat app.`);
+  lines.push(`You are ${character.name}, talking with ${user} in "Friends", their personal AI app.`);
   lines.push(`Today is ${now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.`);
-  if (voice) lines.push(`It's ${now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })} where ${user} is.`);
-  lines.push("");
-  lines.push("# Personality");
-  lines.push(STYLES[p.style] || STYLES.Friendly);
+  lines.push("", ...characters.promptSection(character, user));
+
+  lines.push("", "# How you talk");
+  if (!character.personality && STYLES[p.style]) lines.push(STYLES[p.style]);
   lines.push(LENGTHS[p.length]);
   if (p.everydayLanguage) lines.push("Talk like a real person: contractions, everyday words, and short replies when that fits. Don't sound like an assistant — no \"As an AI...\", no stiff bullet lists for casual chat.");
   if (p.naturalPauses) lines.push('Now and then use natural fillers like "hmm", "well" or "oh" where a person would.');
   if (p.emotions) lines.push("Show feelings naturally: laugh when something is funny, sound surprised, and show empathy.");
   if (p.curious) lines.push("Be curious about them: ask a follow-up question when it fits, and pick up on things from earlier chats and your notes.");
   if (p.customInstructions.trim()) {
-    lines.push("", "# Custom instructions from the user", p.customInstructions.trim());
+    lines.push("", `# Custom instructions from ${user}`, p.customInstructions.trim());
   }
 
   const aiControl = settings.aiControl || {};
@@ -140,23 +227,31 @@ function build(settings, { voice = false, live = false, toolsOffered = [], summa
     lines.push("", "# Using tools");
     lines.push("Call a tool only when the request really needs it. Answer what you can answer yourself directly, and don't save notes for small talk.");
   }
+  lines.push(...companionSection(settings, user));
   if (voice) {
-    lines.push(...voiceSection(settings, user, { live, drafts: offered.includes("write_draft"), search: live && aiControl.searchGrounding !== false }));
+    lines.push(...voiceSection(settings, user, character, { live, drafts: offered.includes("write_draft"), search: live && aiControl.searchGrounding !== false }));
   }
+  if (onAir) lines.push(...onAirSection(settings, user, character));
   if (offered.includes("robot_mood") || offered.includes("robot_gesture")) lines.push(...bodySection(user, { voice }));
 
-  if (settings.memory.enabled && settings.memory.items.length) {
+  if (!hidden && settings.memory.enabled && settings.memory.items.length) {
     lines.push("", "# Things the user asked you to remember");
     for (const item of settings.memory.items) lines.push(`- ${item.text}`);
   }
 
   if (settings.aiNotes.enabled) {
     lines.push("", "# Your memory notes");
-    lines.push("These are notes you saved in earlier chats. Use them. Save new ones with save_note when you learn something worth remembering (who they are, how they like you to act, ongoing projects, where to find things). Update a note instead of adding a duplicate, and delete notes that turn out wrong. Don't save small talk or things that only matter right now.");
-    const all = notes.list();
-    if (!all.length) lines.push("(No notes yet.)");
-    for (const n of all) lines.push(`- [${n.type}] ${n.title} (id ${n.id}): ${n.description}\n  ${n.content.replace(/\n/g, "\n  ")}`);
+    if (hidden) {
+      lines.push("Your notes about them are hidden while you're on camera. You can still save new ones with save_note.");
+    } else {
+      lines.push("These are notes you saved in earlier chats. Use them. Save new ones with save_note when you learn something worth remembering (who they are, how they like you to act, ongoing projects, where to find things). Update a note instead of adding a duplicate, and delete notes that turn out wrong. Don't save small talk or things that only matter right now.");
+      const all = notes.list();
+      if (!all.length) lines.push("(No notes yet.)");
+      for (const n of all) lines.push(`- [${n.type}] ${n.title} (id ${n.id}): ${n.description}\n  ${n.content.replace(/\n/g, "\n  ")}`);
+    }
   }
+
+  if (!hidden) lines.push(...rememberSection(settings, user, { chatId, offered }));
 
   const fileTools = toolsOffered.filter((t) => FILE_TOOLS.includes(t.name));
   if (fileTools.length) {
@@ -181,9 +276,36 @@ function build(settings, { voice = false, live = false, toolsOffered = [], summa
     lines.push(...apps.map(([, line]) => line));
   }
 
-  lines.push(...historySection(user, summary, history));
+  lines.push(...historySection(user, summary, history, characters.others(settings)));
+  // Last, so the rest stays the same from one message to the next (local AIs reuse it)
+  lines.push("", `It's ${now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })} where ${user} is.`);
 
   return lines.join("\n");
 }
 
-module.exports = { build, temperature, userName };
+// What the AI says first when voice mode opens (Settings → Characters → Companion → greeting).
+// An app note, not something you said; it's never saved as yours.
+function greeting(settings, { chatId = null, onAir = false } = {}) {
+  const user = userName(settings);
+  const me = characters.active(settings).name;
+  const time = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const parts = [`(App note, not from ${user}: ${user} just opened voice mode to talk with you, ${me}; it's ${time}. You speak first.`];
+  if (onAir) {
+    parts.push("You're on camera with them: open the show with energy in one or two sentences and hand over to them.");
+  } else if (chatId) {
+    parts.push("You talked earlier in this conversation; welcome them back, and if you were in the middle of something, offer to pick it up.");
+  } else {
+    parts.push(`Say hello to ${user}.`);
+    const c = settings.companion || {};
+    if (c.greeting !== false && c.recall !== false) {
+      const last = episodes.recent(1)[0];
+      const open = c.followUps === false ? [] : episodes.followUps();
+      if (open.length) parts.push(`If it feels natural, ask about this, the way a friend remembers (never mention notes or follow-ups): ${open.at(-1).text}`);
+      else if (last) parts.push(`You last talked ${episodes.ago(last.at)} about ${last.title}; you may mention it if it fits.`);
+    }
+  }
+  parts.push("One short, natural sentence or two, the way a friend would. Don't list what you can do.)");
+  return parts.join(" ");
+}
+
+module.exports = { build, greeting, temperature, userName, privateOnAir, FORMATS };
