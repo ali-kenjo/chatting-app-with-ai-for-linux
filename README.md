@@ -147,7 +147,7 @@ npm run test:desktop   # starts the real Electron window briefly and checks the 
 FRIENDS_TEST_VOICE=1 FRIENDS_VOICE_DIR=~/.config/friends/voice npm test   # adds the real-voice test
 ```
 
-Continuous Integration runs on GitHub Actions (`.github/workflows/ci.yml`): checks, unit and browser tests on Node.js 22 and 24, a dependency audit, and a Docker build. Dependabot proposes dependency updates every week.
+Continuous Integration runs on GitHub Actions (`.github/workflows/ci.yml`): checks, unit and browser tests on Node.js 22, 24 and 26 (the one the Docker image uses), a dependency audit, and a Docker build. Dependabot proposes dependency updates every week.
 
 **Releasing:** bump `version` in `package.json`, add its section to `CHANGELOG.md`, then `git tag v<version> && git push origin v<version>`. The release workflow builds the `.deb`, checks it, and publishes it on GitHub with a checksum.
 
