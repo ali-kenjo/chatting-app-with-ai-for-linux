@@ -1,12 +1,18 @@
 # Friends
 
-A personal AI chat app that runs in your browser. Its brain can be Google Gemini (cloud) or any AI model running on your own computer, so chats can stay completely private.
+A personal AI companion for Linux, in its own window or your browser. Its brain can be Google Gemini (cloud) or any AI model running on your own computer, so chats can stay completely private.
+
+- **Two characters to talk to for hours**: **Atlas** (calm, sharp, dry-witted, always a step ahead) and **Mira** (bright, playful, fearless, your most honest friend), or your own. Switch with one tap. They remember your conversations, follow up on what you told them, and never let a conversation run dry.
+- **Your on-camera co-host**: voice conversations with a 3D robot body, filming mode and video recording, and **ON AIR** co-host mode that keeps everything private off camera.
+- **Your everyday life**: tasks, reminders (as desktop notifications), habits, a journal and a daily briefing, all on your computer.
+- **Connected apps**: Gmail, Calendar, Drive, YouTube, Google Tasks, GitHub, Notion, Todoist, Home Assistant, weather, web search, Wikipedia, and any app with an MCP server.
+- **Builder mode**: build websites, apps and SaaS products together: project starters, code editing, running tests and builds (you choose how much it may do on its own), and a live preview.
 
 ---
 
 ## Install
 
-**You need:** a Linux computer (the app and the helper also run on macOS and Windows from source) and [Node.js](https://nodejs.org) 20 or newer. For a private, offline AI also an AI model server such as [Ollama](https://ollama.com/download) (optional; Gemini needs only a free API key).
+**You need:** a Linux computer (the app and the helper also run on macOS and Windows from source) and [Node.js](https://nodejs.org) 22 or newer. For a private, offline AI also an AI model server such as [Ollama](https://ollama.com/download) (optional; Gemini needs only a free API key).
 
 ### 1. One command (recommended)
 
@@ -36,11 +42,14 @@ The same app in its own window, with a launcher entry and icon. It runs the help
 ./scripts/install.sh --desktop          # dependencies + the Electron download (~100 MB)
 npm run desktop                         # try it from the project folder (runs with --no-sandbox)
 npm run dist                            # builds dist/friends_<version>_amd64.deb
-sudo apt install ./dist/friends_0.2.0_amd64.deb
+sudo apt install ./dist/friends_0.3.0_amd64.deb
 ```
 
+Or download the `.deb` from the [Releases](../../releases) page. After changing the source, `npm run update` tests it, backs up your data, builds the `.deb` and installs it (it asks for your password).
+
 - The `.deb` sets up Chromium's sandbox properly (a setuid helper), which is why it needs `sudo`; `npm run desktop` has no root, so it runs without the sandbox. Use the installed app for everyday use.
-- **Updating the installed app means building and installing a new `.deb`** (`npm run dist`, then `sudo apt install ./dist/friends_*.deb`). An installed app doesn't change when you change the source.
+- **Updating the installed app means building and installing a new `.deb`**: `npm run update` does all of it. An installed app doesn't change when you change the source.
+- **It keeps running in the tray** when you close the window, so reminders still come (Settings → Daily life; quit from the tray icon or with Ctrl+Q). It can start when you log in, quietly in the tray.
 - On a Wayland session it runs natively (X11 otherwise). The window remembers its size and position; a second launch focuses the first window.
 - The window only shows the app itself. The microphone and camera are granted to that page only, links open in your browser, and Google sign-in gets its own popup.
 - Google sign-in (Gmail, Calendar, Drive) is optional, needs a free Firebase project of your own, and is never loaded in Private mode. Set it up in **Settings → Connected Apps → Set up Google sign-in**: the steps are listed there, and you paste the web app's `firebaseConfig` from the Firebase console (it's kept in `~/.config/friends/firebase-applet-config.json`). Add `127.0.0.1` and `localhost` under Authentication → Settings → Authorized domains. (A `firebase-applet-config.json` next to the app, as in `firebase-applet-config.example.json`, still works.)
@@ -122,7 +131,7 @@ The server also emits structured request logs with status codes and duration met
 Friends' tests use Node.js's built-in `node:test` and `node:assert`:
 
 ```bash
-npm test               # unit and HTTP integration tests (about 200, a few seconds, no network)
+npm test               # unit and HTTP integration tests (over 300, about 20 seconds, no network)
 npm run check          # every script parses, JSON is valid, the page needs no internet to start
 npm run test:e2e       # the real page in Chrome against the real helper and a fake Ollama
                        #   (needs Chrome; set CHROME_PATH if it isn't in the usual place)
@@ -138,7 +147,11 @@ npm run test:desktop   # starts the real Electron window briefly and checks the 
 FRIENDS_TEST_VOICE=1 FRIENDS_VOICE_DIR=~/.config/friends/voice npm test   # adds the real-voice test
 ```
 
-Continuous Integration is automated via GitHub Actions (`.github/workflows/ci.yml`), testing on multiple Node.js LTS versions and validating Docker builds.
+Continuous Integration runs on GitHub Actions (`.github/workflows/ci.yml`): checks, unit and browser tests on Node.js 22 and 24, a dependency audit, and a Docker build. Dependabot proposes dependency updates every week.
+
+**Releasing:** bump `version` in `package.json`, add its section to `CHANGELOG.md`, then `git tag v<version> && git push origin v<version>`. The release workflow builds the `.deb`, checks it, and publishes it on GitHub with a checksum.
+
+**Backups:** Friends backs up your data folder once a day while it runs (Settings → Data & backups; never your API keys or tokens). `npm run backup` makes one now; `npm run backup -- --list` and `npm run backup -- --restore <file>` list and restore them.
 
 ---
 
@@ -183,6 +196,69 @@ The model menu next to the message box (and **Settings → AI control → Which 
 - The small jobs (follow-up suggestions, summaries of long chats) use a local AI when there is one. Spoken answers stay local for speed (a setting), so Auto and Dynamic use Studio voice with a local AI; Gemini Live is used where the cloud answers.
 - The default mode is *One AI*; switch to Auto in the model menu.
 
+## Characters and companionship
+
+Settings → **Characters**. Atlas and Mira are built in; edit any part of them, or make your own (from a template or a copy). Each character has:
+
+- a character sheet: who they are, personality, sense of humor, opinions and taste, interests, quirks, catchphrases, how they relate to you, how they act on camera, and what they never do (`{user}` becomes your name)
+- a voice: 30 Gemini voices (Live and Studio), and a female or male local voice
+- a look: the robot's shell, eyes and the accent color come with the character when you switch (can be switched off)
+
+Switch with the names at the top of the chat or in voice mode's top bar; in voice mode the new character takes over at once and says hello. Replies are marked with who wrote them, so a switch mid-chat never continues as the other one. Both share one memory of you.
+
+**Being a companion** (Settings → Characters → Companion):
+
+- **They remember your conversations.** When a chat or voice conversation has been quiet for 15 minutes, a short memory of it is written (what you talked about, how you seemed, what's still open). New conversations start with the latest few; `recall_conversations` looks further back. See and delete them in Settings → Memory.
+- **They follow up**: things worth asking about later ("how did the interview go?") are kept for two weeks and brought up when it fits.
+- **Never boring**: 17 things to do together (debate, would you rather, build a story, quiz, hot takes, two truths and a lie, 20 questions, deep questions, role-play, German or English practice, content ideas, riddles, recommendation duel, plan my day, talk about my day, surprise me) on the start screen and in voice mode's 🎲 menu. They bring their own opinions and stories, vary how they talk, and pick up topics from "What you love talking about".
+- **They speak first** when voice mode opens, picking up from last time.
+
+**ON AIR — co-host mode.** Press **ON AIR** in voice mode (it also turns on by itself in filming mode and while recording). The character knows it's on camera and co-hosts in the format you pick (podcast, reaction, Q&A, debate, explainer, storytime): it talks to the audience too, keeps turns tight, sets you up, and helps with the hook and the sign-off. With "Nothing private on camera" (the default), your memories, notes, earlier conversations, tasks, journal, emails, calendar, files and connected accounts are left out of what it knows and can use. Gemini Live switches in place, without dropping the conversation.
+
+## Daily life
+
+**Today** in the sidebar (and Settings → Daily life). Just talk to it ("remind me in 20 minutes to stretch", "add call the bank to my list for Friday", "I went to the gym", "what's on today?") or use the panel:
+
+- **Tasks** with lists, due dates and times, priorities. Overdue and today's tasks show as a badge.
+- **Reminders**, once or repeating (daily, weekdays, weekly, monthly, yearly), with snooze. They pop up in the page, as desktop notifications (also with the window closed, from the tray), and in voice mode your character says them.
+- **Habits** with streaks and the last 7 days, checked off in one tap.
+- **Journal** entries with a mood, and a quick "How are you today?" line.
+- **Daily briefing**: your character writes your day in one message (calendar, reminders, tasks, habits, weather, headlines, follow-ups). Press ☀️ in Today, ask for it, or have it waiting as a new chat every morning.
+
+Everything stays in `~/.config/friends/life/`.
+
+## Connected apps
+
+Settings → **Connected Apps**. Each app has its own card: switch it on, set it up, test it.
+
+| App | Needs | What the AI can do |
+|---|---|---|
+| Weather | nothing (Open-Meteo) | current weather and forecast; your town goes into the briefing |
+| Web search & pages | nothing | search the web (Google Search through your Gemini key, DuckDuckGo otherwise) and read pages; it never opens anything on your computer or home network |
+| Wikipedia | nothing | article summaries in any language |
+| Currency | nothing | convert at today's ECB rate |
+| Gmail, Calendar, Drive, YouTube, Google Tasks | Google sign-in | search and read mail, save drafts, send (asks); calendar for any dates, add, change and delete events (asks); Drive documents; your YouTube channel's numbers, videos, comments and YouTube search; Google Tasks |
+| GitHub | a personal access token | your repos, issues, pull requests, files, notifications; opening an issue asks |
+| Notion | an integration secret | search and read pages; new pages and additions ask |
+| Todoist | an API token | see, add and complete tasks |
+| Home Assistant | address + long-lived token | lights, switches, heating, blinds, media and scenes by voice; locks, alarms and covers always ask; works in Private mode on your own network |
+| **Any app (MCP)** | an MCP server | its tools; each action asks unless you trust the app |
+
+Tokens are kept in your system keyring (never in backups or sent to the page). Google needs YouTube Data API v3 and Google Tasks API turned on in your Firebase project's Google Cloud project, and one sign-out and sign-in after updating (for the new permissions).
+
+**MCP** (Model Context Protocol) connects thousands of apps: add a server that runs on this computer (a command such as `npx -y @playwright/mcp@latest`) or at an address (Streamable HTTP, with an optional token). There are ready-made starts for a browser (Playwright), code docs (Context7), Git, files, a knowledge graph, fetch, and GitHub's own MCP server. Choose per app: always ask, ask except for what only reads, or never ask. In Private mode only apps you mark as working on this computer are used.
+
+A local AI gets the essential tools (Settings → AI control → Tools for a local AI), so small models stay focused; Gemini gets all of them.
+
+## Builder mode
+
+Settings → **Builder**. Build websites, apps and SaaS products with your character as a senior developer, inside the folders you allow in AI control → File access.
+
+- **Starters**: a website, a SaaS landing page, a Node.js API with tests, a React app (Vite), and Next.js (through `create-next-app`).
+- **Code tools**: change part of a file, search code, read lines, see the project tree; plus the file tools (create, read, edit, move, delete).
+- **Running commands** in five modes: **Off**, **Suggest only** (it gives you the command), **Ask every time**, **Smart** (safe everyday commands such as tests, builds and `git status` run by themselves when they only touch the allowed folders; everything else asks), and **Auto** (everything runs except risky commands, which always ask: `sudo`, deleting outside the project, `git push`, `ssh`, piping a download into a shell, reading key files, and more). Add your own "may also run" and "never without asking" lists and a time limit. API keys are never passed to commands, and in Private mode every command asks.
+- **Background processes and live preview**: dev servers keep running and their address comes back as a link; `preview_site` serves a website folder on this computer. Settings → Builder lists what's running, with Stop.
+
 ## Features & Capabilities
 
 - **Chat**: Streaming replies, attachments (+ button, drag-and-drop, paste: images, PDFs, text/code files), and model selector.
@@ -201,7 +277,7 @@ The model menu next to the message box (and **Settings → AI control → Which 
   - **🤖 Robot** style: the AI's 3D robot body instead of a visualizer (see [The robot](#the-robot)).
   - **🎬 Filming mode** (or press **F**): for filming the screen with a camera or phone (see [Filming mode](#filming-mode)).
 - **Persistent Memory**: Explicit user memories and AI-maintained long-term memory notes.
-- **Customizable AI Personality**: Custom names, styles (Friendly, Professional, Funny, Calm), response lengths, speaking speed, and custom instructions.
+- **Characters**: Atlas, Mira or your own, with voices, looks, response length, speaking speed and custom instructions (see above).
 - **Secure File Access**: Sandboxed file interactions restricted strictly to allowed directories, respecting permission grids and confirmation prompts.
 - **Theme & Appearance**: Dark, light, and system themes; accent colors; chat font and size; message style (Minimal or Bubbles) and spacing (Comfortable or Compact).
 
@@ -288,10 +364,14 @@ Root                  the whole robot, standing on the ground (optional)
   - `src/js/robot/` — the robot. Pure logic in `.mjs` modules that `node:test` checks (springs and the layer mixer, moods and gestures as poses, the mood classifier, the animator, the director that turns app events into moods, clicker keys, voice bands). The browser side: `engine.js` (one shared three.js renderer that draws only where the robot is visible), `model.js` (the robot and custom models), `face.js` (eyes and mouth drawn with signed distance functions into a texture), `scene.js`, `dock.js`, `facetrack.js`, `settings-pane.js`, and `index.js`, which loads three.js only when a robot is first shown.
   - `src/js/filming.js` — filming mode. `src/models/face/` — the face detector model for Follow my face.
   - three.js and MediaPipe are served from `node_modules` under `/vendor/`; an import map (allowed by its hash in the page's security policy) names `three` and `three/addons/`.
-- `server/` — Local Node.js service providing Gemini API integration (`gemini.js`) and local/OpenAI-compatible AI servers (`openai.js`), file sandboxing, and data persistence. `live.js` bridges voice mode to Gemini Live over a WebSocket (`/api/live`), so the API key stays on your computer. `robot.js` checks and keeps your own robot model and asks Gemini for Smarter moods; the robot tools live in `tools.js`.
+- `server/` — Local Node.js service providing Gemini API integration (`gemini.js`) and local/OpenAI-compatible AI servers (`openai.js`), file sandboxing, and data persistence. `characters.js` (the characters), `episodes.js` (memory of conversations), `activities.js`, `life.js` and `briefing.js` (daily life), `connectors/` (one module per app), `mcp.js` (the MCP client), `net.js` (safe web fetching), `builder.js` and `templates.js` (builder mode), `backup.js`. `live.js` bridges voice mode to Gemini Live over a WebSocket (`/api/live`), so the API key stays on your computer. `robot.js` checks and keeps your own robot model and asks Gemini for Smarter moods; the robot tools live in `tools.js`.
 - Data lives in `~/.config/friends/` (or `FRIENDS_DATA_DIR`):
   - `chats/` — JSON storage for conversations (including voice turns, drafts, and a summary of the older part of long chats).
   - `memory/` — AI long-term memory notes.
+  - `episodes/` — what it remembers of each conversation, and the follow-ups.
+  - `life/` — tasks, reminders, habits and the journal.
+  - `backups/` — the daily backups.
+  - `connectors.json`, `mcp.json` — connected apps (their tokens are in the keyring).
   - `attachments/` — Attached files and metadata.
   - `settings.json` — Preferences and configuration.
   - `robot/model.glb` — your own robot model, if you uploaded one (with `model.json`).
