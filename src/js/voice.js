@@ -1147,9 +1147,9 @@ async function speakWithAudioBlob(sentence, mine, audio) {
 
 // ----- Listening (Studio / Instant): voice detection, then Gemini transcribes -----
 // Gemini transcribes in whatever language you speak, and English and German
-// can be mixed. Pauses of almost a second are allowed, so you can think
+// can be mixed. Pauses of over half a second are allowed, so you can think
 // mid-sentence, and one turn can be up to a minute long.
-const END_SILENCE_MS = 900;
+const END_SILENCE_MS = 650;
 const MAX_TURN_MS = 60000;
 let recording = null;
 let preRoll = [];
