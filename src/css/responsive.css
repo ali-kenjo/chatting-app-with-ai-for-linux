@@ -150,11 +150,11 @@
 .nav-voice-hero {
   position: relative;
   background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .nav-voice-hero svg {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .voice-hero-card {
@@ -241,7 +241,7 @@
 
 .prompt-chip:hover {
   background: rgba(255, 255, 255, 0.15);
-  border-color: var(--accent);
+  border-color: var(--accent-text);
   transform: translateY(-1px);
 }
 
@@ -275,13 +275,13 @@
 
 .ws-pill:hover {
   background: var(--bg-hover);
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .ws-pill svg {
   width: 15px;
   height: 15px;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .ws-status-indicator {

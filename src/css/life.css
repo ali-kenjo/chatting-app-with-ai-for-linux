@@ -225,12 +225,12 @@
 }
 
 .habit-check:hover {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .habit-check.done {
   background: var(--bg-active);
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .habit-check.done .habit-name::after {

@@ -112,9 +112,9 @@ async function launch({ pointer = "fine" } = {}) {
     forced = null;
   };
   // Theme, language and viewport; onboarding off unless asked, then a fresh load
-  const setLook = async ({ theme = "dark", width = 1280, height, lang = "en", onboarding = true } = {}) => {
+  const setLook = async ({ theme = "dark", accent, width = 1280, height, lang = "en", onboarding = true } = {}) => {
     const s = await api("GET", "/api/settings");
-    await api("PUT", "/api/settings", { ...s, theme: { ...s.theme, appearance: theme }, ui: { ...(s.ui || {}), language: lang }, onboarding: { ...(s.onboarding || {}), done: onboarding } });
+    await api("PUT", "/api/settings", { ...s, theme: { ...s.theme, appearance: theme, ...(accent ? { accent } : {}) }, ui: { ...(s.ui || {}), language: lang }, onboarding: { ...(s.onboarding || {}), done: onboarding } });
     await page.setViewport({ width, height: height || (width < 500 ? 844 : 900), deviceScaleFactor: 1, isMobile: width < 500, hasTouch: width < 500 });
     // The language the page starts in: the machine's own language would otherwise decide
     await stopForcingLanguage();

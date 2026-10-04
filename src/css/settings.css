@@ -121,7 +121,7 @@
 }
 
 .field:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .textarea {
@@ -198,7 +198,7 @@
 }
 
 .choice.selected {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .swatch {
@@ -307,7 +307,7 @@ label.row {
 
 .chip.selected {
   background: var(--bg-active);
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .btn-primary {
@@ -315,7 +315,7 @@ label.row {
   align-items: center;
   gap: var(--space-1h);
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: var(--accent-text);
   color: var(--on-accent);
 }
 
@@ -609,8 +609,8 @@ label.row {
 }
 
 .preset-row .preset-btn.selected {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--accent-text);
+  color: var(--accent-text);
 }
 
 details.form-field > summary {
@@ -639,8 +639,8 @@ details.form-field[open] {
 
 .preset-btn:hover {
   background: var(--bg-hover);
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--accent-text);
+  color: var(--accent-text);
 }
 
 /* Curated model selection cards */
@@ -674,7 +674,7 @@ details.form-field[open] {
 }
 
 .model-card.selected {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
   background: color-mix(in srgb, var(--accent) 10%, var(--bg-main));
 }
 
@@ -683,7 +683,7 @@ details.form-field[open] {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .model-card-name {
@@ -817,7 +817,7 @@ details.form-field[open] {
   padding: 1px var(--space-2);
   border-radius: var(--radius-pill);
   background: var(--bg-active);
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: var(--fs-xs);
   font-weight: 500;
 }
@@ -927,7 +927,7 @@ details.form-field[open] {
 }
 
 .provider.selected {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
   background: var(--bg-active);
 }
 
@@ -1115,7 +1115,7 @@ details.form-field[open] {
 
 .perm-check:checked {
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .perm-check:checked::after {

@@ -30,7 +30,7 @@
 }
 
 .tab[aria-selected="true"] svg {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .settings-search {
@@ -337,7 +337,7 @@
 }
 
 .nav-voice-hero svg {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 /* Which AI answers: a quiet line that is also the way back to the guide */

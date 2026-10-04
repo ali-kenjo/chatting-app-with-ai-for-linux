@@ -17,6 +17,7 @@
   --border: #3c4043;
   --link: #8ab4f8;
   --focus: #8ab4f8;
+  --accent-text: var(--accent); /* the accent where it is text or a thin icon: darker on the light theme */
   --danger: #f28b82;
   --danger-border: #5c2b29;
   --danger-bg: #2a1c1c;
@@ -121,6 +122,7 @@
   --border: #d3d7dc;
   --link: #0b57d0;
   --focus: #0b57d0;
+  --accent-text: color-mix(in srgb, var(--accent) 50%, #000);
   --danger: #c5221f;
   --danger-border: #f2b8b5;
   --danger-bg: #fce8e6;

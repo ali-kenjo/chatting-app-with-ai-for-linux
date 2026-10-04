@@ -15,6 +15,7 @@ const LANGS = flag("langs", "en,ar").split(",");
 const THEMES = flag("themes", "dark,light").split(",");
 const WIDTH = Number(flag("width", 1280));
 const REPORT = flag("report", "");
+const ACCENT = flag("accent", ""); // one of the accent colours of Settings → Appearance, e.g. #f59e0b
 const FAIL_ON = args.includes("--all-impacts") ? ["minor", "moderate", "serious", "critical"] : ["serious", "critical"];
 
 const axeSource = fs.readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
@@ -41,14 +42,14 @@ async function main() {
     for (const theme of THEMES) {
       // First run: nothing is set up yet
       await h.removeBrains();
-      await h.setLook({ theme, width: WIDTH, lang, onboarding: false });
+      await h.setLook({ theme, width: WIDTH, lang, onboarding: false, accent: ACCENT });
       await scan("first-run", lang, theme);
 
-      await h.setLook({ theme, width: WIDTH, lang });
+      await h.setLook({ theme, width: WIDTH, lang, accent: ACCENT });
       await scan("start-no-ai", lang, theme);
 
       await h.addLocalBrain();
-      await h.setLook({ theme, width: WIDTH, lang });
+      await h.setLook({ theme, width: WIDTH, lang, accent: ACCENT });
       await scan("start", lang, theme);
 
       await page.type("#composer-input", "Show me code, math and a diagram");

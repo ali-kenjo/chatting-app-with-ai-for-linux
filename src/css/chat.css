@@ -59,7 +59,7 @@
 }
 
 .composer.drop-active {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
   background: var(--bg-active);
 }
 
@@ -226,7 +226,7 @@
   margin-top: -2px;
   border-radius: 50%;
   background: color-mix(in srgb, var(--accent) 16%, transparent);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .msg-avatar svg {
@@ -312,7 +312,7 @@
 }
 
 .msg-action.on {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .msg-action[data-action="like"].on {
@@ -328,7 +328,7 @@
 }
 
 .msg-action.done {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .msg-action.busy {
@@ -524,7 +524,7 @@
 }
 
 .jump-latest:hover {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .jump-latest svg {
@@ -958,7 +958,7 @@ mark.find-hit.current {
 }
 
 .code-copy.done {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .code-copy svg {
