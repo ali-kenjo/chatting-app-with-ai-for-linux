@@ -16,6 +16,12 @@
   - With a token (kept in the keyring, never in backups): **GitHub** (your repos, issues, pull requests, files, notifications; opening an issue asks first), **Notion** (search, read, write pages; writing asks first), **Todoist** and **Home Assistant** (lights, heating, blinds, media and scenes by voice; locks, alarms and covers always ask; works in Private mode on your own network).
   - With Google sign-in: **YouTube** (your channel's numbers, your videos' views and comments, YouTube search), **Google Tasks**, reading a whole email and saving **Gmail drafts**, and Calendar for any dates, with changing and deleting events (asks first). Sign out and in again once to allow them.
   - **Any other app through MCP**: add an MCP server (a program on this computer, or an address with a token) and its tools are offered to the AI; ready-made starts for a browser (Playwright), code docs (Context7), Git, files, a knowledge graph, fetch and GitHub's own MCP server. Every action asks first unless you trust the app (all its tools, or the read-only ones).
+- **Builder mode** (Settings → Builder): build websites, apps and SaaS products together, inside the folders you allow.
+  - Code tools: change part of a file (instead of rewriting it), search code, read lines, see a project's tree.
+  - Project starters: a website, a SaaS landing page (hero, features, pricing, FAQ), a Node.js API with tests, a React app (Vite), and Next.js through its official creator.
+  - Running commands (installs, tests, builds, git, dev servers in the background) in five modes: **Off**, **Suggest only**, **Ask every time**, **Smart** (safe everyday commands run by themselves, the rest ask) and **Auto** (everything except risky commands, which always ask: sudo, deleting outside the project, git push, ssh, piping downloads into a shell…). Your own "may also run" and "never without asking" lists, a time limit, and no API keys passed to commands. Private mode always asks.
+  - **Live preview**: a website folder served on this computer, as a link; dev servers' addresses come back too. Settings → Builder shows what's running, with Stop.
+- **Gemini overloaded?** Another Gemini model answers instead of an error.
 - **Local AIs get the essential tools** (Settings → AI control → Tools for a local AI), so small models stay focused and keep room in their memory; or all of them.
 - **It speaks first**: voice mode opens with a greeting that picks up from last time, in Studio and Instant voice too.
 - **`npm run update`**: tests, backs up, builds and installs the desktop app in one step.

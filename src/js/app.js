@@ -13,6 +13,7 @@ import "./activities.js";
 import "./episodes.js";
 import "./life.js";
 import "./apps.js";
+import "./builder.js";
 import "./composer.js";
 import "./chat.js";
 import "./auth.js";

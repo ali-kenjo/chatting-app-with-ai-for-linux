@@ -135,6 +135,10 @@ export const api = {
     remove: (id) => call("DELETE", `/api/mcp/${encodeURIComponent(id)}`),
     restart: (id) => call("POST", `/api/mcp/${encodeURIComponent(id)}/restart`),
   },
+  builder: {
+    running: () => call("GET", "/api/builder/running"),
+    stop: (id) => call("POST", `/api/builder/${encodeURIComponent(id)}/stop`),
+  },
   life: {
     today: () => call("GET", "/api/life/today"),
     tasks: (done = false) => call("GET", `/api/life/tasks${done ? "?done=1" : ""}`),

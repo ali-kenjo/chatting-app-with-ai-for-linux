@@ -12,6 +12,8 @@ const episodes = require("./episodes");
 const life = require("./life");
 const connectors = require("./connectors");
 const mcp = require("./mcp");
+const builder = require("./builder");
+const templates = require("./templates");
 
 const str = (description) => ({ type: "STRING", description });
 const num = (description) => ({ type: "NUMBER", description });
@@ -214,6 +216,39 @@ const LIFE_TOOLS = {
   ),
 };
 
+// Builder mode (builder.js): code tools, starters, commands, preview; inside the allowed folders
+const BUILDER_TOOLS = {
+  edit_file_part: fn(
+    "edit_file_part",
+    "Change part of a text file: replace an exact piece of text with new text. Better than edit_file for code: read the file first and copy the exact lines (with their spaces) to replace.",
+    { path: str("File path"), find: str("The exact text to replace (must be in the file once)"), replace: str("The new text"), all: { type: "BOOLEAN", description: "Replace every place it appears" } },
+    ["path", "find", "replace"]
+  ),
+  read_file_lines: fn("read_file_lines", "Read part of a (big) text file, with line numbers.", { path: str("File path"), start_line: num("First line (default 1)"), end_line: num("Last line (default start + 299)") }, ["path"]),
+  search_code: fn(
+    "search_code",
+    "Search the files in a folder (skipping node_modules, .git, build output) for text, with file names and line numbers.",
+    { path: str("Folder (or file) to search"), query: str("Text to find"), regex: { type: "BOOLEAN", description: "query is a regular expression" }, file_ending: str("Optional: only files ending like this, e.g. .js") },
+    ["path", "query"]
+  ),
+  project_tree: fn("project_tree", "Show a project's files and folders a few levels deep.", { path: str("The project folder"), depth: num("Levels (default 3)") }, ["path"]),
+  create_project: fn(
+    "create_project",
+    `Start a new project from a starter in a new folder: ${templates.describe()}.`,
+    { template: { type: "STRING", enum: templates.names(), description: "Which starter" }, name: str("Project name (becomes the folder name)"), folder: str("Optional: the folder to put it in (default: the first allowed folder)") },
+    ["template", "name"]
+  ),
+  run_command: fn(
+    "run_command",
+    "Run a shell command in a project folder: install packages, run tests and builds, git, scaffolders. Use background for things that keep running (dev servers); their address comes back.",
+    { command: str("The command, e.g. 'npm install' or 'npm test'"), folder: str("The folder to run it in"), reason: str("One short line: why (shown to the user when it asks)"), background: { type: "BOOLEAN", description: "Keep it running (a dev server, a watcher)" }, timeout_seconds: num("For normal commands: how long it may take (default from Settings)") },
+    ["command", "folder"]
+  ),
+  command_output: fn("command_output", "The latest output of a command running in the background.", { id: str("Its id") }),
+  stop_command: fn("stop_command", "Stop a command running in the background, or a preview.", { id: str("Its id") }),
+  preview_site: fn("preview_site", "Serve a website folder (with index.html) on this computer and get its address, to look at it in the browser.", { folder: str("The folder with index.html (for a built app: its dist or build folder)") }),
+};
+
 // Memory of earlier conversations (episodes.js); all on this computer
 const RECALL_TOOLS = {
   recall_conversations: fn(
@@ -319,6 +354,16 @@ function declarations(settings, { voice = false, robot: onScreen = false, nonBlo
     list.push(NOTE_TOOLS.save_note, NOTE_TOOLS.delete_note);
   }
   if (settings.life?.enabled !== false && !hidden) list.push(...Object.values(LIFE_TOOLS));
+  // Builder mode: needs an allowed folder; commands only in their mode
+  const b = settings.builder || {};
+  if (b.enabled !== false && p.folders.length && !hidden) {
+    if (p.files.edit) list.push(BUILDER_TOOLS.edit_file_part);
+    if (p.files.read) list.push(BUILDER_TOOLS.read_file_lines, BUILDER_TOOLS.search_code);
+    if (p.dirs.read) list.push(BUILDER_TOOLS.project_tree);
+    if (p.files.create && p.dirs.create) list.push(BUILDER_TOOLS.create_project);
+    if (b.commands && b.commands !== "off") list.push(BUILDER_TOOLS.run_command, BUILDER_TOOLS.command_output, BUILDER_TOOLS.stop_command);
+    if (p.files.read) list.push(BUILDER_TOOLS.preview_site);
+  }
   if (settings.companion?.recall !== false && !hidden) {
     list.push(RECALL_TOOLS.recall_conversations);
     if (settings.companion?.followUps !== false) list.push(RECALL_TOOLS.resolve_follow_up);
@@ -334,6 +379,7 @@ function declarations(settings, { voice = false, robot: onScreen = false, nonBlo
 // their context. With "Local AI tools: essential" (Settings → AI control) they
 // get these, plus file tools and the robot; "all" gives them everything.
 const ESSENTIAL = new Set([
+  "edit_file_part", "read_file_lines", "search_code", "project_tree", "create_project", "run_command", "command_output", "stop_command", "preview_site",
   "save_note", "recall_conversations", "resolve_follow_up", "write_draft",
   "add_task", "update_task", "list_tasks", "set_reminder", "list_reminders", "log_habit", "daily_briefing",
   "get_weather", "web_search", "read_webpage",
@@ -412,6 +458,106 @@ async function planFileAction(name, args, settings) {
     }
   }
   return null;
+}
+
+// ---------- Builder mode (builder.js) ----------
+async function runBuilder(name, args, ctx) {
+  const s = ctx.settings;
+  const p = s.permissions;
+  const b = s.builder || {};
+  if (b.enabled === false) throw new Error("Builder mode is off (Settings → Builder).");
+  const at = (x) => files.resolve(x, p.folders);
+  const need = (ok, what) => {
+    if (!ok) throw new Error(`You don't have permission to ${what}. The user can allow it in Settings → AI control.`);
+  };
+  const say = (line) => ctx.onActivity?.(line);
+  // Changing a file asks, like the other file tools, when "Ask before acting" is on
+  const ask = async (summary, details = { type: "file" }) => {
+    if (p.askBeforeActing && !(await ctx.confirm(summary, details))) {
+      say(`You declined: ${summary}`);
+      throw Object.assign(new Error("The user declined this action."), { declined: true });
+    }
+  };
+  switch (name) {
+    case "edit_file_part": {
+      need(p.files.edit, "edit files");
+      const { real } = await at(args.path);
+      await ask(`change part of ${files.shown(real)}`);
+      const r = await builder.editPart(real, args.find, args.replace, { all: args.all === true });
+      say(`Edited ${r.path}${r.replaced > 1 ? ` (${r.replaced} places)` : ""}`);
+      return { ok: true, ...r };
+    }
+    case "read_file_lines": {
+      need(p.files.read, "read files");
+      const { real } = await at(args.path);
+      const r = await builder.readLines(real, args.start_line, args.end_line);
+      say(`Read ${r.path} (lines ${r.from}-${r.to})`);
+      return { ok: true, ...r };
+    }
+    case "search_code": {
+      need(p.files.read, "read files");
+      const { real } = await at(args.path);
+      const r = await builder.search(real, args.query, { regex: args.regex === true, glob: args.file_ending || "" });
+      say(`Searched ${files.shown(real)} for "${args.query}": ${r.matches.length} match${r.matches.length === 1 ? "" : "es"}`);
+      return { ok: true, ...r };
+    }
+    case "project_tree": {
+      need(p.dirs.read, "see inside folders");
+      const { real } = await at(args.path);
+      return { ok: true, ...(await builder.tree(real, Math.min(6, Math.max(1, Number(args.depth) || 3)))) };
+    }
+    case "create_project": {
+      need(p.files.create && p.dirs.create, "create files and folders");
+      const { real } = await at(args.folder || p.folders[0]);
+      await ask(`create the project "${args.name}" (${args.template}) in ${files.shown(real)}`);
+      const r = await builder.createProject(real, args.name, args.template);
+      if (r.command) return { ok: true, nextStep: "Run this with run_command in the given folder", command: r.command, folder: r.cwd, note: r.note };
+      say(`Created the project ${r.path}`);
+      return { ok: true, ...r };
+    }
+    case "run_command": {
+      const { real } = await at(args.folder);
+      if ((await files.kind(real)) !== "folder") throw new Error("That folder doesn't exist.");
+      const command = String(args.command || "").trim();
+      if (!command) throw new Error("Which command?");
+      if (command.length > 2000) throw new Error("That command is too long.");
+      const { action, risky } = await builder.decide(command, s, real);
+      if (action === "off") throw new Error("Running commands is off. The user can turn it on in Settings → Builder.");
+      if (action === "suggest") {
+        say(`Suggested: ${command}`);
+        return { ok: true, suggestedOnly: true, command, folder: files.shown(real), note: "Commands are in 'suggest only' mode: show the user the command so they can run it themselves." };
+      }
+      if (action === "ask" && !(await ctx.confirm(`Run ${command}`, { type: "command", command, cwd: files.shown(real), reason: [args.reason, risky ? "⚠️ This can change or delete things outside the project." : ""].filter(Boolean).join(" ") }))) {
+        say(`You declined: ${command}`);
+        return { error: "The user declined running this command." };
+      }
+      if (args.background === true) {
+        const r = await builder.runCommand(command, real, { background: true });
+        say(`Started ${command}${r.url ? ` → ${r.url}` : ""} (id ${r.id})`);
+        return { ok: true, ...r };
+      }
+      say(`Running ${command}…`);
+      const r = await builder.runCommand(command, real, { timeout: args.timeout_seconds || b.timeout });
+      say(`${r.exitCode === 0 ? "✓" : "✗"} ${command} (${r.timedOut ? "stopped: took too long" : `exit ${r.exitCode}`}, ${r.seconds} s)`);
+      return { ok: r.exitCode === 0, ...r };
+    }
+    case "command_output":
+      return { ok: true, ...builder.commandOutput(args.id) };
+    case "stop_command": {
+      const r = builder.stop(args.id);
+      say(`Stopped ${r.stopped}`);
+      return r;
+    }
+    case "preview_site": {
+      need(p.files.read, "read files");
+      const { real } = await at(args.folder);
+      if ((await files.kind(real)) !== "folder") throw new Error("That folder doesn't exist.");
+      const r = await builder.preview(real);
+      say(`Preview: ${r.url}`);
+      return { ok: true, ...r, note: "Give the user this address as a link; it works on this computer only." };
+    }
+  }
+  throw new Error(`Unknown tool ${name}.`);
 }
 
 // ---------- Your life (life.js) ----------
@@ -551,6 +697,9 @@ async function run(name, args, ctx) {
 
     // Tasks, reminders, habits, journal
     if (LIFE_NAMES.has(name)) return await runLife(name, args, ctx);
+
+    // Builder mode
+    if (Object.hasOwn(BUILDER_TOOLS, name)) return await runBuilder(name, args, ctx);
 
     // Connected apps
     if (connectors.find(name)) return await connectors.run(name, args, ctx);
@@ -746,7 +895,7 @@ async function run(name, args, ctx) {
 
     throw new Error(`Unknown tool ${name}.`);
   } catch (err) {
-    ctx.onActivity?.(`Couldn't complete ${name.replace(/_/g, " ")}: ${err.message}`);
+    if (!err.declined) ctx.onActivity?.(`Couldn't complete ${name.replace(/_/g, " ")}: ${err.message}`);
     return { error: err.message };
   }
 }

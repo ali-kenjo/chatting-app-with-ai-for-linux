@@ -35,7 +35,13 @@ async function toError(res) {
     err.retryDelay = retryDelay;
     return err;
   }
-  if (res.status >= 500) return new GeminiError("Gemini is having trouble right now. Try again in a moment.");
+  if (res.status >= 500) {
+    // "High demand" on one model: another model usually answers (see withFallback)
+    const err = new GeminiError("Gemini is having trouble right now. Try again in a moment.");
+    err.status = res.status;
+    err.overloaded = res.status === 503 || /high demand|overloaded|unavailable/i.test(detail);
+    return err;
+  }
   return new GeminiError(detail || `Gemini returned an error (${res.status}).`);
 }
 
@@ -121,7 +127,7 @@ const FALLBACK_MODELS = [
 // later requests skip it instead of paying for another failed round trip.
 const unavailable = new Map(); // key → Set of model names
 
-const canFallBack = (err) => err.status === 429 || err.status === 404 || /quota|rate limit|not available|not found/i.test(err.message);
+const canFallBack = (err) => err.status === 429 || err.status === 404 || err.overloaded === true || /quota|rate limit|not available|not found/i.test(err.message);
 
 // Runs attempt(model) with the brain's model, then with the fallbacks the key
 // has, until one works. An error with `final` set (e.g. after part of a reply
@@ -144,7 +150,7 @@ async function withFallback(key, model, attempt) {
       lastError = err;
       if (err.name === "AbortError" || err.final || !canFallBack(err)) throw err;
       if (err.status === 404) unavailable.set(key, skip.add(current));
-      logger.warn(`Gemini model ${current} ${err.status === 404 ? "isn't available" : "hit a limit"}, trying the next one`);
+      logger.warn(`Gemini model ${current} ${err.status === 404 ? "isn't available" : err.overloaded ? "is overloaded" : "hit a limit"}, trying the next one`);
     }
   }
   throw lastError || new GeminiError("Gemini's rate limit or quota was reached. Wait a moment and try again.");
