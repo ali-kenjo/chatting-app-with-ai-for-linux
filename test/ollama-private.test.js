@@ -212,7 +212,7 @@ describe("Ollama brains and Private mode", () => {
       assert.match(refused.error, /Private mode/);
 
       assert.match((await api("GET", "/api/news")).json.error, /Private mode/);
-      assert.deepStrictEqual((await api("GET", "/api/firebase-config")).json, {});
+      assert.strictEqual((await api("GET", "/api/firebase-config")).json.apiKey, undefined);
       const live = require("../server/live");
       assert.match(live.liveError("PRIVATE_MODE"), /Private mode/);
 

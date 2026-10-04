@@ -1074,6 +1074,23 @@
           </div>
           <p class="form-error" id="gsi-error" hidden></p>
 
+          <details class="form-field" id="gsi-setup">
+            <summary class="row-label">Set up Google sign-in (one time)</summary>
+            <span class="row-desc">Gmail, Calendar and Drive need a free Firebase project that belongs to you. Nothing is shared with anyone else.</span>
+            <ol class="row-desc setup-steps">
+              <li>Open <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer">console.firebase.google.com</a>, create a project, and add a <strong>Web app</strong> (Project settings → Your apps).</li>
+              <li>Under <strong>Authentication → Sign-in method</strong>, turn on <strong>Google</strong>.</li>
+              <li>Under <strong>Authentication → Settings → Authorized domains</strong>, add <code>127.0.0.1</code> and <code>localhost</code>.</li>
+              <li>Copy the web app's <code>firebaseConfig</code> from Project settings and paste it here:</li>
+            </ol>
+            <textarea class="field textarea" id="gsi-config" rows="6" spellcheck="false" autocomplete="off" aria-label="Firebase web app config" placeholder='const firebaseConfig = { apiKey: "AIza…", authDomain: "…", projectId: "…", appId: "…" };'></textarea>
+            <div class="form-test-bar">
+              <button type="button" class="btn small btn-primary" id="gsi-config-save">Save</button>
+              <button type="button" class="btn small" id="gsi-config-remove" hidden>Remove</button>
+              <span class="test-feedback" id="gsi-config-status"></span>
+            </div>
+          </details>
+
           <div class="subhead">
             <div>
               <div class="subhead-title">Enabled Capabilities</div>

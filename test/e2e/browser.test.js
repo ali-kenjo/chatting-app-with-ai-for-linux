@@ -125,6 +125,27 @@ describe("The page in Chrome", { skip: !CHROME && "no Chrome found" }, () => {
     assert.deepStrictEqual(external, []);
   });
 
+  test("Google sign-in says it needs a one-time setup, and the form saves a pasted Firebase config", async () => {
+    await page.evaluate(() => {
+      document.getElementById("settings-btn")?.click();
+      [...document.querySelectorAll(".modal-nav .tab")].find((t) => /Connected Apps/.test(t.textContent))?.click();
+    });
+    await page.waitForSelector("#gsi-setup", { visible: true });
+    await page.waitForFunction(() => document.getElementById("gsi-setup").dataset.state === "not-configured");
+    assert.strictEqual(await page.$eval("#gsi-setup", (el) => el.open), true, "the setup is open when it's needed");
+    await page.click("#gsi-signin-btn");
+    await page.waitForFunction(() => !document.getElementById("gsi-error").hidden);
+    assert.match(await page.$eval("#gsi-error", (el) => el.textContent), /one-time setup/);
+    await page.$eval("#gsi-config", (el) => (el.value = "nonsense"));
+    await page.click("#gsi-config-save");
+    await page.waitForFunction(() => /Firebase web config/.test(document.getElementById("gsi-config-status").textContent));
+    await page.$eval("#gsi-config", (el) => (el.value = 'const firebaseConfig = { apiKey: "AIzaSyDUMMYDUMMYDUMMYDUMMYDUMMYDUMMY123", projectId: "demo", appId: "1:2:web:3" };'));
+    await page.click("#gsi-config-save");
+    await page.waitForFunction(() => /Saved/.test(document.getElementById("gsi-config-status").textContent));
+    await fetch(`${base}/api/firebase-config`, { method: "DELETE" });
+    await page.evaluate(() => document.getElementById("settings-close").click());
+  });
+
   test("the settings work on a phone screen", async () => {
     await page.setViewport({ width: 375, height: 812, isMobile: true });
     await openAiControl();

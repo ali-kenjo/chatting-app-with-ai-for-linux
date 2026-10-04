@@ -43,7 +43,7 @@ sudo apt install ./dist/friends_0.2.0_amd64.deb
 - **Updating the installed app means building and installing a new `.deb`** (`npm run dist`, then `sudo apt install ./dist/friends_*.deb`). An installed app doesn't change when you change the source.
 - On a Wayland session it runs natively (X11 otherwise). The window remembers its size and position; a second launch focuses the first window.
 - The window only shows the app itself. The microphone and camera are granted to that page only, links open in your browser, and Google sign-in gets its own popup.
-- Google sign-in is optional and never loaded in Private mode. Copy `firebase-applet-config.example.json` to `firebase-applet-config.json`, fill in your own Firebase project's web config, and add `127.0.0.1` (and `localhost`) under Firebase console → Authentication → Settings → Authorized domains.
+- Google sign-in (Gmail, Calendar, Drive) is optional, needs a free Firebase project of your own, and is never loaded in Private mode. Set it up in **Settings → Connected Apps → Set up Google sign-in**: the steps are listed there, and you paste the web app's `firebaseConfig` from the Firebase console (it's kept in `~/.config/friends/firebase-applet-config.json`). Add `127.0.0.1` and `localhost` under Authentication → Settings → Authorized domains. (A `firebase-applet-config.json` next to the app, as in `firebase-applet-config.example.json`, still works.)
 
 ### 4. Docker
 

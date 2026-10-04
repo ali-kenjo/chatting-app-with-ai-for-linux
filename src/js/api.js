@@ -92,6 +92,11 @@ export const api = {
       call("PATCH", `/api/chats/${encodeURIComponent(id)}/messages/${encodeURIComponent(messageId)}`, changes),
     suggestions: (id) => call("POST", `/api/chats/${encodeURIComponent(id)}/suggestions`),
   },
+  google: {
+    config: () => call("GET", "/api/firebase-config"),
+    saveConfig: (config) => call("PUT", "/api/firebase-config", { config }),
+    removeConfig: () => call("DELETE", "/api/firebase-config"),
+  },
   local: {
     servers: () => call("GET", "/api/local/servers"),
     voice: () => call("GET", "/api/voice/local"),
