@@ -25,7 +25,7 @@
 - **Local AIs get the essential tools** (Settings → AI control → Tools for a local AI), so small models stay focused and keep room in their memory; or all of them.
 - **It speaks first**: voice mode opens with a greeting that picks up from last time, in Studio and Instant voice too.
 - **`npm run update`**: tests, backs up, builds and installs the desktop app in one step.
-- **Releases**: tagging a version builds the `.deb` on GitHub and publishes it with a checksum; Dependabot proposes dependency updates.
+- **Releases**: tagging a version builds the `.deb` on GitHub and publishes it with a checksum.
 
 ### Changed
 - Settings → AI personality is now Settings → Characters. A name you gave the AI before becomes your own character, with the voice you'd picked.
