@@ -104,13 +104,19 @@ async function launch() {
   const addLocalBrain = async () => {
     if (!((await api("GET", "/api/brains")).brains || []).length) await api("POST", "/api/brains", { provider: "local", protocol: "ollama", name: "llama3.2", baseUrl: fakeUrl, model: "llama3.2:latest", contextSize: 8192 });
   };
+  let forced = null;
+  const stopForcingLanguage = async () => {
+    if (forced) await page.removeScriptToEvaluateOnNewDocument(forced.identifier);
+    forced = null;
+  };
   // Theme, language and viewport; onboarding off unless asked, then a fresh load
   const setLook = async ({ theme = "dark", width = 1280, height, lang = "en", onboarding = true } = {}) => {
     const s = await api("GET", "/api/settings");
     await api("PUT", "/api/settings", { ...s, theme: { ...s.theme, appearance: theme }, ui: { ...(s.ui || {}), language: lang }, onboarding: { ...(s.onboarding || {}), done: onboarding } });
     await page.setViewport({ width, height: height || (width < 500 ? 844 : 900), deviceScaleFactor: 1, isMobile: width < 500, hasTouch: width < 500 });
     // The language the page starts in: the machine's own language would otherwise decide
-    await page.evaluateOnNewDocument((l) => {
+    await stopForcingLanguage();
+    forced = await page.evaluateOnNewDocument((l) => {
       try {
         localStorage.setItem("friends.language", l);
       } catch {}
@@ -126,7 +132,7 @@ async function launch() {
     fs.rmSync(tempDir, { recursive: true, force: true });
   };
 
-  return { base, page, api, behave, fakeUrl, tempDir, setLook, addLocalBrain, removeBrains, close, REPLY };
+  return { base, page, api, behave, fakeUrl, tempDir, setLook, stopForcingLanguage, addLocalBrain, removeBrains, close, REPLY };
 }
 
 module.exports = { launch, sleep, root };

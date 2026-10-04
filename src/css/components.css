@@ -765,3 +765,24 @@ kbd {
     padding-inline: var(--space-4);
   }
 }
+
+/* ---------- Longer words (German), narrower windows: nothing sticks out ---------- */
+.ws-account-card {
+  flex-wrap: wrap;
+}
+
+.ws-account-actions {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.gsi-material-button {
+  max-width: 100%;
+}
+
+.gsi-material-button-contents {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

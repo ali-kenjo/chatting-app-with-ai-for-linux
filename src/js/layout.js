@@ -59,9 +59,9 @@ function greet() {
   const s = getSettings();
   const name = s?.personality.userName?.trim();
   const hour = new Date().getHours();
-  const part = hour < 5 ? "Hello" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const part = hour < 5 ? t("Hello") : hour < 12 ? t("Good morning") : hour < 18 ? t("Good afternoon") : t("Good evening");
   const el = document.getElementById("greeting");
-  el.textContent = name ? `${part}, ${name}` : part;
+  el.textContent = name ? t("{greeting}, {name}", { greeting: part, name }) : part;
   // Who's here to talk
   const who = s?.characters?.list.find((c) => c.id === s.characters.active);
   el.title = who ? `${who.name}: ${who.tagline}` : "";
