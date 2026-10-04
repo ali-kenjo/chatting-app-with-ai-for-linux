@@ -856,3 +856,25 @@ kbd {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ---------- Today on a phone: the title and the close button on the first line, the tabs below ---------- */
+.life-tabs {
+  padding: 3px; /* room for the focus ring */
+  margin: -3px;
+}
+
+@media (max-width: 560px) {
+  .life-head {
+    padding-inline: var(--space-4) var(--space-2);
+  }
+
+  .life-head h2 {
+    flex: 1;
+    font-size: var(--fs-xl);
+  }
+
+  .life-tabs {
+    order: 3;
+    flex: 1 1 100%;
+  }
+}

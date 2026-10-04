@@ -134,6 +134,7 @@ async function main() {
         await page.type("#find-input", "code").catch(() => {});
         await sleep(250);
         await shot("08-find", theme, width, lang);
+        await page.keyboard.press("Escape"); // clears the marks as a person would
         await closeAll();
 
         // Keyboard shortcuts
