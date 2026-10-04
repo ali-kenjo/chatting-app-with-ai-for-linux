@@ -42,7 +42,7 @@ The same app in its own window, with a launcher entry and icon. It runs the help
 ./scripts/install.sh --desktop          # dependencies + the Electron download (~100 MB)
 npm run desktop                         # try it from the project folder (runs with --no-sandbox)
 npm run dist                            # builds dist/friends_<version>_amd64.deb
-sudo apt install ./dist/friends_0.3.1_amd64.deb
+sudo apt install ./dist/friends_0.3.2_amd64.deb
 ```
 
 Or download the `.deb` from the [Releases](../../releases) page. After changing the source, `npm run update` tests it, backs up your data, builds the `.deb` and installs it (it asks for your password).
@@ -81,7 +81,7 @@ To also set up local voice during the install: `./scripts/install.sh --voice` (o
 | The first local reply takes a minute | The model is being loaded into memory; later replies are fast. *Keep the model loaded* in the brain's settings keeps it ready |
 | Long chats forget the beginning | Raise the **Context size** of an Ollama brain (Settings → AI control → edit the brain) |
 | A local AI can't listen | Set up **Local voice** (Settings → AI control, or `npm run voice:setup`) |
-| Google asks you to sign in every time | Set up **Stay signed in** (Settings → Connected Apps): you sign in once |
+| Google asks you to sign in every time | Update to 0.3.2 or newer (it renews the sign-in by itself); if it still asks, set up **Stay signed in for good** (Settings → Connected Apps) |
 | Gemini is slow or doesn't answer | The free tier allows only a few requests a day per model. Friends switches to other Gemini models by itself and says when they're all used up; turning on billing for your key in Google AI Studio raises the limits a lot |
 
 ---
@@ -257,7 +257,7 @@ Settings → **Connected Apps**. Each app has its own card: switch it on, set it
 | Home Assistant | address + long-lived token | lights, switches, heating, blinds, media and scenes by voice; locks, alarms and covers always ask; works in Private mode on your own network |
 | **Any app (MCP)** | an MCP server | its tools; each action asks unless you trust the app |
 
-**Stay signed in to Google.** Google's normal sign-in only lasts until Friends closes (at most an hour). With an OAuth client of your own, you sign in once: in your Firebase project's Google Cloud console, create a client of type **Desktop app** (Google Auth Platform → Clients), paste its ID and secret into Settings → Connected Apps → **Stay signed in**, and press **Publish app** under Audience (otherwise Google ends the sign-in after 7 days). Friends keeps the refresh token in your system keyring and renews access by itself, also for voice mode and the morning briefing. The steps are listed in the app.
+**Staying signed in to Google.** Google's sign-in gives Friends access for an hour at a time. Friends renews it by itself when it opens and every 50 minutes (a sign-in window may flash up for a moment and close itself), so you normally sign in only once. If that doesn't work for you, there's a way that needs no window at all, with an OAuth client of your own: in your Firebase project's Google Cloud console, create a client of type **Desktop app** (Google Auth Platform → Clients), paste its ID and secret into Settings → Connected Apps → **Stay signed in**, and press **Publish app** under Audience (otherwise Google ends the sign-in after 7 days). Friends keeps the refresh token in your system keyring and renews access by itself, also for voice mode and the morning briefing. The steps are listed in the app.
 
 Tokens are kept in your system keyring (never in backups or sent to the page). Google needs YouTube Data API v3 and Google Tasks API turned on in your Firebase project's Google Cloud project, and one sign-out and sign-in after updating (for the new permissions).
 

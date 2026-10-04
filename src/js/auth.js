@@ -108,12 +108,43 @@ export async function initAuth() {
         cachedAccessToken = null;
       }
       announce();
+      // Firebase remembers who you are, but not Google's access: get it again without asking
+      if (user && !cachedAccessToken) quietRenew();
     });
 
     return authInstance;
   } catch (err) {
     console.error("Failed to initialize auth:", err);
     return null;
+  }
+}
+
+// Google's access (an hour long) again, without asking: a sign-in popup with
+// prompt=none closes by itself when you're still signed in to Google and have
+// allowed Friends before. If Google wants you to choose, nothing happens and
+// "Sign in with Google" stays there as before. Renewed every 50 minutes.
+let quietTimer = null;
+let quietRunning = false;
+async function quietRenew() {
+  if (quietRunning || isSigningIn || kept.connected || !authInstance || !currentUser?.email) return;
+  quietRunning = true;
+  try {
+    const { signInWithPopup, GoogleAuthProvider } = await loadFirebase();
+    const quiet = new GoogleAuthProvider();
+    for (const scope of SCOPES) quiet.addScope(scope);
+    quiet.setCustomParameters({ prompt: "none", login_hint: currentUser.email });
+    const result = await signInWithPopup(authInstance, quiet);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (!credential?.accessToken) return;
+    cachedAccessToken = credential.accessToken;
+    currentUser = result.user;
+    announce();
+    clearTimeout(quietTimer);
+    quietTimer = setTimeout(quietRenew, 50 * 60 * 1000);
+  } catch (err) {
+    console.info("Couldn't renew Google's access quietly:", err?.code || err?.message);
+  } finally {
+    quietRunning = false;
   }
 }
 
@@ -167,6 +198,8 @@ export async function googleSignIn() {
     cachedAccessToken = credential.accessToken;
     currentUser = result.user;
     document.dispatchEvent(new CustomEvent("friends:auth-changed", { detail: { user: currentUser, hasToken: true } }));
+    clearTimeout(quietTimer);
+    quietTimer = setTimeout(quietRenew, 50 * 60 * 1000); // before the hour is up
     return { user: currentUser, accessToken: cachedAccessToken };
   } catch (err) {
     console.error("Sign-in failed:", err);
@@ -182,6 +215,7 @@ export async function logout() {
     clearInterval(renewTimer);
     kept = { ...kept, connected: false, account: null };
   }
+  clearTimeout(quietTimer);
   if (authInstance) {
     await (await loadFirebase()).signOut(authInstance);
   }

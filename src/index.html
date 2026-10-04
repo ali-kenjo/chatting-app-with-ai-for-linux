@@ -1173,8 +1173,8 @@
           <p class="form-error" id="gsi-error" hidden></p>
 
           <details class="form-field" id="gsi-kept">
-            <summary class="row-label">Stay signed in (recommended)</summary>
-            <span class="row-desc">Without this, Google's sign-in lasts until Friends closes (at most an hour). With an OAuth client of your own, you sign in once and stay signed in; the sign-in is kept in your system keyring.</span>
+            <summary class="row-label">Stay signed in for good (optional, advanced)</summary>
+            <span class="row-desc">You don't need this normally: once you've signed in, Friends renews Google's access by itself when it opens and every hour (a sign-in window may flash up for a moment). Set this up only if you still have to sign in again: with an OAuth client of your own, the sign-in is kept in your system keyring and needs no window at all.</span>
             <ol class="row-desc setup-steps">
               <li>Open <a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener noreferrer">console.cloud.google.com → Google Auth Platform → Clients</a> and pick your Firebase project at the top.</li>
               <li><strong>Create client</strong> → Application type <strong>Desktop app</strong> → name it Friends → Create. Copy the <strong>Client ID</strong> and <strong>Client secret</strong> into the boxes below.</li>

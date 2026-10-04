@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.2
+
+### Fixed
+- **No more signing in to Google every time**: when Friends opens (and every 50 minutes), it renews Google's access by itself, without asking, as long as you're still signed in to Google. "Stay signed in for good" with your own OAuth client is now only needed if that doesn't work.
+- "Sign in with Google" and "Disconnect" no longer show at the same time; anything hidden stays hidden.
+
 ## 0.3.1
 
 ### Added

@@ -5614,6 +5614,11 @@ details.form-field[open] {
   }
 }
 
+/* Hidden means hidden, whatever display a class gives it (the Google button set inline-flex) */
+[hidden] {
+  display: none !important;
+}
+
 /* ---------- Characters (src/js/characters.js) ---------- */
 .character-switch {
   position: absolute;
