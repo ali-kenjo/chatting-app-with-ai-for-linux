@@ -72,9 +72,26 @@ export function promptConfirmation(summary, details = {}) {
       body.textContent = (details.body || "").slice(0, 300);
       detailsEl.append(body);
     } else if (details.type === "calendar") {
-      row("Event:", details.summary, true);
-      row("Time:", `${details.start || ""} → ${details.end || ""}`);
+      if (details.summary) row("Event:", details.summary, true);
+      if (details.start || details.end) row("Time:", `${details.start || ""} → ${details.end || ""}`);
       if (details.location) row("Location:", details.location);
+    } else if (details.type === "app") {
+      // A connected app (Settings → Connected Apps), with what the AI wants to send it
+      row("App:", details.app, true);
+      if (details.args && Object.keys(details.args).length) {
+        const body = document.createElement("div");
+        body.className = "ws-detail-body";
+        body.textContent = JSON.stringify(details.args, null, 2).slice(0, 600);
+        detailsEl.append(body);
+      }
+    } else if (details.type === "command") {
+      // A command in builder mode (Settings → Builder)
+      row("In:", details.cwd);
+      const body = document.createElement("pre");
+      body.className = "ws-detail-body ws-detail-command";
+      body.textContent = details.command || "";
+      detailsEl.append(body);
+      if (details.reason) row("Why:", details.reason);
     }
 
     const cleanUp = (allowed) => {

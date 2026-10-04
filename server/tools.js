@@ -10,6 +10,8 @@ const news = require("./news");
 const robot = require("./robot");
 const episodes = require("./episodes");
 const life = require("./life");
+const connectors = require("./connectors");
+const mcp = require("./mcp");
 
 const str = (description) => ({ type: "STRING", description });
 const num = (description) => ({ type: "NUMBER", description });
@@ -45,10 +47,30 @@ const WORKSPACE_TOOLS = {
   ),
   get_calendar_events: fn(
     "get_calendar_events",
-    "Check your upcoming schedule and events on Google Calendar.",
-    { maxResults: num("Maximum number of upcoming events to return (1-20)") },
+    "Check the user's Google Calendar: upcoming events, or the events between two dates.",
+    { maxResults: num("Maximum number of events to return (1-50, default 10)"), from: str("Optional start date YYYY-MM-DD (default now)"), to: str("Optional end date YYYY-MM-DD") },
     []
   ),
+  update_calendar_event: fn(
+    "update_calendar_event",
+    "Change an event on Google Calendar (the user confirms first). Get the event id from get_calendar_events.",
+    { eventId: str("The event's id"), summary: str("New title"), start: str("New start (ISO 8601)"), end: str("New end (ISO 8601)"), location: str("New location"), description: str("New description") },
+    ["eventId"]
+  ),
+  delete_calendar_event: fn("delete_calendar_event", "Delete an event from Google Calendar (the user confirms first).", { eventId: str("The event's id") }),
+  read_gmail: fn("read_gmail", "Read one whole email (its full text) by the id search_gmail gave.", { id: str("The message id") }),
+  draft_gmail: fn(
+    "draft_gmail",
+    "Save an email as a draft in Gmail, for the user to review and send themselves.",
+    { to: str("Recipient email address"), subject: str("Subject line"), body: str("Message body text") }
+  ),
+  youtube_my_channel: fn("youtube_my_channel", "The user's own YouTube channel: subscribers, views, and their recent videos with views, likes and comments.", {}, []),
+  youtube_video: fn("youtube_video", "Details and numbers of a YouTube video (title, views, likes, comments, description, tags).", { video: str("Video id or link") }),
+  youtube_comments: fn("youtube_comments", "The top comments on a YouTube video (to see what viewers think or find ideas).", { video: str("Video id or link"), max: num("How many (default 20)") }, ["video"]),
+  youtube_search: fn("youtube_search", "Search YouTube for videos, channels or playlists (research, trends, competitors).", { query: str("What to search for"), type: { type: "STRING", enum: ["video", "channel", "playlist"], description: "Default video" } }, ["query"]),
+  google_tasks: fn("google_tasks", "The user's Google Tasks lists (synced with their phone).", { show_completed: { type: "BOOLEAN", description: "Also completed ones" } }, []),
+  google_add_task: fn("google_add_task", "Add a task to Google Tasks (shows up on their phone).", { title: str("The task"), notes: str("Optional details"), due: str("Optional due date YYYY-MM-DD") }, ["title"]),
+  google_complete_task: fn("google_complete_task", "Mark a Google Tasks task as done.", { id: str("The task's id"), listId: str("Its list id (default list if left out)") }, ["id"]),
   create_calendar_event: fn(
     "create_calendar_event",
     "Schedule a new event on Google Calendar. Requires user confirmation before adding.",
@@ -249,7 +271,8 @@ function robotEvent(name, args = {}) {
 // small local models focused and requests short).
 // options.onAir: co-host mode; with "nothing private on camera" the tools that
 // read your files, mail, calendar and memories are left out.
-function declarations(settings, { voice = false, robot: onScreen = false, nonBlocking = false, workspace = true, onAir = false } = {}) {
+// options.live: Gemini Live (it searches the web by itself, so no web_search).
+function declarations(settings, { voice = false, robot: onScreen = false, nonBlocking = false, workspace = true, onAir = false, live = false } = {}) {
   const p = settings.permissions;
   const list = [];
   const online = settings.privacy?.localOnly !== true; // Private mode keeps everything on this computer
@@ -271,11 +294,26 @@ function declarations(settings, { voice = false, robot: onScreen = false, nonBlo
       WORKSPACE_TOOLS.read_drive_file,
       WORKSPACE_TOOLS.get_calendar_events,
       WORKSPACE_TOOLS.create_calendar_event,
+      WORKSPACE_TOOLS.update_calendar_event,
+      WORKSPACE_TOOLS.delete_calendar_event,
       WORKSPACE_TOOLS.search_gmail,
+      WORKSPACE_TOOLS.read_gmail,
+      WORKSPACE_TOOLS.draft_gmail,
       WORKSPACE_TOOLS.send_gmail,
+      WORKSPACE_TOOLS.youtube_my_channel,
+      WORKSPACE_TOOLS.youtube_video,
+      WORKSPACE_TOOLS.youtube_comments,
+      WORKSPACE_TOOLS.youtube_search,
+      WORKSPACE_TOOLS.google_tasks,
+      WORKSPACE_TOOLS.google_add_task,
+      WORKSPACE_TOOLS.google_complete_task,
     );
   }
   if (online) list.push(WORKSPACE_TOOLS.search_github, WORKSPACE_TOOLS.get_news);
+  // Connected apps (connectors/): weather, web, Wikipedia, GitHub, Notion, Home Assistant…
+  list.push(...connectors.declarations(settings, { hidden, live }));
+  // Any other app, through MCP (mcp.js)
+  list.push(...mcp.declarations(settings, { hidden }));
 
   if (settings.aiNotes?.enabled) {
     list.push(NOTE_TOOLS.save_note, NOTE_TOOLS.delete_note);
@@ -290,6 +328,23 @@ function declarations(settings, { voice = false, robot: onScreen = false, nonBlo
     for (const tool of Object.values(ROBOT_TOOLS)) list.push(nonBlocking ? { ...tool, behavior: "NON_BLOCKING" } : tool);
   }
   return list;
+}
+
+// Small local models do better with fewer tools, and every tool takes room in
+// their context. With "Local AI tools: essential" (Settings → AI control) they
+// get these, plus file tools and the robot; "all" gives them everything.
+const ESSENTIAL = new Set([
+  "save_note", "recall_conversations", "resolve_follow_up", "write_draft",
+  "add_task", "update_task", "list_tasks", "set_reminder", "list_reminders", "log_habit", "daily_briefing",
+  "get_weather", "web_search", "read_webpage",
+  "search_gmail", "get_calendar_events",
+  "home_devices", "home_control",
+]);
+
+function forLocal(list, settings) {
+  if (settings.aiControl?.localTools === "all") return list;
+  // Apps you added yourself (MCP) are kept too
+  return list.filter((t) => ESSENTIAL.has(t.name) || Object.hasOwn(FILE_TOOLS, t.name) || isRobotTool(t.name) || t.name.startsWith("mcp_"));
 }
 
 // "folder" → the dirs permissions, "file" → the files permissions
@@ -391,6 +446,7 @@ async function briefing(ctx) {
     extras.push(news.getNews("").then((r) => (out.headlines = r.articles.slice(0, 5).map((a) => a.title))).catch(() => {}));
   }
   for (const extra of briefingSources) extras.push(Promise.resolve(extra(ctx, out)).catch(() => {}));
+  extras.push(connectors.briefing(ctx, out).catch(() => {}));
   await Promise.all(extras);
   return out;
 }
@@ -496,6 +552,14 @@ async function run(name, args, ctx) {
     // Tasks, reminders, habits, journal
     if (LIFE_NAMES.has(name)) return await runLife(name, args, ctx);
 
+    // Connected apps
+    if (connectors.find(name)) return await connectors.run(name, args, ctx);
+    if (name.startsWith("mcp_")) {
+      const result = await mcp.run(name, args, ctx);
+      if (result) return result;
+      throw new Error("That app isn't connected anymore.");
+    }
+
     // Earlier conversations
     if (name === "recall_conversations") {
       if (ctx.settings.companion?.recall === false) throw new Error("Remembering conversations is turned off.");
@@ -569,8 +633,8 @@ async function run(name, args, ctx) {
     }
 
     if (name === "get_calendar_events") {
-      ctx.onActivity?.("Checking upcoming Google Calendar schedule");
-      const events = await workspace.getCalendarEvents(token, args.maxResults || 10);
+      ctx.onActivity?.(args.from || args.to ? `Checking your calendar${args.from ? ` from ${args.from}` : ""}${args.to ? ` to ${args.to}` : ""}` : "Checking upcoming Google Calendar schedule");
+      const events = await workspace.getCalendarEvents(token, args.maxResults || 10, { from: args.from, to: args.to });
       ctx.onActivity?.(`Found ${events.length} calendar events`);
       return { ok: true, events };
     }
@@ -580,6 +644,62 @@ async function run(name, args, ctx) {
       const messages = await workspace.searchGmail(token, args.query);
       ctx.onActivity?.(`Found ${messages.length} email threads`);
       return { ok: true, messages };
+    }
+
+    if (name === "read_gmail") {
+      const m = await workspace.readGmail(token, args.id);
+      ctx.onActivity?.(`Read the email "${m.subject}"`);
+      return { ok: true, message: m };
+    }
+
+    if (name === "draft_gmail") {
+      const d = await workspace.draftGmail(token, args);
+      ctx.onActivity?.(`Saved a draft in Gmail to ${args.to}`);
+      return { ok: true, draft: d };
+    }
+
+    if (name === "youtube_my_channel") {
+      ctx.onActivity?.("Checking your YouTube channel");
+      return { ok: true, ...(await workspace.youtubeMyChannel(token)) };
+    }
+    if (name === "youtube_video") {
+      ctx.onActivity?.("Looking at a YouTube video");
+      return { ok: true, video: await workspace.youtubeVideo(token, args.video) };
+    }
+    if (name === "youtube_comments") {
+      ctx.onActivity?.("Reading YouTube comments");
+      return { ok: true, comments: await workspace.youtubeComments(token, args.video, args.max) };
+    }
+    if (name === "youtube_search") {
+      ctx.onActivity?.(`Searching YouTube for "${args.query}"`);
+      return { ok: true, results: await workspace.youtubeSearch(token, args.query, args.type) };
+    }
+
+    if (name === "google_tasks") {
+      ctx.onActivity?.("Checking Google Tasks");
+      return { ok: true, lists: await workspace.googleTasks(token, { showCompleted: args.show_completed === true }) };
+    }
+    if (name === "google_add_task") {
+      const t = await workspace.googleAddTask(token, args);
+      ctx.onActivity?.(`Added to Google Tasks: ${t.title}`);
+      return { ok: true, task: t };
+    }
+    if (name === "google_complete_task") {
+      const t = await workspace.googleCompleteTask(token, args);
+      ctx.onActivity?.(`Done in Google Tasks: ${t.title}`);
+      return { ok: true, task: t };
+    }
+
+    if (name === "update_calendar_event" || name === "delete_calendar_event") {
+      const del = name === "delete_calendar_event";
+      const summaryText = del ? "Delete an event from Google Calendar" : `Change the calendar event${args.summary ? ` to "${args.summary}"` : ""}${args.start ? ` (starts ${args.start})` : ""}`;
+      if (confirmWorkspace && !(await ctx.confirm(summaryText, { type: "calendar", ...args }))) {
+        ctx.onActivity?.(`You declined: ${summaryText}`);
+        return { error: "The user declined this change." };
+      }
+      const result = del ? await workspace.deleteCalendarEvent(token, args.eventId) : await workspace.updateCalendarEvent(token, args);
+      ctx.onActivity?.(del ? "Deleted a calendar event" : `Changed the calendar event ${result.summary || ""}`.trim());
+      return { ok: true, event: result };
     }
 
     // 6. Gmail and Calendar changes (confirmed unless turned off)
@@ -631,4 +751,4 @@ async function run(name, args, ctx) {
   }
 }
 
-module.exports = { declarations, run, isRobotTool, robotEvent, briefing, addBriefingSource };
+module.exports = { declarations, forLocal, run, isRobotTool, robotEvent, briefing, addBriefingSource };

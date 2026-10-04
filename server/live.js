@@ -206,7 +206,7 @@ class LiveSession {
     // answered; the others would pause mid-sentence (see gemini.liveAsyncTools).
     // There, the robot follows the captions instead.
     const robotTools = this.robot && gemini.liveAsyncTools(model);
-    this.offered = tools.declarations(current, { voice: true, robot: robotTools, nonBlocking: true, onAir: this.onAir });
+    this.offered = tools.declarations(current, { voice: true, robot: robotTools, nonBlocking: true, onAir: this.onAir, live: true });
     this.robotTools = this.offered.some((t) => tools.isRobotTool(t.name));
     if (!this.system || this.systemRobot !== this.robotTools) {
       this.systemRobot = this.robotTools;

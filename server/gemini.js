@@ -413,4 +413,23 @@ async function speak({ key, text, voice }) {
   throw lastErr || new GeminiError("Voice speech unavailable right now.");
 }
 
-module.exports = { GeminiError, listModels, checkModel, streamChat, transcribe, speak, generateText, liveModels, preferLiveModel, liveAsyncTools, LIVE_MODELS };
+// A web search through Google Search grounding: an answer written from the
+// results, with the pages it used (web_search, for chats that aren't Live)
+async function searchWeb({ key, model, query, signal }) {
+  return withFallback(key, model, async (current) => {
+    const config = generationConfig(current, { temperature: 0.2, fast: true });
+    const body = {
+      contents: [{ role: "user", parts: [{ text: `Search the web and answer with the facts, dates and numbers that matter, briefly: ${query}` }] }],
+      tools: [{ google_search: {} }],
+      ...(config ? { generationConfig: config } : {}),
+    };
+    const res = await post(`${API}/models/${encodeURIComponent(current)}:generateContent`, key, body, signal);
+    const data = await res.json();
+    const candidate = data.candidates?.[0];
+    const answer = (candidate?.content?.parts || []).map((p) => (p.thought ? "" : p.text || "")).join("").trim();
+    const sources = (candidate?.groundingMetadata?.groundingChunks || []).map((c) => c.web).filter(Boolean).slice(0, 8).map((w) => ({ title: w.title, url: w.uri }));
+    return { answer, sources };
+  });
+}
+
+module.exports = { GeminiError, searchWeb, listModels, checkModel, streamChat, transcribe, speak, generateText, liveModels, preferLiveModel, liveAsyncTools, LIVE_MODELS };

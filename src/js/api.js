@@ -124,6 +124,17 @@ export const api = {
     clear: () => call("DELETE", "/api/episodes"),
     resolve: (id) => call("DELETE", `/api/follow-ups/${encodeURIComponent(id)}`),
   },
+  connectors: {
+    list: () => call("GET", "/api/connectors"),
+    save: (id, body) => call("PUT", `/api/connectors/${encodeURIComponent(id)}`, body),
+    remove: (id) => call("DELETE", `/api/connectors/${encodeURIComponent(id)}`),
+    test: (id) => call("POST", `/api/connectors/${encodeURIComponent(id)}/test`),
+  },
+  mcp: {
+    save: (server) => call("POST", "/api/mcp", server),
+    remove: (id) => call("DELETE", `/api/mcp/${encodeURIComponent(id)}`),
+    restart: (id) => call("POST", `/api/mcp/${encodeURIComponent(id)}/restart`),
+  },
   life: {
     today: () => call("GET", "/api/life/today"),
     tasks: (done = false) => call("GET", `/api/life/tasks${done ? "?done=1" : ""}`),

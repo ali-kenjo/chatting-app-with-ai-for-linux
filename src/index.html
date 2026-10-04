@@ -494,6 +494,17 @@
               </div>
             </div>
 
+            <div class="row">
+              <div>
+                <div class="row-label">Tools for a local AI</div>
+                <div class="row-desc">Small models work better with fewer tools (and each takes room in their memory)</div>
+              </div>
+              <select class="field" data-setting="aiControl.localTools">
+                <option value="essential">Essential</option>
+                <option value="all">All</option>
+              </select>
+            </div>
+
             <label class="row">
               <div>
                 <div class="row-label">Confirm workspace actions</div>
@@ -1124,7 +1135,7 @@
           <div class="subhead">
             <div>
               <div class="subhead-title">Google Workspace</div>
-              <p class="hint">Connect your Google account with OAuth to enable Gmail, Calendar, Drive, Docs, Sheets, and Slides.</p>
+              <p class="hint">Sign in with Google for Gmail, Calendar, Drive (Docs, Sheets, Slides), YouTube and Google Tasks. Signed in before this version? Sign out and in again to allow YouTube, Tasks and drafts.</p>
             </div>
           </div>
 
@@ -1210,6 +1221,20 @@
             </div>
 
             <div class="ws-feature-item">
+              <div class="ws-feature-icon">▶️</div>
+              <div class="ws-feature-content">
+                <strong>YouTube</strong>
+                <span>Your channel's numbers, your videos' views and comments, and YouTube search for research. (Turn on the YouTube Data API v3 for your Firebase project's Google Cloud project.)</span>
+              </div>
+            </div>
+            <div class="ws-feature-item">
+              <div class="ws-feature-icon">☑️</div>
+              <div class="ws-feature-content">
+                <strong>Google Tasks</strong>
+                <span>Your task lists that sync with your phone. (Turn on the Google Tasks API for your project.)</span>
+              </div>
+            </div>
+            <div class="ws-feature-item">
               <div class="ws-feature-icon">🐙</div>
               <div class="ws-feature-content">
                 <strong>GitHub</strong>
@@ -1227,6 +1252,58 @@
               <button type="button" class="btn btn-sm" id="test-news-btn">Test</button>
             </div>
           </div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Apps</div>
+            <p class="hint">Switch them on and off; the ones with an account need a token once. Tokens are kept in your system keyring, never in backups.</p>
+          </div></div>
+          <div class="app-grid" id="app-grid"></div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">More apps (MCP)</div>
+            <p class="hint">Any app with an MCP server: Slack, Spotify, Linear, a browser, your Git repositories, docs… thousands exist. It runs on this computer (a command) or at an address. Each action asks you first, unless you trust the app.</p>
+          </div></div>
+          <ul class="mcp-list" id="mcp-list"></ul>
+          <details class="form-field mcp-add" id="mcp-add">
+            <summary class="row-label">Add an app</summary>
+            <form class="mcp-form" id="mcp-form">
+              <label class="form-field"><span class="row-label">Start from</span>
+                <select class="field" name="preset" id="mcp-preset">
+                  <option value="">Your own</option>
+                </select>
+              </label>
+              <p class="row-desc" id="mcp-preset-help"></p>
+              <label class="form-field"><span class="row-label">Name</span><input class="field" name="name" maxlength="40" required autocomplete="off"></label>
+              <label class="form-field"><span class="row-label">How it runs</span>
+                <select class="field" name="transport">
+                  <option value="stdio">A program on this computer</option>
+                  <option value="http">An address (Streamable HTTP)</option>
+                </select>
+              </label>
+              <div class="mcp-stdio">
+                <label class="form-field"><span class="row-label">Command</span><input class="field" name="command" placeholder="npx" autocomplete="off" spellcheck="false"></label>
+                <label class="form-field"><span class="row-label">Arguments</span><input class="field" name="args" placeholder="-y @playwright/mcp@latest" autocomplete="off" spellcheck="false"></label>
+                <label class="form-field"><span class="row-label">Folder to run in (optional)</span><input class="field" name="cwd" placeholder="~/projects/my-app" autocomplete="off" spellcheck="false"></label>
+                <label class="form-field"><span class="row-label">Environment (optional, kept secret)</span><textarea class="field textarea" name="env" rows="2" placeholder="API_KEY=…" spellcheck="false"></textarea></label>
+              </div>
+              <div class="mcp-http" hidden>
+                <label class="form-field"><span class="row-label">Address</span><input class="field" name="url" placeholder="https://…/mcp" autocomplete="off" spellcheck="false"></label>
+                <label class="form-field"><span class="row-label">Token (optional, kept secret)</span><input class="field" name="token" type="password" autocomplete="off"></label>
+              </div>
+              <label class="form-field"><span class="row-label">Ask before each action</span>
+                <select class="field" name="trust">
+                  <option value="ask">Always ask</option>
+                  <option value="read-only">Ask, except for what only reads</option>
+                  <option value="all">Never ask (I trust this app)</option>
+                </select>
+              </label>
+              <label class="life-toggle"><input type="checkbox" name="local"> It works only on this computer (allowed in Private mode)</label>
+              <div class="form-test-bar">
+                <button type="submit" class="btn small btn-primary">Add</button>
+                <span class="test-feedback" id="mcp-status"></span>
+              </div>
+            </form>
+          </details>
 
           <div class="honesty-note">
             <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>

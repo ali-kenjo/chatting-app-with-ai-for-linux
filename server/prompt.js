@@ -287,14 +287,19 @@ function build(settings, { voice = false, live = false, toolsOffered = [], summa
     ["search_drive", "- Use `search_drive` and `read_drive_file` to find and examine documents, spreadsheets, presentations, and files."],
     ["get_calendar_events", "- Use `get_calendar_events` to check schedules, upcoming meetings, and availability."],
     ["create_calendar_event", "- Use `create_calendar_event` to schedule events (the user will confirm before it's saved)."],
-    ["search_gmail", "- Use `search_gmail` to check recent emails, unread messages, or specific senders."],
+    ["update_calendar_event", "- Use `update_calendar_event` and `delete_calendar_event` to change events (the user confirms)."],
+    ["search_gmail", "- Use `search_gmail` to check recent emails, unread messages, or specific senders, and `read_gmail` to read one in full."],
+    ["draft_gmail", "- Prefer `draft_gmail` (a draft they send themselves) over sending, unless they clearly want it sent now."],
+    ["youtube_my_channel", "- YouTube: `youtube_my_channel` (their channel and recent videos' numbers), `youtube_video`, `youtube_comments` (what viewers say) and `youtube_search` (research and trends). Use them for content ideas and to see what works."],
+    ["google_tasks", "- Google Tasks (on their phone): `google_tasks`, `google_add_task`, `google_complete_task`. Friends' own task list is the default; use Google Tasks when they ask for it."],
     ["send_gmail", "- Use `send_gmail` to send or draft emails (the user will confirm before it's sent)."],
     ["search_github", "- Use `search_github` to find repositories, trending code, and developer projects."],
     ["get_news", "- Use `get_news` to fetch breaking news and headlines on any topic."],
   ].filter(([name]) => offered.includes(name));
-  if (apps.length) {
+  const appLines = [...apps.map(([, line]) => line), ...require("./connectors").promptLines(settings, offered)];
+  if (appLines.length) {
     lines.push("", "# Connected Apps and Tools");
-    lines.push(...apps.map(([, line]) => line));
+    lines.push(...appLines);
   }
 
   lines.push(...historySection(user, summary, history, characters.others(settings)));
