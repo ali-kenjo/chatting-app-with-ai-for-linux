@@ -212,13 +212,16 @@ class LiveSession {
       model: `models/${model}`,
       generationConfig: {
         responseModalities: ["AUDIO"],
+        // Lowest latency; gemini-3.8-live doesn't take a thinking level at all
+        ...(/^gemini-3\.1-flash-live/.test(model) ? { thinkingConfig: { thinkingLevel: "minimal" } } : {}),
         temperature: prompt.temperature(current),
         speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOICES[current.personality.voice] || VOICES[1] } } },
       },
       systemInstruction: { parts: [{ text: this.system }] },
       tools: toolList,
       // A little patience before answering, so a pause to think doesn't end your turn
-      realtimeInputConfig: { automaticActivityDetection: { prefixPaddingMs: 200, silenceDurationMs: 800 } },
+      // (Google recommends 500-800 ms; every ms here is added to each answer's delay)
+      realtimeInputConfig: { automaticActivityDetection: { prefixPaddingMs: 100, silenceDurationMs: 500 } },
       // Long conversations: older context is compressed instead of the session ending
       contextWindowCompression: { slidingWindow: {} },
       sessionResumption: this.handle ? { handle: this.handle } : {},
