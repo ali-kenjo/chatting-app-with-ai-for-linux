@@ -42,7 +42,7 @@ The same app in its own window, with a launcher entry and icon. It runs the help
 ./scripts/install.sh --desktop          # dependencies + the Electron download (~100 MB)
 npm run desktop                         # try it from the project folder (runs with --no-sandbox)
 npm run dist                            # builds dist/friends_<version>_amd64.deb
-sudo apt install ./dist/friends_0.3.0_amd64.deb
+sudo apt install ./dist/friends_0.3.1_amd64.deb
 ```
 
 Or download the `.deb` from the [Releases](../../releases) page. After changing the source, `npm run update` tests it, backs up your data, builds the `.deb` and installs it (it asks for your password).
@@ -52,7 +52,7 @@ Or download the `.deb` from the [Releases](../../releases) page. After changing 
 - **It keeps running in the tray** when you close the window, so reminders still come (Settings → Daily life; quit from the tray icon or with Ctrl+Q). It can start when you log in, quietly in the tray.
 - On a Wayland session it runs natively (X11 otherwise). The window remembers its size and position; a second launch focuses the first window.
 - The window only shows the app itself. The microphone and camera are granted to that page only, links open in your browser, and Google sign-in gets its own popup.
-- Google sign-in (Gmail, Calendar, Drive) is optional, needs a free Firebase project of your own, and is never loaded in Private mode. Set it up in **Settings → Connected Apps → Set up Google sign-in**: the steps are listed there, and you paste the web app's `firebaseConfig` from the Firebase console (it's kept in `~/.config/friends/firebase-applet-config.json`). Add `127.0.0.1` and `localhost` under Authentication → Settings → Authorized domains. (A `firebase-applet-config.json` next to the app, as in `firebase-applet-config.example.json`, still works.)
+- Google sign-in (Gmail, Calendar, Drive, YouTube, Tasks) is optional, needs a free Firebase project of your own, and is never loaded in Private mode. With **Stay signed in** (below) you sign in once instead of every time the app opens. Set it up in **Settings → Connected Apps → Set up Google sign-in**: the steps are listed there, and you paste the web app's `firebaseConfig` from the Firebase console (it's kept in `~/.config/friends/firebase-applet-config.json`). Add `127.0.0.1` and `localhost` under Authentication → Settings → Authorized domains. (A `firebase-applet-config.json` next to the app, as in `firebase-applet-config.example.json`, still works.)
 
 ### 4. Docker
 
@@ -81,6 +81,8 @@ To also set up local voice during the install: `./scripts/install.sh --voice` (o
 | The first local reply takes a minute | The model is being loaded into memory; later replies are fast. *Keep the model loaded* in the brain's settings keeps it ready |
 | Long chats forget the beginning | Raise the **Context size** of an Ollama brain (Settings → AI control → edit the brain) |
 | A local AI can't listen | Set up **Local voice** (Settings → AI control, or `npm run voice:setup`) |
+| Google asks you to sign in every time | Set up **Stay signed in** (Settings → Connected Apps): you sign in once |
+| Gemini is slow or doesn't answer | The free tier allows only a few requests a day per model. Friends switches to other Gemini models by itself and says when they're all used up; turning on billing for your key in Google AI Studio raises the limits a lot |
 
 ---
 
@@ -196,6 +198,17 @@ The model menu next to the message box (and **Settings → AI control → Which 
 - The small jobs (follow-up suggestions, summaries of long chats) use a local AI when there is one. Spoken answers stay local for speed (a setting), so Auto and Dynamic use Studio voice with a local AI; Gemini Live is used where the cloud answers.
 - The default mode is *One AI*; switch to Auto in the model menu.
 
+## Gemini's limits, and speed
+
+Gemini's free tier allows only a small number of requests per model per day (for some models 20). Friends makes them go further:
+
+- A model whose quota is used up (or that's busy) is skipped until Google says it's back, and the next one answers: newer and older Flash models, then the light ones. When every model is out, it says so and when they're back.
+- Background jobs (follow-up suggestions, memories of conversations, summaries, the briefing) use a light model with its own quota, so they don't eat into your replies.
+- Gemini Live tries its other voice models when one runs out, before falling back to Studio voice.
+- Replies think only briefly, so the first words come in about 2 seconds; **Deep** (Settings → AI control → Reasoning) thinks at length when you need it.
+
+For a lot of daily use, turn on billing for your key in Google AI Studio, or add a local AI for the small jobs.
+
 ## Characters and companionship
 
 Settings → **Characters**. Atlas and Mira are built in; edit any part of them, or make your own (from a template or a copy). Each character has:
@@ -243,6 +256,8 @@ Settings → **Connected Apps**. Each app has its own card: switch it on, set it
 | Todoist | an API token | see, add and complete tasks |
 | Home Assistant | address + long-lived token | lights, switches, heating, blinds, media and scenes by voice; locks, alarms and covers always ask; works in Private mode on your own network |
 | **Any app (MCP)** | an MCP server | its tools; each action asks unless you trust the app |
+
+**Stay signed in to Google.** Google's normal sign-in only lasts until Friends closes (at most an hour). With an OAuth client of your own, you sign in once: in your Firebase project's Google Cloud console, create a client of type **Desktop app** (Google Auth Platform → Clients), paste its ID and secret into Settings → Connected Apps → **Stay signed in**, and press **Publish app** under Audience (otherwise Google ends the sign-in after 7 days). Friends keeps the refresh token in your system keyring and renews access by itself, also for voice mode and the morning briefing. The steps are listed in the app.
 
 Tokens are kept in your system keyring (never in backups or sent to the page). Google needs YouTube Data API v3 and Google Tasks API turned on in your Firebase project's Google Cloud project, and one sign-out and sign-in after updating (for the new permissions).
 

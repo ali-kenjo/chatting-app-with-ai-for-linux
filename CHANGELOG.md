@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.1
+
+### Added
+- **Stay signed in to Google**: with an OAuth client of your own (Settings → Connected Apps → Stay signed in), you sign in once and stay signed in; before, Google's sign-in ended when Friends closed. Voice mode and the morning briefing use it too.
+
+### Fixed
+- **Slow or missing answers on Gemini's free tier**: a model whose quota is used up, or that's busy, is now skipped until it's back, and more Gemini models are tried; when every one is out, the message says when they're back.
+- **Silent voice mode**: Gemini Live now tries its other voice models when one's quota is used up.
+- **Replies start sooner**: normal replies think only briefly (first words in about 2 seconds instead of over 10); Deep still thinks at length.
+- Follow-up suggestions, memories, summaries and the briefing run on a light Gemini model, so they don't use up the main model's quota.
+
+### Changed
+- The Docker image runs on Node.js 26; KaTeX 0.19; Dependabot removed.
+
 ## 0.3.0
 
 ### Added
