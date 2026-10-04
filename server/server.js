@@ -410,7 +410,8 @@ async function chat(req, res) {
   // Long chats: summarize what dropped out of the window, in the background. With a choice
   // of AIs a local one does it (private and free).
   const summarizer = answeredBy && (routePlan.mode === "fixed" || routePlan.mode === "force") ? answeredBy.brain : brains.forTask() || answeredBy?.brain;
-  if (summarizer) summary.update(conversation.id, { api: summarizer.api, key: summarizer.key, model: summarizer.model, window }).catch((err) => logger.debug("Summary skipped:", err.message));
+  // On Gemini a light model does it, so the main model's free quota is kept for replies
+  if (summarizer) summary.update(conversation.id, { api: summarizer.api, key: summarizer.key, model: summarizer.provider === "gemini" ? require("./gemini").TASK_MODEL : summarizer.model, window }).catch((err) => logger.debug("Summary skipped:", err.message));
 }
 
 // Your Google access token when you stay signed in (none in Private mode)

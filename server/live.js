@@ -360,7 +360,7 @@ class LiveSession {
 
   summarize() {
     if (!this.chatId || !this.brain) return;
-    summary.update(this.chatId, { key: this.brain.key, model: this.brain.model, window: HISTORY }).catch((err) => logger.debug("Summary skipped:", err.message));
+    summary.update(this.chatId, { key: this.brain.key, model: gemini.TASK_MODEL, window: HISTORY }).catch((err) => logger.debug("Summary skipped:", err.message));
   }
 
   // ---------- Tools ----------
