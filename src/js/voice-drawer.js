@@ -2,7 +2,7 @@
 // "Drafts": what the AI wrote in this conversation (scripts, posts, ideas…).
 // "Transcript": what you both said, as it's said.
 import { draftCard } from "./drafts.js";
-import { getSettings } from "./store.js";
+import { characterName } from "./characters.js";
 
 const drawer = document.getElementById("voice-drawer");
 const draftsPane = document.getElementById("voice-drafts");
@@ -19,7 +19,7 @@ let tab = "drafts";
 let unseen = 0;
 let lines = { user: null, model: null }; // the transcript lines of this turn, still growing
 
-const companion = () => getSettings()?.personality.name || "Companion";
+const companion = characterName;
 
 function placeholder(pane, text) {
   const p = document.createElement("p");

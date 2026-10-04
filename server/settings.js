@@ -2,6 +2,7 @@
 const fs = require("fs");
 const path = require("path");
 const { dataDir, writeJson } = require("./config");
+const characters = require("./characters");
 
 const file = path.join(dataDir, "settings.json");
 
@@ -37,6 +38,26 @@ const DEFAULTS = {
   memory: { enabled: true, items: [] },
   // The AI's own notes (stored separately, see notes.js)
   aiNotes: { enabled: true },
+  // Who the AI is (see characters.js): Atlas, Mira, or your own; one is active.
+  // switchLook: switching also changes the robot's look and the accent color.
+  characters: { active: "atlas", switchLook: true, list: [] },
+  // Being a companion you can talk to for hours
+  companion: {
+    recall: true, // remembers past conversations (episodes.js) and can look them up
+    followUps: true, // asks about things you mentioned before
+    activities: true, // suggests games, debates and stories when a conversation runs dry
+    greeting: true, // starts voice conversations with something from last time
+    interests: "", // what you love talking about, for fresh topics
+  },
+  // On camera: co-host mode for videos, streams and podcasts
+  onAir: {
+    auto: true, // on by itself in filming mode and while recording
+    format: "podcast", // ON_AIR.formats
+    show: "", // the show's name
+    audience: "", // who's watching
+    hidePrivate: true, // nothing private (memories, emails, calendar, files) on camera
+    familyFriendly: true,
+  },
   personality: {
     name: "",
     userName: "", // what the AI calls you; empty = your login name
@@ -84,6 +105,8 @@ const DEFAULTS = {
     },
   },
 };
+
+const ON_AIR = { formats: ["podcast", "reaction", "qa", "debate", "explainer", "storytime", "free"] };
 
 // Allowed values of the robot's choices
 const ROUTING = { modes: ["fixed", "auto", "dynamic", "fastest", "local", "cloud"], ask: ["always", "chat", "never"] };
@@ -137,6 +160,11 @@ function sanitize(input) {
   s.aiControl.confirmTools = Boolean(s.aiControl.confirmTools);
   s.aiControl.contextWindow = clamp(s.aiControl.contextWindow || 20, 5, 50);
   s.backup.keep = clamp(s.backup.keep, 3, 60);
+  s.characters = characters.sanitize(s.characters);
+  s.companion.interests = s.companion.interests.trim().slice(0, 1000);
+  if (!ON_AIR.formats.includes(s.onAir.format)) s.onAir.format = "podcast";
+  s.onAir.show = s.onAir.show.trim().slice(0, 80);
+  s.onAir.audience = s.onAir.audience.trim().slice(0, 300);
   if (!/^#[0-9a-f]{6}$/i.test(s.theme.accent)) s.theme.accent = DEFAULTS.theme.accent;
 
   s.routing.mode = ROUTING.modes.includes(s.routing.mode) ? s.routing.mode : "fixed";
@@ -162,11 +190,13 @@ let cache = null;
 
 function get() {
   if (cache) return cache;
+  let stored = null;
   try {
-    cache = sanitize(JSON.parse(fs.readFileSync(file, "utf8")));
-  } catch {
-    cache = clone(DEFAULTS);
-  }
+    stored = JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch {}
+  // Settings from before there were characters: a name you'd given the AI becomes your own character
+  const upgraded = stored && characters.migrate(stored, stored.personality);
+  cache = sanitize(upgraded ? { ...stored, characters: upgraded } : stored || {});
   return cache;
 }
 
@@ -182,4 +212,4 @@ function reload() {
   return get();
 }
 
-module.exports = { get, set, reload, sanitize, DEFAULTS, ROBOT, ROUTING };
+module.exports = { get, set, reload, sanitize, DEFAULTS, ROBOT, ROUTING, ON_AIR };

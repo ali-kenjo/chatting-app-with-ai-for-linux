@@ -37,12 +37,17 @@ chatsNav.addEventListener("click", (e) => {
   chatsNav.classList.toggle("active", !folded);
 });
 
-// A greeting that fits the time of day, with your name from Settings → AI personality
+// A greeting that fits the time of day, with your name from Settings → Characters
 function greet() {
-  const name = getSettings()?.personality.userName?.trim();
+  const s = getSettings();
+  const name = s?.personality.userName?.trim();
   const hour = new Date().getHours();
   const part = hour < 5 ? "Hello" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  document.getElementById("greeting").textContent = name ? `${part}, ${name}` : part;
+  const el = document.getElementById("greeting");
+  el.textContent = name ? `${part}, ${name}` : part;
+  // Who's here to talk
+  const who = s?.characters?.list.find((c) => c.id === s.characters.active);
+  el.title = who ? `${who.name}: ${who.tagline}` : "";
 }
 greet();
 onSettings(greet);

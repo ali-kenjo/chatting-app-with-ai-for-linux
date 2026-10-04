@@ -803,11 +803,18 @@ messagesEl.addEventListener("dblclick", (e) => {
 
 // Used by voice mode (Studio / Instant voice): send what you said; the reply
 // streams to onChunk(text), drafts to onDraft(draft). robot: the robot is on screen.
-export function askFromVoice(text, { onChunk = null, onDraft = null, robot: robotShown = false } = {}) {
+export function askFromVoice(text, { onChunk = null, onDraft = null, robot: robotShown = false, onAir = false } = {}) {
   if (active) stopActive();
   main.classList.add("has-chat");
   const userMsg = addUserMessage(text, [], { isNew: true });
-  return ask({ chatId: currentChatId, text, voice: true, robot: robotShown, brainId: getSelectedBrainId(), onChunk, onDraft }, userMsg);
+  return ask({ chatId: currentChatId, text, voice: true, robot: robotShown, onAir, brainId: getSelectedBrainId(), onChunk, onDraft }, userMsg);
+}
+
+// Voice mode opened: the AI speaks first (nothing of yours is added to the chat)
+export function greetFromVoice(text, { onChunk = null, onDraft = null, robot: robotShown = false, onAir = false } = {}) {
+  if (active) stopActive();
+  main.classList.add("has-chat");
+  return ask({ chatId: currentChatId, greet: true, voice: true, robot: robotShown, onAir, brainId: getSelectedBrainId(), onChunk, onDraft });
 }
 
 // Voice mode's Live voice saved turns to this chat on the helper: it's the open one now

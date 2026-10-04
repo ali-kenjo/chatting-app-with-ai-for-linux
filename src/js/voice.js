@@ -15,7 +15,7 @@
 // The "Robot" style shows the AI's 3D robot body (src/js/robot/) instead of a
 // visualizer: this module tells it the state, the captions and both voices.
 import { api } from "./api.js";
-import { askFromVoice, stopReply, getCurrentChatId, adoptChat, reloadChat } from "./chat.js";
+import { askFromVoice, greetFromVoice, stopReply, getCurrentChatId, adoptChat, reloadChat } from "./chat.js";
 import { getSettings } from "./store.js";
 import { playbackRate, voiceErrorText } from "./personality.js";
 import { promptConfirmation } from "./workspace.js";
@@ -27,6 +27,9 @@ import { toggleDrawer, resetDrawer, addDraft, addTranscript, endTurn } from "./v
 import { robot } from "./robot/index.js";
 import { updateVoiceLevels } from "./robot/bands.mjs";
 import { createFilming } from "./filming.js";
+import { characterName, activeCharacter } from "./characters.js";
+import { isOnAir, onOnAir, toggleOnAir, autoOnAir, resetOnAir } from "./onair.js";
+import { activityPrompt } from "./activities.js";
 
 const voiceMode = document.getElementById("voice-mode");
 const voiceStatus = document.getElementById("voice-status");
@@ -163,7 +166,7 @@ const fireflies = Array.from({ length: 45 }, () => ({
   glowSpeed: 1 + Math.random() * 2,
 }));
 
-const companionName = () => getSettings()?.personality.name || "Companion";
+const companionName = characterName;
 const isMuted = () => voiceMode.classList.contains("muted");
 
 // Setup theme switcher buttons
@@ -237,7 +240,7 @@ const filming = createFilming({
     resume() {
       if (voiceMode.hidden) return;
       robot.director.openVoice(); // it greets (and waves) again
-      startEngine();
+      startEngine({ greet: true });
     },
     mute() {
       toggleMute();
@@ -258,9 +261,11 @@ const filming = createFilming({
       toggleDrawer(false);
       if (voiceTypeForm) voiceTypeForm.hidden = true;
       robot.setFilming(true, filmingLook());
+      autoOnAir("filming", true);
     },
     onExit() {
       robot.setFilming(false);
+      autoOnAir("filming", false);
     },
   },
 });
@@ -392,6 +397,53 @@ enginePill.addEventListener("click", () => {
   if (!voiceMode.hidden) startEngine();
 });
 updateEnginePill();
+
+// ---------- Characters, co-host mode and things to do ----------
+// Another character takes over: a new voice and personality, so the
+// conversation restarts (same chat) and they say hello
+document.addEventListener("friends:character", () => {
+  systemVoice = undefined;
+  if (voiceMode.hidden || filming.on) return;
+  caption("", "");
+  note(`${characterName()} is here.`, 2000);
+  startEngine({ greet: true });
+});
+
+const onAirButton = document.getElementById("voice-onair");
+function syncOnAir(on = isOnAir()) {
+  onAirButton.classList.toggle("on", on);
+  onAirButton.setAttribute("aria-pressed", String(on));
+  voiceMode.classList.toggle("on-air", on);
+}
+onAirButton.addEventListener("click", () => {
+  toggleOnAir();
+  note(isOnAir() ? "On air: co-host mode, nothing private." : "Off air.", 2500);
+});
+onOnAir((on) => {
+  syncOnAir(on);
+  live?.send({ type: "on-air", on });
+});
+syncOnAir();
+
+const activitiesButton = document.getElementById("voice-activities-btn");
+const activitiesPop = document.getElementById("voice-activities");
+function closeActivities() {
+  activitiesPop.hidden = true;
+  activitiesButton.setAttribute("aria-expanded", "false");
+}
+activitiesButton.addEventListener("click", () => {
+  const open = activitiesPop.hidden;
+  closeRecordPop();
+  closeScenePop();
+  activitiesPop.hidden = !open;
+  activitiesButton.setAttribute("aria-expanded", String(open));
+});
+activitiesPop.addEventListener("click", (e) => {
+  const prompt = activityPrompt(e.target.closest(".activity-chip")?.dataset.id);
+  if (!prompt) return;
+  closeActivities();
+  askInVoice(prompt);
+});
 
 // Clicking on status allows retrying microphone connection
 voiceStatus?.addEventListener("click", () => {
@@ -593,7 +645,7 @@ export async function openVoice() {
   heartbeatTimer = setInterval(() => {
     if (!voiceMode.hidden && audioCtx?.state === "suspended") audioCtx.resume().catch(() => {});
   }, 400);
-  startEngine();
+  startEngine({ greet: true });
 }
 
 export function closeVoice() {
@@ -603,6 +655,8 @@ export function closeVoice() {
   endTimer = null;
   filming.exit({ resume: false });
   voiceMode.hidden = true;
+  resetOnAir();
+  closeActivities();
   robot.director.closeVoice();
   syncRobot();
   closeScenePop();
@@ -768,14 +822,20 @@ function toggleMute() {
 }
 
 // ---------- Starting and switching engines ----------
-async function startEngine() {
+// greet: it speaks first (voice mode just opened, filming started, or another character took over)
+async function startEngine({ greet = false } = {}) {
   stopEngine();
-  if (engineChoice !== "live") return startClassic(engineChoice);
+  const greetClassic = () => greet && getSettings()?.companion?.greeting !== false && greetInVoice();
+  if (engineChoice !== "live") {
+    startClassic(engineChoice);
+    return greetClassic();
+  }
   // Gemini Live is Google's; a local AI speaks through Studio voice
   if (!liveWanted()) {
     const local = getLocalBrainId();
     if (local) api.local.warm(local, true); // the speech models too
-    return startClassic("studio");
+    startClassic("studio");
+    return greetClassic();
   }
 
   setState("connecting");
@@ -783,7 +843,7 @@ async function startEngine() {
   live = voice;
   updateEnginePill();
   try {
-    await voice.start({ chatId: getCurrentChatId(), brainId: getSelectedBrainId(), googleAccessToken: getAccessToken(), robot: robotOnScreen() });
+    await voice.start({ chatId: getCurrentChatId(), brainId: getSelectedBrainId(), googleAccessToken: getAccessToken(), robot: robotOnScreen(), onAir: isOnAir() });
     if (live !== voice) return;
     voice.setMuted(isMuted());
     setState("listening");
@@ -936,11 +996,17 @@ function takeSpeakable(text, { first, idle, all }) {
   return text.slice(0, cut);
 }
 
-// Something you said (or typed): the AI answers, and its reply is spoken
-export async function askInVoice(text) {
-  if (!text || !text.trim()) return;
-  const said = text.trim();
-  if (live) {
+// The AI speaks first (Studio and Instant; Live greets on its own)
+function greetInVoice() {
+  return askInVoice("", { greet: true });
+}
+
+// Something you said (or typed): the AI answers, and its reply is spoken.
+// greet: nothing was said; the AI opens the conversation.
+export async function askInVoice(text, { greet = false } = {}) {
+  if (!greet && (!text || !text.trim())) return;
+  const said = String(text || "").trim();
+  if (live && !greet) {
     addTranscript("user", said);
     endTurn();
     showCaption("You", said, true);
@@ -949,15 +1015,18 @@ export async function askInVoice(text) {
     setState("thinking");
     return;
   }
+  if (live) return;
   const mine = ++turn;
   stopSpeaking();
   clearSentenceQueue();
   recording = null;
-  showCaption("You", said, true);
-  addTranscript("user", said);
+  if (!greet) {
+    showCaption("You", said, true);
+    addTranscript("user", said);
+  }
   robot.director.resetTurn();
-  robot.director.userSaid(said);
-  setState("thinking", "Thinking…");
+  if (!greet) robot.director.userSaid(said);
+  setState("thinking", greet ? "" : "Thinking…");
 
   await ensureAudioOutput();
 
@@ -1006,7 +1075,7 @@ export async function askInVoice(text) {
 
     // Studio voice: start making the audio now, so it's ready when its turn comes
     const studio = classicTts !== "instant";
-    const audio = studio ? api.voice.speak(clean, getSettings()?.personality.voice || 1).catch(() => null) : null;
+    const audio = studio ? api.voice.speak(clean).catch(() => null) : null; // in the active character's voice
     const cumulativeText = fullReply;
     // Read now; its mood shows when the piece starts playing (see playNextSentence)
     const reading = robot.director.readPiece(clean, { turnStart: pieces === 1 });
@@ -1033,8 +1102,9 @@ export async function askInVoice(text) {
   };
 
   try {
-    const { error } = await askFromVoice(said, {
+    const { error } = await (greet ? greetFromVoice : askFromVoice)(said, {
       robot: robotOnScreen(),
+      onAir: isOnAir(),
       onChunk(chunk) {
         if (mine !== turn) return;
         fullReply += chunk;
@@ -1073,10 +1143,13 @@ function pickSystemVoice() {
   const voices = window.speechSynthesis.getVoices();
   if (!voices.length) return null; // not loaded yet; try again next sentence
   const good = (v) => /Natural|Google|Siri|Samantha/.test(v.name);
+  // The character's gender, when the voice's name says it (e.g. "Google UK English Male")
+  const male = activeCharacter()?.gender === "male";
+  const fits = (v) => (male ? /\bmale\b|daniel|thomas|david|alex|fred|ryan|guy/i : /female|samantha|karen|victoria|zira|anna|helena|moira|tessa/i).test(v.name);
   const lang = (navigator.language || "en").slice(0, 2);
   const inLang = voices.filter((v) => v.lang.startsWith(lang));
   const english = voices.filter((v) => v.lang.startsWith("en"));
-  systemVoice = inLang.find(good) || inLang[0] || english.find(good) || english[0] || null;
+  systemVoice = inLang.find((v) => fits(v) && good(v)) || inLang.find(fits) || inLang.find(good) || inLang[0] || english.find(fits) || english.find(good) || english[0] || null;
   return systemVoice;
 }
 
@@ -1399,6 +1472,7 @@ function startRecording() {
     return note(err.message, 4000);
   }
   recorder = next;
+  autoOnAir("recording", true);
   activeFrame = recOptions.frame;
   resizeCanvas();
   voiceMode.classList.add("recording");
@@ -1413,6 +1487,7 @@ async function stopRecording() {
   const current = recorder;
   if (!current) return;
   recorder = null;
+  autoOnAir("recording", false);
   clearInterval(recTimer);
   voiceMode.classList.remove("recording", "canvas-captions");
   recordButton.title = "Record a video";

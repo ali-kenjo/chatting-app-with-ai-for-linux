@@ -80,6 +80,8 @@
       <button class="icon-btn find-open" id="find-open" title="Find in this chat (Ctrl+F)">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/></svg>
       </button>
+      <!-- Who you're talking to (src/js/characters.js) -->
+      <div class="character-switch" id="character-switch" role="radiogroup" aria-label="Who you're talking to"></div>
       <div class="find-bar" id="find-bar" role="search" hidden>
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/></svg>
         <input type="text" id="find-input" placeholder="Find in this chat" autocomplete="off" spellcheck="false" aria-label="Find in this chat">
@@ -140,13 +142,8 @@
             </a>
           </div>
 
-          <div class="voice-hero-prompts" id="hero-prompts">
-            <button type="button" class="prompt-chip" data-prompt="What's on my Google Calendar today?">📅 Calendar schedule</button>
-            <button type="button" class="prompt-chip" data-prompt="Check my unread Gmail messages">✉️ Check Gmail</button>
-            <button type="button" class="prompt-chip" data-prompt="Search my Google Drive for recent project files">📂 Drive docs</button>
-            <button type="button" class="prompt-chip" data-prompt="Summarize the top news headlines today">📰 Top news</button>
-            <button type="button" class="prompt-chip" data-prompt="Search GitHub for trending open source repositories">🐙 GitHub trends</button>
-          </div>
+          <!-- Things to do together, a different few each time (src/js/activities.js) -->
+          <div class="voice-hero-prompts" id="hero-prompts" aria-label="Let's do something"></div>
         </div>
 
         <!-- Connected Apps Quick Bar -->
@@ -226,7 +223,7 @@
         </button>
         <button class="tab" data-tab="personality">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14a4 4 0 0 0 8 0"/><line x1="9" y1="9.5" x2="9" y2="9.5"/><line x1="15" y1="9.5" x2="15" y2="9.5"/></svg>
-          <span>AI personality</span>
+          <span>Characters</span>
         </button>
         <button class="tab" data-tab="robot">
           <svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="4"/><line x1="9.5" y1="12.5" x2="9.5" y2="14.5"/><line x1="14.5" y1="12.5" x2="14.5" y2="14.5"/><path d="M7.5 8 6 4.5M16.5 8 18 4.5"/></svg>
@@ -747,58 +744,131 @@
             <div class="row-label">Clear AI memory</div>
             <button class="btn btn-danger" id="notes-clear">Clear</button>
           </div>
+
+          <div class="subhead">
+            <div>
+              <div class="subhead-title">Conversations it remembers</div>
+              <p class="hint">A short memory of each chat and voice conversation, written once it's gone quiet, and things it means to ask you about. Switch it off in Settings → Characters → Companion.</p>
+            </div>
+          </div>
+          <div class="row-label">Follow-ups</div>
+          <ul class="note-list" id="followup-list"></ul>
+          <div class="row-label">Conversations</div>
+          <ul class="note-list" id="episode-list"></ul>
+          <div class="row">
+            <div class="row-label">Forget all conversations</div>
+            <button class="btn btn-danger" id="episodes-clear">Forget</button>
+          </div>
         </section>
 
         <!-- AI personality -->
         <section class="pane" data-pane="personality">
-          <h3>AI personality</h3>
+          <h3>Characters</h3>
 
           <div class="subhead"><div>
-            <div class="subhead-title">Identity</div>
-            <p class="hint">Who you're talking to.</p>
+            <div class="subhead-title">Who you talk to</div>
+            <p class="hint">Switch any time with the names at the top of the chat and in voice mode. They share one memory of you.</p>
           </div></div>
-          <div class="row">
-            <div><div class="row-label">Name</div><div class="row-desc">What the AI calls itself</div></div>
-            <input type="text" class="field" placeholder="e.g. Sam" autocomplete="off" maxlength="40" data-setting="personality.name">
+          <div class="char-grid" id="char-grid" role="radiogroup" aria-label="Characters"></div>
+          <div class="form-test-bar char-new">
+            <select class="field" id="char-template" aria-label="Start a new character from">
+              <option value="blank">Blank</option>
+              <option value="friendly">Friendly</option>
+              <option value="professional">Professional</option>
+              <option value="funny">Funny</option>
+              <option value="calm">Calm</option>
+              <option value="copy">A copy of the selected one</option>
+            </select>
+            <button type="button" class="btn small" id="char-add">New character</button>
+            <span class="test-feedback" id="char-status"></span>
           </div>
-          <div class="row">
-            <div><div class="row-label">Your name</div><div class="row-desc">What the AI calls you</div></div>
-            <input type="text" class="field" placeholder="e.g. Sam" autocomplete="off" maxlength="40" data-setting="personality.userName">
-          </div>
-
-          <div class="subhead"><div>
-            <div class="subhead-title">Voice</div>
-            <p class="hint">How it sounds in voice conversations.</p>
-          </div></div>
-          <div class="voice-grid" id="voice-grid">
-            <div class="voice-card selected" role="radio" aria-checked="true" tabindex="0" data-voice="1" style="--c: #ffb074">
-              <div class="voice-bars"><span></span><span></span><span></span><span></span><span></span></div>
-              <div class="voice-info"><div class="row-label">Voice 1</div><div class="row-desc">Warm · bright</div></div>
-              <button class="icon-btn small voice-play" title="Play sample"><svg class="i-play" viewBox="0 0 24 24"><polygon points="7 4 20 12 7 20"/></svg><svg class="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
-            </div>
-            <div class="voice-card" role="radio" aria-checked="false" tabindex="0" data-voice="2" style="--c: #f07c7c">
-              <div class="voice-bars"><span></span><span></span><span></span><span></span><span></span></div>
-              <div class="voice-info"><div class="row-label">Voice 2</div><div class="row-desc">Calm · deep</div></div>
-              <button class="icon-btn small voice-play" title="Play sample"><svg class="i-play" viewBox="0 0 24 24"><polygon points="7 4 20 12 7 20"/></svg><svg class="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
-            </div>
-          </div>
-          <p class="form-error" id="voice-error" hidden></p>
+          <div class="char-editor" id="char-editor"></div>
+          <label class="row">
+            <div><div class="row-label">Each has its own look</div><div class="row-desc">Switching also changes the robot's shell, eyes and the accent color</div></div>
+            <input type="checkbox" class="toggle" data-setting="characters.switchLook">
+          </label>
           <div class="row">
             <div class="row-label">Speaking speed</div>
             <div class="slider"><span>Slow</span><input type="range" class="range" min="0" max="10" value="5" data-setting="personality.speed"><span>Fast</span></div>
           </div>
+          <p class="form-error" id="voice-error" hidden></p>
 
           <div class="subhead"><div>
-            <div class="subhead-title">Personality</div>
-            <p class="hint">The overall character.</p>
+            <div class="subhead-title">About you</div>
+            <p class="hint">So they know who they're talking to.</p>
           </div></div>
-          <div class="chips" id="style-chips">
-            <button class="chip selected">Friendly</button>
-            <button class="chip">Professional</button>
-            <button class="chip">Funny</button>
-            <button class="chip">Calm</button>
-            <button class="chip" data-custom>Custom</button>
+          <div class="row">
+            <div><div class="row-label">Your name</div><div class="row-desc">What they call you</div></div>
+            <input type="text" class="field" placeholder="e.g. Sam" autocomplete="off" maxlength="40" data-setting="personality.userName">
           </div>
+          <div class="form-field">
+            <div class="row-label">What you love talking about</div>
+            <span class="row-desc">They bring up fresh topics from here now and then</span>
+            <textarea class="field textarea" rows="2" maxlength="1000" data-setting="companion.interests" placeholder="e.g. tech, football, cooking, content creation, history"></textarea>
+          </div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Companion</div>
+            <p class="hint">A friend you can talk to for hours.</p>
+          </div></div>
+          <label class="row">
+            <div><div class="row-label">Remember our conversations</div><div class="row-desc">After a chat goes quiet, a short memory of it is kept (Settings → Memory), and it can look further back. One small extra request per conversation</div></div>
+            <input type="checkbox" class="toggle" data-setting="companion.recall">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Follow up</div><div class="row-desc">Asks how things went that you mentioned before ("So, how was the interview?")</div></div>
+            <input type="checkbox" class="toggle" data-setting="companion.followUps">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Suggest things to do</div><div class="row-desc">Games, debates, stories and practice when a conversation runs dry</div></div>
+            <input type="checkbox" class="toggle" data-setting="companion.activities">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Greet me in voice mode</div><div class="row-desc">Speaks first, picking up from last time</div></div>
+            <input type="checkbox" class="toggle" data-setting="companion.greeting">
+          </label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">On camera</div>
+            <p class="hint">Co-host mode for videos, streams and podcasts. Turn it on with ON AIR in voice mode.</p>
+          </div></div>
+          <label class="row">
+            <div><div class="row-label">On by itself while filming or recording</div><div class="row-desc">In filming mode and while a video is recorded</div></div>
+            <input type="checkbox" class="toggle" data-setting="onAir.auto">
+          </label>
+          <div class="row">
+            <div class="row-label">Format</div>
+            <select class="field" data-setting="onAir.format">
+              <option value="podcast">Podcast</option>
+              <option value="reaction">Reaction</option>
+              <option value="qa">Q&amp;A</option>
+              <option value="debate">Debate</option>
+              <option value="explainer">Explainer</option>
+              <option value="storytime">Storytime</option>
+              <option value="free">Free</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Show name</div><div class="row-desc">Optional</div></div>
+            <input type="text" class="field" autocomplete="off" maxlength="80" data-setting="onAir.show" placeholder="e.g. Late Night Tech">
+          </div>
+          <div class="row">
+            <div><div class="row-label">Who's watching</div><div class="row-desc">Optional</div></div>
+            <input type="text" class="field" autocomplete="off" maxlength="300" data-setting="onAir.audience" placeholder="e.g. young developers, German and English">
+          </div>
+          <label class="row">
+            <div><div class="row-label">Nothing private on camera</div><div class="row-desc">Your memories, notes, emails, calendar and files stay out of it</div></div>
+            <input type="checkbox" class="toggle" data-setting="onAir.hidePrivate">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Family friendly</div><div class="row-desc">Language and topics for a general audience</div></div>
+            <input type="checkbox" class="toggle" data-setting="onAir.familyFriendly">
+          </label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">How they talk</div>
+            <p class="hint">For every character.</p>
+          </div></div>
           <div class="row">
             <div class="row-label">Response length</div>
             <div class="slider"><span>Short</span><input type="range" class="range" min="1" max="3" value="2" data-setting="personality.length"><span>Long</span></div>
@@ -839,7 +909,7 @@
 
           <div class="subhead"><div>
             <div class="subhead-title">Custom instructions</div>
-            <p class="hint">Anything else about how it should talk and behave.</p>
+            <p class="hint">Anything else about how they should talk and behave, for every character.</p>
           </div></div>
           <textarea class="field textarea" id="custom-instructions" maxlength="5000" data-setting="personality.customInstructions" placeholder="e.g. Talk like an old friend from school. Keep it short and joke around a bit."></textarea>
         </section>
@@ -1232,6 +1302,8 @@
         <button type="button" class="voice-theme-btn" data-theme="hearth" title="Firefly Hearth">🔥 Hearth</button>
         <button type="button" class="voice-theme-btn" data-theme="robot" title="Robot: a 3D robot that is the AI's body">🤖 Robot</button>
       </div>
+      <div class="character-switch voice-character-switch" id="voice-character-switch" role="radiogroup" aria-label="Who you're talking to"></div>
+      <button type="button" class="voice-onair" id="voice-onair" aria-pressed="false" title="Co-host mode: it knows it's on camera and keeps private things out of it">ON AIR</button>
       <span class="voice-rec-badge" id="voice-rec-badge"><span class="voice-rec-dot"></span>REC <span id="voice-rec-time">0:00</span></span>
       <button type="button" class="voice-speed-pill" id="voice-engine">
         <span class="speed-bolt" id="voice-engine-icon">⚡</span>
@@ -1319,6 +1391,9 @@
       <button class="voice-ctrl" id="voice-keyboard-btn" title="Type in Voice Mode">
         <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M8 16h8"/></svg>
       </button>
+      <button class="voice-ctrl" id="voice-activities-btn" title="Let's do something: games, debates, stories" aria-expanded="false" aria-controls="voice-activities">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>
+      </button>
       <button class="voice-ctrl" id="voice-mute" title="Microphone (M)">
         <svg class="mic-on" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg>
         <svg class="mic-off" viewBox="0 0 24 24"><path d="M15 10V6a3 3 0 0 0-5.7-1.3"/><path d="M9 9v2a3 3 0 0 0 5 2.2"/><path d="M19 11a7 7 0 0 1-1.2 3.9M5 11a7 7 0 0 0 11 5.7"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
@@ -1345,6 +1420,12 @@
       <div class="voice-drawer-pane" id="voice-drafts"></div>
       <div class="voice-drawer-pane" id="voice-transcript" hidden></div>
     </aside>
+
+    <!-- Things to do together (src/js/activities.js) -->
+    <div class="voice-record-pop voice-activities" id="voice-activities" role="dialog" aria-label="Let's do something" hidden>
+      <div class="voice-record-title">Let's do something</div>
+      <div class="activity-chips" id="voice-activity-chips"></div>
+    </div>
 
     <!-- Recording a video: only the visualizer and the voices are recorded -->
     <div class="voice-record-pop" id="voice-record-pop" hidden>

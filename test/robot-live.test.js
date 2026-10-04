@@ -150,6 +150,24 @@ describe("Gemini Live moves the robot without pausing", () => {
     page.ws.close();
   });
 
+  test("going on air mid-session resumes Live as a co-host, without the private tools", async () => {
+    const { page, conn, setup } = await connect({ robot: false });
+    assert.ok(names(setup).includes("create_file"));
+    assert.doesNotMatch(setup.systemInstruction.parts[0].text, /# On camera/);
+    conn.send({ setupComplete: {} });
+    await page.next("ready");
+    conn.send({ sessionResumptionUpdate: { newHandle: "h2", resumable: true } });
+    const next = gemini.connection();
+    page.send({ type: "on-air", on: true });
+    const resumed = await next;
+    const { setup: again } = await resumed.next((m) => m.setup);
+    assert.match(again.systemInstruction.parts[0].text, /# On camera/);
+    assert.ok(!names(again).includes("create_file"), "files stay private on camera");
+    assert.strictEqual(again.sessionResumption.handle, "h2");
+    assert.strictEqual(again.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName, setup.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName);
+    page.ws.close();
+  });
+
   test("without the robot on screen, Live gets no robot tools", async () => {
     const { page, setup } = await connect({ robot: false });
     assert.ok(!names(setup).includes("robot_mood"));

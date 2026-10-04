@@ -21,9 +21,12 @@ const router = require("./router");
 const voiceLocal = require("./voice");
 const firebase = require("./firebase");
 const backup = require("./backup");
-const { VOICES } = require("./voices");
+const characters = require("./characters");
+const episodes = require("./episodes");
+const { ACTIVITIES } = require("./activities");
 
 const PORT = defaultPort;
+const VOICE_CHAT_TITLE = "Voice conversation"; // the same as live.js uses
 const HOST = defaultHost;
 const ROOT = path.join(__dirname, "..");
 
@@ -182,7 +185,9 @@ function waitForConfirmation(id, onClose) {
 // Gemini messages for a saved chat, from `start` on (older ones are in the
 // chat's summary). Attachments of the last 10 of your messages are included;
 // older ones are only mentioned, to keep requests small.
-function toContents(messages, start = 0) {
+// others: { id → name } of the characters that aren't the one answering now;
+// their replies are marked, so it doesn't carry on as them
+function toContents(messages, start = 0, others = {}) {
   const windowed = messages.slice(start);
   const userIndexes = windowed.map((m, i) => (m.role === "user" ? i : -1)).filter((i) => i >= 0);
   const recent = new Set(userIndexes.slice(-10));
@@ -192,7 +197,7 @@ function toContents(messages, start = 0) {
       const part = recent.has(i) ? attachments.toPart(file.id) : null;
       parts.push(part || { text: `[Earlier attachment: ${file.name}]` });
     }
-    if (m.text) parts.push({ text: m.text });
+    if (m.text) parts.push({ text: m.role === "model" && others[m.by] ? `[${others[m.by]}, another of the user's AI characters, said:] ${m.text}` : m.text });
     else if (m.activity?.length) parts.push({ text: `[${m.activity.join("; ")}]` });
     for (const d of m.drafts || []) parts.push({ text: `[Draft "${d.title}"]\n${d.content}` });
     if (!parts.length) parts.push({ text: "(empty)" });
@@ -215,7 +220,10 @@ function toContents(messages, start = 0) {
 async function chat(req, res) {
   const authHeader = req.headers.authorization || "";
   const headerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  const { chatId = null, text = "", retry = false, from = null, force = null, brainId = null, voice = false, robot: robotOnScreen = false, attachments: files = [], googleAccessToken } = await readJson(req);
+  const { chatId = null, text = "", retry = false, from = null, force = null, brainId = null, voice = false, robot: robotOnScreen = false, attachments: files = [], googleAccessToken, onAir: onAirFlag = false, greet = false } = await readJson(req);
+  const onAir = onAirFlag === true;
+  // greet: voice mode just opened; the AI speaks first (nothing of yours is added)
+  const greeting = greet === true && voice === true;
   const activeToken = googleAccessToken || headerToken;
   const attached = [];
   for (const id of Array.isArray(files) ? files.slice(0, 10) : []) {
@@ -227,17 +235,21 @@ async function chat(req, res) {
     }
   }
   if (retry && !chatId) return sendJson(res, 400, { error: "Nothing to answer." });
-  if (!retry && (typeof text !== "string" || (!text.trim() && !attached.length))) return sendJson(res, 400, { error: "The message is empty." });
+  if (!retry && !greeting && (typeof text !== "string" || (!text.trim() && !attached.length))) return sendJson(res, 400, { error: "The message is empty." });
 
   let conversation;
   try {
-    conversation = chatId ? chats.get(chatId) : chats.create(text.trim() || attached[0].name);
+    conversation = chatId ? chats.get(chatId) : chats.create(greeting ? VOICE_CHAT_TITLE : text.trim() || attached[0].name);
     if (chatId && from) chats.truncate(conversation, from);
   } catch (err) {
     return sendJson(res, 404, { error: err.message });
   }
+  // A voice chat that started with the AI's greeting is named after the first thing you say
+  if (!greeting && !retry && conversation.title === VOICE_CHAT_TITLE && text.trim()) conversation.title = chats.titleFrom(text.trim());
   let userId = null;
-  if (retry) {
+  if (greeting) {
+    // Nothing to add
+  } else if (retry) {
     if (conversation.messages.at(-1)?.role !== "user") return sendJson(res, 400, { error: "Nothing to answer." });
   } else {
     userId = crypto.randomUUID();
@@ -251,8 +263,21 @@ async function chat(req, res) {
   res.writeHead(200, securityHeaders({
     "Content-Type": "application/x-ndjson; charset=utf-8",
   }));
-  const send = (event) => !res.writableEnded && res.write(JSON.stringify(event) + "\n");
-  send({ type: "chat", id: conversation.id, title: conversation.title, userId, replyId });
+  const write = (event) => !res.writableEnded && res.write(JSON.stringify(event) + "\n");
+  // Which chat it's saved in. A greeting in a new voice chat says so only once
+  // something arrives, so a greeting that fails leaves no empty chat behind.
+  let announced = false;
+  const announce = () => {
+    if (announced) return;
+    announced = true;
+    if (greeting) chats.save(conversation);
+    write({ type: "chat", id: conversation.id, title: conversation.title, userId, replyId });
+  };
+  const send = (event) => {
+    if (!["error", "done", "route", "confirm"].includes(event.type)) announce();
+    return write(event);
+  };
+  if (!greeting || chatId) announce();
 
   // Pressing stop closes the request; stop asking the provider too
   const controller = new AbortController();
@@ -264,7 +289,7 @@ async function chat(req, res) {
 
   const current = settings.get();
   const window = current.aiControl?.contextWindow || 20;
-  const lastUser = conversation.messages.at(-1);
+  const lastUser = greeting ? { role: "user", text: "" } : conversation.messages.at(-1);
 
   // Which AI answers: see router.js (the routing mode in Settings → AI control)
   let routePlan;
@@ -295,12 +320,15 @@ async function chat(req, res) {
   const run = async (step, { signal, started }) => {
     const brain = step.brain;
     // Google tools are left out for a local AI until you're signed in with Google
-    const offered = tools.declarations(current, { voice, robot: robotOnScreen === true, workspace: brain.provider !== "local" || Boolean(activeToken) });
+    const offered = tools.declarations(current, { voice, robot: robotOnScreen === true, workspace: brain.provider !== "local" || Boolean(activeToken), onAir });
+    const contents = toContents(conversation.messages, summary.windowStart(conversation, window), characters.others(current));
+    // The greeting's note from the app goes last, as if said, but it's never saved
+    if (greeting) contents.push({ role: "user", parts: [{ text: prompt.greeting(current, { chatId: conversation.messages.length ? conversation.id : null, onAir }) }] });
     await brain.api.streamChat({
       key: brain.key,
       model: brain.model,
-      contents: toContents(conversation.messages, summary.windowStart(conversation, window)),
-      system: prompt.build(current, { voice, toolsOffered: offered, summary: conversation.summary?.text }),
+      contents,
+      system: prompt.build(current, { voice, toolsOffered: offered, summary: conversation.summary?.text, onAir, chatId: conversation.id }),
       temperature: prompt.temperature(current),
       fast: voice || current.aiControl?.reasoningEffort === "fast",
       tools: offered,
@@ -358,13 +386,13 @@ async function chat(req, res) {
   } finally {
     // Keep whatever arrived, even if the reply was stopped halfway
     if (reply || activity.length || drafts.length) {
-      const message = { id: replyId, role: "model", text: reply, at: Date.now() };
+      const message = { id: replyId, role: "model", text: reply, at: Date.now(), by: current.characters.active };
       if (activity.length) message.activity = activity;
       if (drafts.length) message.drafts = drafts;
       if (answeredBy && routePlan.mode !== "fixed") message.via = { kind: answeredBy.kind, name: answeredBy.brain.name, model: answeredBy.brain.model, reason: answeredBy.reason, mode: routePlan.mode };
       conversation.messages.push(message);
     }
-    if (reply || activity.length || drafts.length || conversation.cloudOk) chats.save(conversation);
+    if (announced && (reply || activity.length || drafts.length || conversation.cloudOk)) chats.save(conversation);
   }
   res.end();
   // Long chats: summarize what dropped out of the window, in the background. With a choice
@@ -387,7 +415,9 @@ async function speak(req, res) {
   if (!brain) return sendJson(res, 400, { error: "NO_BRAIN" });
   if (typeof text !== "string" || !text.trim()) return sendJson(res, 400, { error: "Nothing to say." });
   try {
-    const wav = await brain.api.speak({ key: brain.key, text: text.slice(0, 4000), voice: VOICES[voice] || VOICES[settings.get().personality.voice] });
+    // A voice by name (trying one out in Settings), else the active character's
+    const chosen = characters.GEMINI_VOICES.find((v) => v.name === voice) || characters.voiceOf(characters.active(settings.get()));
+    const wav = await brain.api.speak({ key: brain.key, text: text.slice(0, 4000), voice: chosen.name, gender: chosen.gender });
     res.writeHead(200, securityHeaders({
       "Content-Type": "audio/wav",
     }));
@@ -546,12 +576,21 @@ const routes = [
   ["GET", /^\/api\/chats\/search$/, (req, id, url) => chats.search(url.searchParams.get("q"))],
   ["GET", /^\/api\/chats\/([\w-]+)$/, (req, id) => chats.get(id)],
   ["PATCH", /^\/api\/chats\/([\w-]+)$/, async (req, id) => chats.rename(id, (await readJson(req)).title)],
-  ["DELETE", /^\/api\/chats\/([\w-]+)$/, (req, id) => chats.remove(id)],
+  ["DELETE", /^\/api\/chats\/([\w-]+)$/, (req, id) => (episodes.removeForChat(id), chats.remove(id))],
   ["PATCH", /^\/api\/chats\/([\w-]+\/messages\/[\w-]+)$/, (req, ids) => markMessage(req, ...ids.split("/messages/"))],
   ["POST", /^\/api\/chats\/([\w-]+)\/suggestions$/, (req, id) => suggestions(id)],
 
   ["GET", /^\/api\/settings$/, () => settings.get()],
   ["PUT", /^\/api\/settings$/, async (req) => settings.set(await readJson(req))],
+
+  // Characters (Settings → Characters): the choices; the characters themselves are in the settings
+  ["GET", /^\/api\/characters\/meta$/, () => ({ voices: characters.GEMINI_VOICES, fields: characters.FIELDS, builtin: characters.BUILTIN, templates: characters.TEMPLATES, looks: characters.LOOKS, formats: Object.keys(prompt.FORMATS), max: characters.MAX_CHARACTERS })],
+  ["GET", /^\/api\/activities$/, () => ({ activities: ACTIVITIES })],
+  // What the AI remembers of your conversations (Settings → Memory)
+  ["GET", /^\/api\/episodes$/, () => ({ episodes: episodes.all(), followUps: episodes.followUps() })],
+  ["DELETE", /^\/api\/episodes$/, () => episodes.clear()],
+  ["DELETE", /^\/api\/episodes\/([\w-]+)$/, (req, id) => (episodes.removeForChat(id), { ok: true })],
+  ["DELETE", /^\/api\/follow-ups\/([\w-]+)$/, (req, id) => episodes.resolve(id)],
 
   ["GET", /^\/api\/notes$/, () => ({ dir: notes.dir, notes: notes.list() })],
   ["PUT", /^\/api\/notes\/([\w-]+)$/, async (req, id) => notes.save({ ...(await readJson(req)), id })],
@@ -666,6 +705,8 @@ async function handle(req, res) {
 function start(port = PORT, host = HOST) {
   allowedHosts = computeAllowedHosts(port, host);
   backup.schedule(settings.get);
+  // Quiet conversations become memories, in the background (a local AI does it when there is one)
+  episodes.schedule({ getBrain: () => brains.forTask(), getSettings: settings.get });
   const connections = new Set();
   let isShuttingDown = false;
 
