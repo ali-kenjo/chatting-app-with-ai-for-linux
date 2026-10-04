@@ -30,7 +30,7 @@ npm start       # then open http://localhost:3000
 
 ### 3. Linux desktop app (Electron)
 
-The same app in its own window, with a launcher entry and icon. It runs the helper inside the app on a fixed local port (`127.0.0.1:38417`, nothing outside this computer can reach it) and uses the same `~/.config/friends` as the browser version, so your chats, settings and keys carry over.
+The same app in its own window, with a launcher entry and icon. It runs the helper inside the app on a fixed local port (`localhost:38417`, answered on `127.0.0.1` only, so nothing outside this computer can reach it) and uses the same `~/.config/friends` as the browser version, so your chats, settings and keys carry over.
 
 ```bash
 ./scripts/install.sh --desktop          # dependencies + the Electron download (~100 MB)

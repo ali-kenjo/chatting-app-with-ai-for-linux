@@ -1,6 +1,6 @@
 // What the desktop window may do, as plain functions (no Electron needed, so
 // node:test checks them). The window only ever shows this app's own helper
-// (http://127.0.0.1:<port>); everything else goes to the real browser.
+// (http://localhost:<port>, served from 127.0.0.1); everything else goes to the real browser.
 
 // Google sign-in (Firebase) opens a popup on these hosts
 const SIGN_IN_HOSTS = /^([a-z0-9-]+\.)*(google\.com|googleapis\.com|gstatic\.com|firebaseapp\.com)$/;

@@ -4,6 +4,7 @@ const assert = require("node:assert");
 const policy = require("../electron/policy");
 
 const ORIGIN = "http://127.0.0.1:38417";
+const WINDOW_ORIGIN = "http://localhost:38417"; // what the desktop app opens (Firebase accepts localhost for Google sign-in)
 
 describe("Desktop window rules", () => {
   test("only this app's own page may use the microphone and camera", () => {
@@ -45,4 +46,12 @@ describe("Desktop window rules", () => {
     const ua = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) friends/0.1.0 Chrome/152.0.0.0 Electron/44.4.5 Safari/537.36";
     assert.strictEqual(policy.cleanUserAgent(ua), "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36");
   });
+});
+
+test("the desktop app's own localhost address is trusted, other ports and the IP address are not", () => {
+  assert.strictEqual(policy.permissionAllowed("media", "http://localhost:38417/", WINDOW_ORIGIN), true);
+  assert.strictEqual(policy.navigationAllowed("http://localhost:38417/#chat/x", WINDOW_ORIGIN), true);
+  assert.strictEqual(policy.navigationAllowed("http://localhost:38418/", WINDOW_ORIGIN), false);
+  assert.strictEqual(policy.navigationAllowed("http://127.0.0.1:38417/", WINDOW_ORIGIN), false);
+  assert.strictEqual(policy.openAction("https://accounts.google.com/o/oauth2/auth", WINDOW_ORIGIN), "popup");
 });

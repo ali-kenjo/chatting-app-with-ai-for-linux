@@ -36,7 +36,7 @@ async function main() {
     if (!browser) throw new Error("The window didn't start.\n" + log.slice(-600));
     let page;
     for (let i = 0; i < 40 && !page; i++) {
-      page = (await browser.pages()).find((p) => /127\.0\.0\.1:\d+/.test(p.url()));
+      page = (await browser.pages()).find((p) => /(127\.0\.0\.1|localhost):\d+/.test(p.url()));
       if (!page) await new Promise((resolve) => setTimeout(resolve, 500));
     }
     if (!page) throw new Error("The app window never loaded the page.");
