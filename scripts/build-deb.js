@@ -12,9 +12,19 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"))
 const electronDist = path.join(root, "node_modules", "electron", "dist");
 const run = (cmd, args, opts = {}) => execFileSync(cmd, args, { stdio: "inherit", ...opts });
 
+// Newer npm versions don't run Electron's own download when installing, so it's fetched here
 if (!fs.existsSync(path.join(electronDist, "electron"))) {
-  console.error("Electron isn't downloaded yet. Run: node node_modules/electron/install.js");
-  process.exit(1);
+  const installer = path.join(root, "node_modules", "electron", "install.js");
+  if (!fs.existsSync(installer)) {
+    console.error("Electron isn't installed. Run: npm ci");
+    process.exit(1);
+  }
+  console.log("Downloading Electron…");
+  run(process.execPath, [installer], { cwd: root });
+  if (!fs.existsSync(path.join(electronDist, "electron"))) {
+    console.error("Electron couldn't be downloaded. Run: node node_modules/electron/install.js");
+    process.exit(1);
+  }
 }
 
 const out = path.join(root, "dist");
