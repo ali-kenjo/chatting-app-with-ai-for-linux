@@ -5,7 +5,7 @@
   "private": true,
   "main": "electron/main.js",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   },
   "scripts": {
     "start": "node server/server.js",
@@ -15,6 +15,8 @@
     "check": "node scripts/check.js",
     "desktop": "electron . --no-sandbox",
     "dist": "node scripts/build-deb.js",
+    "update": "bash scripts/update.sh",
+    "backup": "node scripts/backup.js",
     "doctor": "node scripts/doctor.js",
     "setup": "bash scripts/install.sh",
     "voice:setup": "node scripts/local-voice.js",

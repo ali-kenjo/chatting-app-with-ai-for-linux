@@ -114,6 +114,23 @@ export const api = {
     remove: (id) => call("DELETE", `/api/notes/${id}`),
     clear: () => call("DELETE", "/api/notes"),
   },
+  backups: {
+    list: () => call("GET", "/api/backups"),
+    create: () => call("POST", "/api/backups"),
+    remove: (name) => call("DELETE", `/api/backups/${encodeURIComponent(name)}`),
+    restore: (name, mode) => call("POST", `/api/backups/${encodeURIComponent(name)}/restore?mode=${mode}`),
+    async import(file, mode) {
+      let res;
+      try {
+        res = await fetch(`/api/backups/import?mode=${mode}`, { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: file });
+      } catch {
+        throw new Error(OFFLINE);
+      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Import failed.");
+      return data;
+    },
+  },
   confirm: (id, allow) => call("POST", `/api/confirm/${id}`, { allow }),
   news: (q) => call("GET", `/api/news?q=${encodeURIComponent(q || "")}`),
   attachments: {

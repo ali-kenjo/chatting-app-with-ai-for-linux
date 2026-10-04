@@ -43,6 +43,14 @@ async function main() {
   if (storage.ok) ok(`Your data is kept in ${storage.path}`);
   else fail(`Can't write to ${storage.path}: ${storage.error}`, "Set FRIENDS_DATA_DIR to a folder you can write to");
 
+  // Backups
+  const backups = require("../server/backup").list();
+  if (backups.length) {
+    const days = Math.floor((Date.now() - backups[0].createdAt) / 86400000);
+    if (days <= 2) ok(`Your data is backed up (${backups.length} backup${backups.length === 1 ? "" : "s"}, the newest ${days ? `${days} day${days === 1 ? "" : "s"} ago` : "today"})`);
+    else warn(`The newest backup is ${days} days old`, "Back up now: npm run backup (or Settings → Data & backups)");
+  } else console.log(`${paint(2, "·")} No backups yet: Friends makes one a day while it runs, or run: npm run backup`);
+
   // API keys
   const keys = require("../server/keys");
   if (keys.isSystemKeyringOperational()) ok("API keys are kept in the system keyring");

@@ -2513,6 +2513,40 @@ details.form-field[open] {
   border-color: var(--danger);
 }
 
+/* ---------- Data & backups ---------- */
+.backup-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.backup-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--bg-main);
+}
+
+.backup-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.backup-meta {
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+.backup-item a.btn {
+  text-decoration: none;
+}
+
 /* ---------- AI memory ---------- */
 .storage-line {
   display: flex;

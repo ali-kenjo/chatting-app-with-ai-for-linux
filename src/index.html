@@ -236,6 +236,10 @@
           <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
           <span>Connected Apps</span>
         </button>
+        <button class="tab" data-tab="data">
+          <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
+          <span>Data &amp; backups</span>
+        </button>
       </div>
 
       <div class="modal-body">
@@ -1147,7 +1151,52 @@
 
           <div class="honesty-note">
             <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            <span>Cloud security: OAuth access tokens are kept strictly in browser memory only and never written to localStorage. All data mutations require your explicit confirmation. Zero local filesystem access.</span>
+            <span>Your Google sign-in token is kept in this window's memory only, never saved to disk. Sending an email or adding an event asks you first (Settings → AI control → Confirm workspace actions). None of this is available in Private mode.</span>
+          </div>
+        </section>
+
+        <!-- Data & backups -->
+        <section class="pane" data-pane="data">
+          <h3>Data &amp; backups</h3>
+          <div class="storage-line">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><line x1="8" y1="20" x2="16" y2="20"/><line x1="12" y1="16" x2="12" y2="20"/></svg>
+            <span>Backups are kept in <code id="backup-dir">~/.config/friends/backups</code>. API keys are never in a backup; enter them again on a new computer.</span>
+          </div>
+          <label class="row">
+            <div><div class="row-label">Automatic backups</div><div class="row-desc">Once a day: chats, memory, settings and everything you keep here (not attachments)</div></div>
+            <input type="checkbox" class="toggle" data-setting="backup.auto">
+          </label>
+          <div class="row">
+            <div><div class="row-label">Keep</div><div class="row-desc">Older automatic backups are deleted; the ones you make stay</div></div>
+            <select class="field" data-setting="backup.keep" data-type="number">
+              <option value="5">5 days</option>
+              <option value="10">10 days</option>
+              <option value="30">30 days</option>
+              <option value="60">60 days</option>
+            </select>
+          </div>
+          <div class="form-test-bar">
+            <button type="button" class="btn small btn-primary" id="backup-now">Back up now</button>
+            <span class="test-feedback" id="backup-status" role="status"></span>
+          </div>
+          <ul class="backup-list" id="backup-list"></ul>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Export and import</div>
+            <p class="hint">Take your data to another computer, or keep a copy somewhere safe.</p>
+          </div></div>
+          <label class="row">
+            <div><div class="row-label">Include attachments</div><div class="row-desc">Files you attached to chats and your own robot model (can be large)</div></div>
+            <input type="checkbox" class="toggle" id="backup-with-files">
+          </label>
+          <div class="form-test-bar">
+            <button type="button" class="btn small" id="backup-export">Export…</button>
+            <button type="button" class="btn small" id="backup-import">Import…</button>
+            <select class="field" id="backup-import-mode" aria-label="How to import">
+              <option value="merge">Add to what's here</option>
+              <option value="replace">Replace what's here</option>
+            </select>
+            <input type="file" id="backup-file" accept=".gz,.json,application/gzip,application/json" hidden>
           </div>
         </section>
       </div>

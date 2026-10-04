@@ -323,7 +323,13 @@ async function testConfig({ key, provider = "gemini", model, protocol, baseUrl }
   };
 }
 
+// Read brains.json again (after a backup was restored)
+function reload() {
+  state = null;
+}
+
 module.exports = {
+  reload,
   publicState,
   listModels,
   saveBrain,

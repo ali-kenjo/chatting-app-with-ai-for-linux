@@ -19,6 +19,8 @@ const DEFAULTS = {
     askBeforeActing: true,
     useTrash: true,
   },
+  // Copies of your data folder in <data folder>/backups (see backup.js)
+  backup: { auto: true, keep: 10 },
   // Private mode: only a local AI answers, and nothing is sent to Google, GitHub
   // or news sites (no Gemini, Live, Google sign-in, GitHub search or news)
   privacy: { localOnly: false },
@@ -134,6 +136,7 @@ function sanitize(input) {
   s.aiControl.searchGrounding = Boolean(s.aiControl.searchGrounding);
   s.aiControl.confirmTools = Boolean(s.aiControl.confirmTools);
   s.aiControl.contextWindow = clamp(s.aiControl.contextWindow || 20, 5, 50);
+  s.backup.keep = clamp(s.backup.keep, 3, 60);
   if (!/^#[0-9a-f]{6}$/i.test(s.theme.accent)) s.theme.accent = DEFAULTS.theme.accent;
 
   s.routing.mode = ROUTING.modes.includes(s.routing.mode) ? s.routing.mode : "fixed";
@@ -173,4 +176,10 @@ function set(input) {
   return cache;
 }
 
-module.exports = { get, set, sanitize, DEFAULTS, ROBOT, ROUTING };
+// Read settings.json again (after a backup was restored)
+function reload() {
+  cache = null;
+  return get();
+}
+
+module.exports = { get, set, reload, sanitize, DEFAULTS, ROBOT, ROUTING };

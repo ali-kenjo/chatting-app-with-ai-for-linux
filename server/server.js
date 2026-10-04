@@ -20,6 +20,7 @@ const local = require("./local");
 const router = require("./router");
 const voiceLocal = require("./voice");
 const firebase = require("./firebase");
+const backup = require("./backup");
 const { VOICES } = require("./voices");
 
 const PORT = defaultPort;
@@ -512,6 +513,24 @@ async function smartMood({ text, heard }) {
   return { mood: await robot.readMood({ brain, text, heard }) };
 }
 
+// ---------- Backups (Settings → Data) ----------
+// A restore changes files that some modules keep in memory
+backup.onRestore(() => {
+  settings.reload();
+  brains.reload();
+});
+
+function sendBackup(res, buffer, name) {
+  res.writeHead(200, securityHeaders({
+    "Content-Type": "application/gzip",
+    "Content-Disposition": `attachment; filename="${name}"`,
+    "Content-Length": buffer.length,
+  }));
+  res.end(buffer);
+}
+
+const restoreMode = (url) => (url.searchParams.get("mode") === "merge" ? "merge" : "replace");
+
 // [method, path pattern, handler(req, captured id, url)] → JSON response
 const routes = [
   ["GET", /^\/api\/brains$/, () => brains.publicState()],
@@ -577,6 +596,12 @@ const routes = [
   ["POST", /^\/api\/attachments$/, (req) => upload(req)],
   ["POST", /^\/api\/voice\/transcribe$/, (req) => transcribe(req)],
 
+  ["GET", /^\/api\/backups$/, () => ({ dir: backup.dir, backups: backup.list() })],
+  ["POST", /^\/api\/backups$/, () => backup.create("manual", { keep: settings.get().backup.keep })],
+  ["POST", /^\/api\/backups\/import$/, async (req, id, url) => backup.restore(await readBody(req, 1024 * 1024 * 1024), { mode: restoreMode(url) })],
+  ["POST", /^\/api\/backups\/([\w.-]+)\/restore$/, (req, name, url) => backup.restoreSaved(name, { mode: restoreMode(url) })],
+  ["DELETE", /^\/api\/backups\/([\w.-]+)$/, (req, name) => backup.remove(name)],
+
   ["GET", /^\/api\/robot\/model\/info$/, () => robot.info()],
   ["PUT", /^\/api\/robot\/model$/, (req) => uploadModel(req)],
   ["DELETE", /^\/api\/robot\/model$/, () => robot.removeModel()],
@@ -607,6 +632,18 @@ async function handle(req, res) {
   const file = pathname.match(/^\/api\/attachments\/([\w-]+)$/);
   if (file && req.method === "GET") return download(req, res, file[1]);
   if (pathname === "/api/robot/model" && (req.method === "GET" || req.method === "HEAD")) return sendModel(req, res);
+  if (pathname === "/api/backups/export" && req.method === "GET") {
+    const files = url.searchParams.get("files") === "1";
+    return sendBackup(res, backup.exportBuffer({ files }), `friends-backup-${new Date().toISOString().slice(0, 10)}.json.gz`);
+  }
+  const saved = pathname.match(/^\/api\/backups\/([\w.-]+)\/download$/);
+  if (saved && req.method === "GET") {
+    try {
+      return sendBackup(res, backup.read(saved[1]), saved[1]);
+    } catch {
+      return sendJson(res, 404, { error: "Backup not found." });
+    }
+  }
 
   if (pathname.startsWith("/api/")) {
     for (const [method, pattern, fn] of routes) {
@@ -628,6 +665,7 @@ async function handle(req, res) {
 
 function start(port = PORT, host = HOST) {
   allowedHosts = computeAllowedHosts(port, host);
+  backup.schedule(settings.get);
   const connections = new Set();
   let isShuttingDown = false;
 
