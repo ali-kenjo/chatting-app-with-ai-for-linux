@@ -1,5 +1,5 @@
 // File access for the AI, limited to the allowed folders from
-// Settings → AI control. Every path is resolved to its real location first
+// Settings → AI & privacy. Every path is resolved to its real location first
 // (following "..", "~" and symbolic links), then checked against those folders.
 const fs = require("fs");
 const fsp = fs.promises;

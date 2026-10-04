@@ -65,16 +65,6 @@
   overflow: hidden;
 }
 
-.voice-confirm {
-  pointer-events: auto;
-  width: 100%;
-  background: rgba(30, 31, 32, 0.9);
-}
-
-.voice-confirm[hidden] {
-  display: none;
-}
-
 .voice-mode[data-state="thinking"] .voice-dot {
   animation-duration: 0.6s;
 }
@@ -119,7 +109,7 @@
   height: 36px;
   border-radius: 50%;
   background: rgba(245, 158, 11, 0.18);
-  color: #f59e0b;
+  color: var(--warning);
   display: grid;
   place-items: center;
   flex-shrink: 0;

@@ -4,6 +4,7 @@
 // as if you'd said it.
 import { api } from "./api.js";
 import { getSettings, onSettings } from "./store.js";
+import { t } from "./i18n.js";
 
 const chips = document.getElementById("hero-prompts");
 const voiceChips = document.getElementById("voice-activity-chips");
@@ -16,7 +17,7 @@ function chip(a, { prompt = false } = {}) {
   b.className = "prompt-chip activity-chip";
   b.dataset.id = a.id;
   if (prompt) b.dataset.prompt = a.prompt; // sent like a typed message (workspace.js)
-  b.textContent = `${a.emoji} ${a.title}`;
+  b.textContent = `${a.emoji} ${t(a.title)}`;
   b.title = a.prompt;
   return b;
 }

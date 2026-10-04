@@ -2,7 +2,7 @@
 // How commands run (server/builder.js decides with these), the lists, and what's running now.
 import { api } from "./api.js";
 import { getSettings, onSettings, updateSettings } from "./store.js";
-import { openSettings } from "./settings.js";
+import { t } from "./i18n.js";
 
 const modes = document.getElementById("builder-modes");
 const allow = document.getElementById("builder-allow");
@@ -33,11 +33,6 @@ modes.addEventListener("click", (e) => {
 allow.addEventListener("change", () => updateSettings((s) => (s.builder.allow = lines(allow.value))));
 block.addEventListener("change", () => updateSettings((s) => (s.builder.block = lines(block.value))));
 
-document.querySelector('[data-open-tab="ai-control"]')?.addEventListener("click", (e) => {
-  e.preventDefault();
-  openSettings("ai-control");
-});
-
 async function refreshRunning() {
   let list = [];
   try {
@@ -55,7 +50,7 @@ async function refreshRunning() {
           title.textContent = p.command;
           const meta = document.createElement("span");
           meta.className = "life-meta";
-          meta.textContent = `${p.cwd}${p.running ? "" : " · finished"}`;
+          meta.textContent = `${p.cwd}${p.running ? "" : ` · ${t("finished")}`}`;
           text.append(title, meta);
           if (p.url) {
             const a = Object.assign(document.createElement("a"), { href: p.url, target: "_blank", rel: "noopener noreferrer", textContent: p.url, className: "app-link" });
@@ -64,7 +59,8 @@ async function refreshRunning() {
           const stop = document.createElement("button");
           stop.type = "button";
           stop.className = "btn small";
-          stop.textContent = "Stop";
+          stop.textContent = t("Stop");
+          stop.setAttribute("aria-label", t("Stop {command}", { command: p.command }));
           stop.addEventListener("click", async () => {
             await api.builder.stop(p.id).catch(() => {});
             refreshRunning();
@@ -72,7 +68,7 @@ async function refreshRunning() {
           li.append(text, stop);
           return li;
         })
-      : [Object.assign(document.createElement("li"), { className: "memory-empty", textContent: "Nothing is running." })])
+      : [Object.assign(document.createElement("li"), { className: "memory-empty", textContent: t("Nothing is running. Dev servers and previews the AI starts will show up here.") })])
   );
 }
 

@@ -4,8 +4,9 @@
 // chat and in voice mode's side panel.
 import { marked } from "/vendor/marked/marked.esm.js";
 import DOMPurify from "/vendor/dompurify/purify.es.mjs";
+import { t } from "./i18n.js";
 
-const KINDS = { script: "Script", post: "Post", caption: "Caption", outline: "Outline", ideas: "Ideas", email: "Email", other: "Draft" };
+const KINDS = { script: t("Script"), post: t("Post"), caption: t("Caption"), outline: t("Outline"), ideas: t("Ideas"), email: t("Email"), other: t("Draft") };
 
 const fileName = (title) => `${title.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "") || "draft"}.md`;
 
@@ -21,10 +22,10 @@ export function draftCard(draft) {
   card.dataset.id = draft.id;
   card.innerHTML = `
     <header class="draft-head"><span class="draft-kind"></span><span class="draft-title"></span></header>
-    <div class="draft-body markdown"></div>
+    <div class="draft-body markdown" dir="auto"></div>
     <div class="draft-actions">
-      <button type="button" class="btn btn-sm" data-action="copy">Copy</button>
-      <button type="button" class="btn btn-sm" data-action="download">Download</button>
+      <button type="button" class="btn btn-sm" data-action="copy">${t("Copy")}</button>
+      <button type="button" class="btn btn-sm" data-action="download">${t("Download")}</button>
     </div>`;
   card.querySelector(".draft-kind").textContent = KINDS[draft.kind] || KINDS.other;
   card.querySelector(".draft-title").textContent = draft.title;
@@ -36,9 +37,9 @@ export function draftCard(draft) {
     if (button.dataset.action === "copy") {
       try {
         await navigator.clipboard.writeText(draft.content);
-        flash(button, "Copied");
+        flash(button, t("Copied"));
       } catch {
-        flash(button, "Couldn't copy");
+        flash(button, t("Couldn't copy"));
       }
     } else {
       const link = document.createElement("a");

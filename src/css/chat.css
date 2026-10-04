@@ -11,6 +11,19 @@
   overflow: hidden;
 }
 
+/* The start screen centres when it fits and scrolls from its top when it doesn't (a small window) */
+.main:not(.has-chat) {
+  align-items: flex-start;
+  justify-content: flex-start;
+  overflow-y: auto;
+  padding-top: 4rem;
+}
+
+.main:not(.has-chat) > .center {
+  margin: auto;
+  padding-bottom: var(--space-6);
+}
+
 
 .center {
   width: 100%;
@@ -150,7 +163,7 @@
   gap: var(--space-6);
   overflow-y: auto;
   /* Full-width scroll area, content centered in a reading column (about 70 characters a line) */
-  padding: var(--space-8) max(var(--space-6), calc((100% - var(--reading-w)) / 2)) var(--space-6);
+  padding: 4.25rem max(var(--space-6), calc((100% - var(--reading-w)) / 2)) var(--space-6); /* the top clears the character switch */
 }
 
 .has-chat .center {

@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="css/filming.css">
   <link rel="stylesheet" href="css/robot-dock.css">
   <link rel="stylesheet" href="css/characters.css">
+  <link rel="stylesheet" href="css/voice-ui.css">
   <link rel="stylesheet" href="css/life.css">
   <link rel="stylesheet" href="css/apps.css">
   <link rel="stylesheet" href="css/components.css">
@@ -164,7 +165,7 @@
               </div>
               <p class="onboarding-status" id="onb-local-status" role="status">Looking for an AI on this computer…</p>
               <div class="onboarding-actions" id="onb-local-actions"></div>
-              <p class="onboarding-help" id="onb-local-help" hidden>None found yet. Install <a href="https://ollama.com/download" target="_blank" rel="noopener noreferrer">Ollama</a> (free), run <code>ollama pull llama3.2</code> in a terminal, then look again.</p>
+              <p class="onboarding-help" id="onb-local-help" hidden data-i18n-html="onb.localHelp">None found yet. Install <a href="https://ollama.com/download" target="_blank" rel="noopener noreferrer">Ollama</a> (free), run <code>ollama pull llama3.2</code> in a terminal, then look again.</p>
             </div>
 
             <form class="onboarding-option onb-cloud" id="onb-cloud">
@@ -190,7 +191,7 @@
           <div class="onboarding-foot">
             <label class="onboarding-private">
               <input type="checkbox" class="toggle" data-setting="privacy.localOnly">
-              <span><strong>Private mode</strong> Only an AI on this computer answers, and nothing is sent to the internet.</span>
+              <span data-i18n-html="onb.private"><strong>Private mode</strong> Only an AI on this computer answers, and nothing is sent to the internet.</span>
             </label>
             <button type="button" class="link-btn" id="onb-skip">Not now</button>
           </div>
@@ -276,7 +277,7 @@
         <h2 id="settings-title">Settings</h2>
         <div class="settings-search">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/></svg>
-          <input type="search" id="settings-search" class="field" placeholder="Search settings" aria-label="Search settings" autocomplete="off" spellcheck="false" aria-controls="settings-results" aria-expanded="false">
+          <input type="search" id="settings-search" class="field" role="combobox" placeholder="Search settings" aria-label="Search settings" autocomplete="off" spellcheck="false" aria-autocomplete="list" aria-controls="settings-results" aria-expanded="false">
         </div>
         <ul class="settings-results" id="settings-results" aria-label="Matching settings" hidden></ul>
         <div class="settings-tabs" id="settings-tabs" role="tablist" aria-orientation="vertical" aria-label="Settings sections">
@@ -325,7 +326,7 @@
       </div>
 
       <div class="modal-body">
-        <button class="icon-btn modal-close" id="settings-close" title="Close">
+        <button class="icon-btn modal-close" id="settings-close" title="Close" aria-label="Close">
           <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
         </button>
 
@@ -425,13 +426,13 @@
               <div class="ai-status-left">
                 <div class="ai-status-indicator">
                   <span class="status-pulse-dot"></span>
-                  <span class="ai-status-title" id="ai-active-brain-name">Gemini (Default)</span>
+                  <span class="ai-status-title" id="ai-active-brain-name">Looking…</span>
                 </div>
-                <div class="ai-status-subtitle" id="ai-active-brain-meta">Google AI Studio · gemini-2.5-flash</div>
+                <div class="ai-status-subtitle" id="ai-active-brain-meta"></div>
               </div>
-              <button type="button" class="btn small" id="ai-ping-btn" title="Ping the AI to verify latency and model status">
+              <button type="button" class="btn small" id="ai-ping-btn" title="Check that the AI answers, and how fast">
                 <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                <span>Test Ping</span>
+                <span>Test connection</span>
               </button>
             </div>
             <div class="ai-ping-status" id="ai-ping-status" hidden></div>
@@ -439,7 +440,7 @@
             <!-- Privacy & local AI -->
             <div class="subhead">
               <div>
-                <div class="subhead-title">Privacy & local AI</div>
+                <div class="subhead-title">Privacy and local AI</div>
                 <p class="hint">Run models on this computer, so your chats never leave it.</p>
               </div>
             </div>
@@ -447,11 +448,11 @@
             <div class="explain" id="local-vs-cloud">
               <div class="explain-item">
                 <span class="explain-icon" aria-hidden="true">🔒</span>
-                <p><strong>Local AI</strong> runs on this computer. Your messages never leave it, and it works offline. It can be slower on an older computer.</p>
+                <p data-i18n-html="explain.local"><strong>Local AI</strong> runs on this computer. Your messages never leave it, and it works offline. It can be slower on an older computer.</p>
               </div>
               <div class="explain-item">
                 <span class="explain-icon" aria-hidden="true">☁️</span>
-                <p><strong>Cloud AI</strong> (Gemini) runs on Google's servers. It is faster and smarter, but your messages are sent to Google to be answered.</p>
+                <p data-i18n-html="explain.cloud"><strong>Cloud AI</strong> (Gemini) runs on Google's servers. It is faster and smarter, but your messages are sent to Google to be answered.</p>
               </div>
             </div>
 
@@ -476,9 +477,9 @@
               <div class="local-help" id="local-help" hidden>
                 <p>No local AI found yet. To get one:</p>
                 <ol>
-                  <li>Install <strong>Ollama</strong> from <a href="https://ollama.com/download" target="_blank" rel="noopener noreferrer">ollama.com/download</a> (or LM Studio, Jan, llama.cpp…).</li>
-                  <li>Get a model, e.g. run <code>ollama pull llama3.2</code> in a terminal.</li>
-                  <li>Click <em>Look again</em>. It appears here, one click adds it.</li>
+                  <li data-i18n-html="local.help1">Install <strong>Ollama</strong> from <a href="https://ollama.com/download" target="_blank" rel="noopener noreferrer">ollama.com/download</a> (or LM Studio, Jan, llama.cpp…).</li>
+                  <li data-i18n-html="local.help2">Get a model, e.g. run <code>ollama pull llama3.2</code> in a terminal.</li>
+                  <li data-i18n-html="local.help3">Click <em>Look again</em>. It appears here, one click adds it.</li>
                 </ol>
               </div>
               <button type="button" class="btn" id="local-add-manual">Add a local AI by address…</button>
@@ -569,33 +570,33 @@
             <!-- AI Reasoning & Execution Policy -->
             <div class="subhead">
               <div>
-                <div class="subhead-title">Reasoning & intelligence</div>
-                <p class="hint">Fine-tune how your companion thinks and processes your chats.</p>
+                <div class="subhead-title">How it thinks</div>
+                <p class="hint">Faster answers, or slower and more thorough ones.</p>
               </div>
             </div>
 
-            <div class="row-label">Reasoning effort</div>
-            <div class="choice-grid" id="reasoning-effort-grid">
-              <button type="button" class="choice" data-effort="fast">
+            <div class="row-label" id="effort-label">Thinking effort</div>
+            <div class="choice-grid" id="reasoning-effort-grid" role="radiogroup" aria-labelledby="effort-label">
+              <button type="button" class="choice" data-effort="fast" role="radio" aria-checked="false">
                 <span class="choice-title">⚡ Fast</span>
                 <span class="choice-desc">Concise, low-latency</span>
               </button>
-              <button type="button" class="choice selected" data-effort="balanced">
+              <button type="button" class="choice selected" data-effort="balanced" role="radio" aria-checked="true">
                 <span class="choice-title">⚖️ Balanced</span>
                 <span class="choice-desc">Recommended</span>
               </button>
-              <button type="button" class="choice" data-effort="deep">
+              <button type="button" class="choice" data-effort="deep" role="radio" aria-checked="false">
                 <span class="choice-title">🧠 Deep</span>
                 <span class="choice-desc">Step-by-step analysis</span>
               </button>
             </div>
 
             <details class="advanced">
-              <summary>Advanced: memory window and tools</summary>
+              <summary>Advanced: how much it sees, and its tools</summary>
             <div class="row">
               <div>
-                <div class="row-label">Context memory window</div>
-                <div class="row-desc">Number of recent messages passed to the model</div>
+                <div class="row-label">How much of the chat it sees</div>
+                <div class="row-desc">The number of recent messages that are sent along with your new one</div>
               </div>
               <div class="slider">
                 <span id="context-val-label" class="slider-badge">20</span>
@@ -618,8 +619,8 @@
 
             <label class="row">
               <div>
-                <div class="row-label">Confirm workspace actions</div>
-                <div class="row-desc">Prompt for approval before modifying Google Calendar or Gmail</div>
+                <div class="row-label">Confirm Google actions</div>
+                <div class="row-desc">Ask before sending an email or changing your calendar</div>
               </div>
               <input type="checkbox" class="toggle" checked data-setting="aiControl.confirmTools">
             </label>
@@ -627,20 +628,20 @@
             <!-- Brains Management -->
             <div class="subhead">
               <div>
-                <div class="subhead-title">Configured AI brains</div>
-                <p class="hint">Switch models or add keys for your conversations.</p>
+                <div class="subhead-title">Your AIs</div>
+                <p class="hint">The AIs Friends can use. Add as many as you like, and pick which one is the default.</p>
               </div>
               <button class="btn btn-primary" id="brain-add">
                 <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                <span>Add brain</span>
+                <span>Add an AI</span>
               </button>
             </div>
 
             <div class="preset-chips">
-              <span class="preset-label">Quick add preset:</span>
-              <button type="button" class="chip preset-btn" data-preset="flash">⚡ 2.5 Flash (Fast)</button>
-              <button type="button" class="chip preset-btn" data-preset="pro">🧠 2.5 Pro (Deep)</button>
-              <button type="button" class="chip preset-btn" data-preset="flash2">🎙️ 2.0 Flash (Voice)</button>
+              <span class="preset-label">Quick add:</span>
+              <button type="button" class="chip preset-btn" data-preset="flash">⚡ 2.5 Flash (fast)</button>
+              <button type="button" class="chip preset-btn" data-preset="pro">🧠 2.5 Pro (deep)</button>
+              <button type="button" class="chip preset-btn" data-preset="flash2">🎙️ 2.0 Flash (voice)</button>
               <button type="button" class="chip preset-btn" data-preset="local">🔒 Local AI (private)</button>
             </div>
 
@@ -712,9 +713,9 @@
           <form class="brain-form" id="brain-form" hidden>
             <button type="button" class="back-link" id="brain-back">
               <svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>
-              <span>Back to AI control</span>
+              <span>Back to AI &amp; privacy</span>
             </button>
-            <div class="subhead-title" id="brain-form-title">Add AI brain</div>
+            <div class="subhead-title" id="brain-form-title">Add an AI</div>
 
             <div class="form-field">
               <span class="row-label">Provider</span>
@@ -738,7 +739,7 @@
             </label>
 
             <div class="form-field" id="model-select-field">
-              <span class="row-label">Model selection</span>
+              <span class="row-label">Model</span>
               <div class="model-curated-grid" id="model-curated-grid">
                 <button type="button" class="model-card selected" data-model="gemini-2.5-flash">
                   <div class="model-card-badge">Fast & Voice</div>
@@ -764,7 +765,7 @@
             </div>
 
             <label class="form-field" id="model-custom-wrapper" hidden>
-              <span class="row-label" id="model-label">Custom Model identifier</span>
+              <span class="row-label" id="model-label">Custom model name</span>
               <input class="field" name="model" list="model-options" autocomplete="off" spellcheck="false" placeholder="Leave empty to pick automatically">
               <datalist id="model-options"></datalist>
             </label>
@@ -777,7 +778,7 @@
                   <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
               </span>
-              <span class="row-desc" id="key-desc">Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a></span>
+              <span class="row-desc" id="key-desc" data-i18n-html="key.desc">Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a></span>
             </label>
 
             <details class="form-field advanced" id="ollama-field" hidden>
@@ -806,7 +807,7 @@
 
             <details class="form-field" id="speech-field" hidden>
               <summary class="row-label">Voice (optional)</summary>
-              <span class="row-desc">Only for your own speech-to-text server (OpenAI-style <code>/audio/transcriptions</code>). Not needed if you set up <strong>Local voice</strong> under Privacy & local AI, which listens and speaks on this computer.</span>
+              <span class="row-desc" data-i18n-html="speech.desc">Only for your own speech-to-text server (OpenAI-style <code>/audio/transcriptions</code>). Not needed if you set up <strong>Local voice</strong> under Privacy & local AI, which listens and speaks on this computer.</span>
               <input class="field" name="speechUrl" type="text" placeholder="Speech server address, e.g. http://127.0.0.1:8000/v1" autocomplete="off" spellcheck="false">
               <input class="field" name="speechModel" type="text" placeholder="Speech model, e.g. Systran/faster-whisper-small" autocomplete="off" spellcheck="false">
             </details>
@@ -822,7 +823,7 @@
             <p class="form-error" id="brain-form-error" hidden></p>
             <div class="form-actions">
               <button type="button" class="btn" id="brain-cancel">Cancel</button>
-              <button type="submit" class="btn btn-primary" id="brain-save">Save brain</button>
+              <button type="submit" class="btn btn-primary" id="brain-save">Save</button>
             </div>
           </form>
         </section>
@@ -864,7 +865,7 @@
           </label>
           <div class="storage-line">
             <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><line x1="8" y1="20" x2="16" y2="20"/><line x1="12" y1="16" x2="12" y2="20"/></svg>
-            <span>Stored on this device in <code id="notes-dir">~/.config/friends/memory</code></span>
+            <span data-i18n-html="notes.storage">Stored on this device in <code id="notes-dir">~/.config/friends/memory</code></span>
           </div>
 
           <div class="ai-notes" id="ai-notes">
@@ -1087,7 +1088,7 @@
 
           <div class="subhead"><div>
             <div class="subhead-title">Looks</div>
-            <p class="hint">Its glow is your accent color (Settings → Theme).</p>
+            <p class="hint">Its glow is your accent color (Settings → Appearance).</p>
           </div></div>
           <div class="row">
             <div class="row-label" id="robot-shell-label">Shell color</div>
@@ -1242,7 +1243,7 @@
 
         <!-- Connected Apps & Workspace -->
         <section class="pane" data-pane="integrations" id="pane-integrations" role="tabpanel" aria-labelledby="tab-integrations">
-          <h3>Connected Apps</h3>
+          <h3>Connected apps</h3>
 
           <div class="subhead">
             <div>
@@ -1284,12 +1285,12 @@
             <summary class="row-label">Stay signed in for good (optional, advanced)</summary>
             <span class="row-desc">You don't need this normally: once you've signed in, Friends renews Google's access by itself when it opens and every hour (a sign-in window may flash up for a moment). Set this up only if you still have to sign in again: with an OAuth client of your own, the sign-in is kept in your system keyring and needs no window at all.</span>
             <ol class="row-desc setup-steps">
-              <li>Open <a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener noreferrer">console.cloud.google.com → Google Auth Platform → Clients</a> and pick your Firebase project at the top.</li>
-              <li><strong>Create client</strong> → Application type <strong>Desktop app</strong> → name it Friends → Create. Copy the <strong>Client ID</strong> and <strong>Client secret</strong> into the boxes below.</li>
-              <li>Under <strong>Audience</strong>, press <strong>Publish app</strong> (otherwise Google ends the sign-in after 7 days). When you sign in, Google says it hasn't verified the app: that's your own app, so choose Advanced → Go to Friends.</li>
-              <li>Under <strong>APIs &amp; Services → Library</strong>, make sure Gmail, Google Calendar, Google Drive, YouTube Data API v3 and Google Tasks API are on.</li>
+              <li data-i18n-html="kept.step1">Open <a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener noreferrer">console.cloud.google.com → Google Auth Platform → Clients</a> and pick your Firebase project at the top.</li>
+              <li data-i18n-html="kept.step2"><strong>Create client</strong> → Application type <strong>Desktop app</strong> → name it Friends → Create. Copy the <strong>Client ID</strong> and <strong>Client secret</strong> into the boxes below.</li>
+              <li data-i18n-html="kept.step3">Under <strong>Audience</strong>, press <strong>Publish app</strong> (otherwise Google ends the sign-in after 7 days). When you sign in, Google says it hasn't verified the app: that's your own app, so choose Advanced → Go to Friends.</li>
+              <li data-i18n-html="kept.step4">Under <strong>APIs &amp; Services → Library</strong>, make sure Gmail, Google Calendar, Google Drive, YouTube Data API v3 and Google Tasks API are on.</li>
             </ol>
-            <span class="row-desc">Friends signs in from <code id="gsi-kept-origin"></code>; a Desktop app client allows that by itself.</span>
+            <span class="row-desc" data-i18n-html="kept.origin">Friends signs in from <code id="gsi-kept-origin"></code>; a Desktop app client allows that by itself.</span>
             <label class="form-field"><span class="row-label">Client ID</span><input class="field" id="gsi-kept-id" autocomplete="off" spellcheck="false" placeholder="…apps.googleusercontent.com"></label>
             <label class="form-field"><span class="row-label">Client secret</span><input class="field" id="gsi-kept-secret" type="password" autocomplete="off" spellcheck="false"></label>
             <div class="form-test-bar">
@@ -1302,10 +1303,10 @@
             <summary class="row-label">Set up Google sign-in (one time)</summary>
             <span class="row-desc">Gmail, Calendar and Drive need a free Firebase project that belongs to you. Nothing is shared with anyone else.</span>
             <ol class="row-desc setup-steps">
-              <li>Open <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer">console.firebase.google.com</a>, create a project, and add a <strong>Web app</strong> (Project settings → Your apps).</li>
-              <li>Under <strong>Authentication → Sign-in method</strong>, turn on <strong>Google</strong>.</li>
-              <li>Under <strong>Authentication → Settings → Authorized domains</strong>, add <code>127.0.0.1</code> and <code>localhost</code>.</li>
-              <li>Copy the web app's <code>firebaseConfig</code> from Project settings and paste it here:</li>
+              <li data-i18n-html="setup.step1">Open <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer">console.firebase.google.com</a>, create a project, and add a <strong>Web app</strong> (Project settings → Your apps).</li>
+              <li data-i18n-html="setup.step2">Under <strong>Authentication → Sign-in method</strong>, turn on <strong>Google</strong>.</li>
+              <li data-i18n-html="setup.step3">Under <strong>Authentication → Settings → Authorized domains</strong>, add <code>127.0.0.1</code> and <code>localhost</code>.</li>
+              <li data-i18n-html="setup.step4">Copy the web app's <code>firebaseConfig</code> from Project settings and paste it here:</li>
             </ol>
             <textarea class="field textarea" id="gsi-config" rows="6" spellcheck="false" autocomplete="off" aria-label="Firebase web app config" placeholder='const firebaseConfig = { apiKey: "AIza…", authDomain: "…", projectId: "…", appId: "…" };'></textarea>
             <div class="form-test-bar">
@@ -1317,8 +1318,8 @@
 
           <div class="subhead">
             <div>
-              <div class="subhead-title">Enabled Capabilities</div>
-              <p class="hint">The companion can access your cloud tools on your behalf. Any action that sends emails or adds events requires explicit dialog confirmation.</p>
+              <div class="subhead-title">What Friends can do with Google</div>
+              <p class="hint">Friends can use these for you. Anything that sends an email or adds an event asks you first.</p>
             </div>
           </div>
 
@@ -1327,7 +1328,7 @@
               <div class="ws-feature-icon">📅</div>
               <div class="ws-feature-content">
                 <strong>Google Calendar</strong>
-                <span>Check upcoming events, schedules, and plan calendar appointments.</span>
+                <span>See what's coming up, and add or change events (it asks first).</span>
               </div>
               <button type="button" class="btn btn-sm" id="test-cal-btn">Test</button>
             </div>
@@ -1336,7 +1337,7 @@
               <div class="ws-feature-icon">✉️</div>
               <div class="ws-feature-content">
                 <strong>Gmail</strong>
-                <span>Search inbox, read unread messages, and send replies with explicit confirmation.</span>
+                <span>Search your inbox, read messages, and write drafts or replies (it asks before sending).</span>
               </div>
               <button type="button" class="btn btn-sm" id="test-gmail-btn">Test</button>
             </div>
@@ -1345,7 +1346,7 @@
               <div class="ws-feature-icon">📁</div>
               <div class="ws-feature-content">
                 <strong>Google Drive, Docs, Sheets & Slides</strong>
-                <span>Find and read cloud documents, spreadsheets, and presentation files.</span>
+                <span>Find and read your documents, spreadsheets and presentations.</span>
               </div>
               <button type="button" class="btn btn-sm" id="test-drive-btn">Test</button>
             </div>
@@ -1368,7 +1369,7 @@
               <div class="ws-feature-icon">🐙</div>
               <div class="ws-feature-content">
                 <strong>GitHub</strong>
-                <span>Search repositories, explore trending code, and discover developers.</span>
+                <span>Search repositories and see what's trending.</span>
               </div>
               <button type="button" class="btn btn-sm" id="test-github-btn">Test</button>
             </div>
@@ -1376,8 +1377,8 @@
             <div class="ws-feature-item">
               <div class="ws-feature-icon">📰</div>
               <div class="ws-feature-content">
-                <strong>Live Breaking News</strong>
-                <span>Search world headlines, technology news, and current events.</span>
+                <strong>News</strong>
+                <span>Search headlines and current events.</span>
               </div>
               <button type="button" class="btn btn-sm" id="test-news-btn">Test</button>
             </div>
@@ -1437,19 +1438,19 @@
 
           <div class="honesty-note">
             <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            <span>Your Google sign-in token is kept in this window's memory only, never saved to disk. Sending an email or adding an event asks you first (Settings → AI control → Confirm workspace actions). None of this is available in Private mode.</span>
+            <span>Your Google sign-in token is kept in this window's memory only, never saved to disk. Sending an email or adding an event asks you first (Settings → AI &amp; privacy → Confirm Google actions). None of this is available in Private mode.</span>
           </div>
         </section>
 
         <!-- Builder mode -->
         <section class="pane" data-pane="builder" id="pane-builder" role="tabpanel" aria-labelledby="tab-builder">
           <h3>Builder</h3>
-          <p class="hint">Build websites, apps and SaaS products together: the AI starts projects, edits code, runs tests and builds, and shows you a live preview. It works only inside the folders you allow in <a href="#" data-open-tab="ai-control">AI control → File access</a>, with the permissions set there.</p>
+          <p class="hint" data-i18n-html="builder.hint">Build websites, apps and SaaS products together: the AI starts projects, edits code, runs tests and builds, and shows you a live preview. It works only inside the folders you allow in <a href="#" data-open-tab="ai-control" data-open-section="permissions-section">AI &amp; privacy → Permissions and file access</a>, with the permissions set there.</p>
           <label class="row">
             <div><div class="row-label">Builder tools</div><div class="row-desc">Editing parts of files, searching code, project starters and the preview</div></div>
             <input type="checkbox" class="toggle" data-setting="builder.enabled">
           </label>
-          <p class="form-error" id="builder-folders-note" hidden>No folder is allowed yet. Add one (for example ~/projects) in AI control → File access, with create, read and edit allowed.</p>
+          <p class="form-error" id="builder-folders-note" hidden>No folder is allowed yet. Add one (for example ~/projects) in Settings → AI &amp; privacy → Permissions and file access, with create, read and edit allowed.</p>
 
           <div class="subhead"><div>
             <div class="subhead-title">Running commands</div>
@@ -1465,7 +1466,7 @@
           <p class="hint builder-warning" id="builder-auto-warning" hidden>⚠️ In Auto, a web page or file the AI reads could try to trick it into running something. Use it for projects you trust, and keep "Never without asking" up to date.</p>
           <div class="form-field">
             <div class="row-label">Smart may also run</div>
-            <span class="row-desc">One command beginning per line, e.g. <code>npm install</code> or <code>docker compose up</code></span>
+            <span class="row-desc" data-i18n-html="builder.allow">One command beginning per line, e.g. <code>npm install</code> or <code>docker compose up</code></span>
             <textarea class="field textarea" id="builder-allow" rows="3" spellcheck="false" placeholder="npm install&#10;npm run dev"></textarea>
           </div>
           <div class="form-field">
@@ -1544,7 +1545,7 @@
           <h3>Data &amp; backups</h3>
           <div class="storage-line">
             <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><line x1="8" y1="20" x2="16" y2="20"/><line x1="12" y1="16" x2="12" y2="20"/></svg>
-            <span>Backups are kept in <code id="backup-dir">~/.config/friends/backups</code>. API keys are never in a backup; enter them again on a new computer.</span>
+            <span data-i18n-html="data.storage">Backups are kept in <code id="backup-dir">~/.config/friends/backups</code>. API keys are never in a backup; enter them again on a new computer.</span>
           </div>
           <label class="row">
             <div><div class="row-label">Automatic backups</div><div class="row-desc">Once a day: chats, memory, settings and everything you keep here (not attachments)</div></div>
@@ -1593,19 +1594,19 @@
     <div class="modal life-modal" role="dialog" aria-modal="true" aria-labelledby="life-title">
       <div class="life-head">
         <h2 id="life-title">Today</h2>
-        <div class="life-tabs" role="tablist">
-          <button type="button" class="life-tab active" data-life-tab="today" role="tab">Today</button>
-          <button type="button" class="life-tab" data-life-tab="tasks" role="tab">Tasks</button>
-          <button type="button" class="life-tab" data-life-tab="reminders" role="tab">Reminders</button>
-          <button type="button" class="life-tab" data-life-tab="habits" role="tab">Habits</button>
-          <button type="button" class="life-tab" data-life-tab="journal" role="tab">Journal</button>
+        <div class="life-tabs" role="tablist" aria-label="Today">
+          <button type="button" class="life-tab active" data-life-tab="today" role="tab" id="life-tab-today" aria-controls="life-pane-today" aria-selected="true" tabindex="0">Today</button>
+          <button type="button" class="life-tab" data-life-tab="tasks" role="tab" id="life-tab-tasks" aria-controls="life-pane-tasks" aria-selected="false" tabindex="-1">Tasks</button>
+          <button type="button" class="life-tab" data-life-tab="reminders" role="tab" id="life-tab-reminders" aria-controls="life-pane-reminders" aria-selected="false" tabindex="-1">Reminders</button>
+          <button type="button" class="life-tab" data-life-tab="habits" role="tab" id="life-tab-habits" aria-controls="life-pane-habits" aria-selected="false" tabindex="-1">Habits</button>
+          <button type="button" class="life-tab" data-life-tab="journal" role="tab" id="life-tab-journal" aria-controls="life-pane-journal" aria-selected="false" tabindex="-1">Journal</button>
         </div>
-        <button class="icon-btn" id="life-close" title="Close">
+        <button class="icon-btn" id="life-close" title="Close" aria-label="Close">
           <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
         </button>
       </div>
       <div class="life-body">
-        <section class="life-pane active" data-life-pane="today">
+        <section class="life-pane active" data-life-pane="today" id="life-pane-today" role="tabpanel" aria-labelledby="life-tab-today">
           <div class="life-date" id="life-date"></div>
           <div class="form-test-bar">
             <button type="button" class="btn small btn-primary" id="life-briefing">☀️ Daily briefing</button>
@@ -1620,19 +1621,19 @@
           <div class="habit-checks" id="life-today-habits"></div>
           <div class="life-section-title">How are you today?</div>
           <form class="life-journal-quick" id="life-journal-quick">
-            <div class="mood-pick" role="radiogroup" aria-label="Mood">
-              <button type="button" data-mood="awful" title="Awful">😣</button>
-              <button type="button" data-mood="bad" title="Bad">🙁</button>
-              <button type="button" data-mood="okay" title="Okay">😐</button>
-              <button type="button" data-mood="good" title="Good">🙂</button>
-              <button type="button" data-mood="great" title="Great">😄</button>
+            <div class="mood-pick" role="group" aria-label="Mood">
+              <button type="button" data-mood="awful" title="Awful" aria-label="Awful" aria-pressed="false">😣</button>
+              <button type="button" data-mood="bad" title="Bad" aria-label="Bad" aria-pressed="false">🙁</button>
+              <button type="button" data-mood="okay" title="Okay" aria-label="Okay" aria-pressed="false">😐</button>
+              <button type="button" data-mood="good" title="Good" aria-label="Good" aria-pressed="false">🙂</button>
+              <button type="button" data-mood="great" title="Great" aria-label="Great" aria-pressed="false">😄</button>
             </div>
             <input class="field" name="text" placeholder="A line about your day (goes into your journal)" autocomplete="off" maxlength="2000">
             <button type="submit" class="btn small">Save</button>
           </form>
         </section>
 
-        <section class="life-pane" data-life-pane="tasks">
+        <section class="life-pane" data-life-pane="tasks" id="life-pane-tasks" role="tabpanel" aria-labelledby="life-tab-tasks">
           <form class="life-add" id="task-add">
             <input class="field" name="title" placeholder="Add a task…" autocomplete="off" maxlength="200" required>
             <input class="field" type="date" name="due" aria-label="Due date">
@@ -1644,7 +1645,7 @@
           <div id="task-groups"></div>
         </section>
 
-        <section class="life-pane" data-life-pane="reminders">
+        <section class="life-pane" data-life-pane="reminders" id="life-pane-reminders" role="tabpanel" aria-labelledby="life-tab-reminders">
           <form class="life-add" id="reminder-add">
             <input class="field" name="text" placeholder="Remind me to…" autocomplete="off" maxlength="300" required>
             <input class="field" type="datetime-local" name="at" aria-label="When" required>
@@ -1661,7 +1662,7 @@
           <ul class="life-list" id="reminder-list"></ul>
         </section>
 
-        <section class="life-pane" data-life-pane="habits">
+        <section class="life-pane" data-life-pane="habits" id="life-pane-habits" role="tabpanel" aria-labelledby="life-tab-habits">
           <form class="life-add" id="habit-add">
             <input class="field life-emoji" name="emoji" placeholder="✅" maxlength="4" aria-label="Emoji">
             <input class="field" name="name" placeholder="A habit to build, e.g. Gym, Read 20 minutes" autocomplete="off" maxlength="60" required>
@@ -1670,7 +1671,7 @@
           <ul class="life-list" id="habit-list"></ul>
         </section>
 
-        <section class="life-pane" data-life-pane="journal">
+        <section class="life-pane" data-life-pane="journal" id="life-pane-journal" role="tabpanel" aria-labelledby="life-tab-journal">
           <form class="life-journal" id="journal-add">
             <textarea class="field textarea" name="text" rows="4" maxlength="10000" placeholder="What's on your mind?"></textarea>
             <div class="form-test-bar">
@@ -1770,24 +1771,24 @@
 
   <!-- Voice mode -->
   <div class="voice-mode" id="voice-mode" role="dialog" aria-modal="true" aria-label="Voice conversation" data-modal data-modal-focus="#voice-mute" hidden>
-    <canvas class="voice-waves" id="voice-waves"></canvas>
+    <canvas class="voice-waves" id="voice-waves" aria-hidden="true"></canvas>
     <!-- The Robot style: the shared 3D canvas is placed here (src/js/robot/) -->
     <div class="voice-robot" id="voice-robot" aria-hidden="true"></div>
 
     <div class="voice-top">
-      <div class="voice-status"><span class="voice-dot"></span><span id="voice-status">Listening</span></div>
-      <div class="voice-theme-bar" id="voice-theme-bar">
-        <button type="button" class="voice-theme-btn active" data-theme="sunset" title="Warm Sunset Waves">🌅 Sunset Waves</button>
-        <button type="button" class="voice-theme-btn" data-theme="aurora" title="Warm Aurora">✨ Aurora</button>
-        <button type="button" class="voice-theme-btn" data-theme="cosmic" title="Cosmic Pulse">🌌 Cosmic</button>
-        <button type="button" class="voice-theme-btn" data-theme="zen" title="Zen Ripples">💧 Zen</button>
-        <button type="button" class="voice-theme-btn" data-theme="hearth" title="Firefly Hearth">🔥 Hearth</button>
-        <button type="button" class="voice-theme-btn" data-theme="robot" title="Robot: a 3D robot that is the AI's body">🤖 Robot</button>
+      <div class="voice-status" role="status" aria-live="polite"><span class="voice-dot" aria-hidden="true"></span><span id="voice-status">Listening</span></div>
+      <div class="voice-theme-bar" id="voice-theme-bar" role="group" aria-label="Look of the voice screen">
+        <button type="button" class="voice-theme-btn active" data-theme="sunset" aria-pressed="true" title="Warm Sunset Waves">🌅 Sunset Waves</button>
+        <button type="button" class="voice-theme-btn" data-theme="aurora" aria-pressed="false" title="Warm Aurora">✨ Aurora</button>
+        <button type="button" class="voice-theme-btn" data-theme="cosmic" aria-pressed="false" title="Cosmic Pulse">🌌 Cosmic</button>
+        <button type="button" class="voice-theme-btn" data-theme="zen" aria-pressed="false" title="Zen Ripples">💧 Zen</button>
+        <button type="button" class="voice-theme-btn" data-theme="hearth" aria-pressed="false" title="Firefly Hearth">🔥 Hearth</button>
+        <button type="button" class="voice-theme-btn" data-theme="robot" aria-pressed="false" title="Robot: a 3D robot that is the AI's body">🤖 Robot</button>
       </div>
       <div class="character-switch voice-character-switch" id="voice-character-switch" role="radiogroup" aria-label="Who you're talking to"></div>
-      <button type="button" class="voice-onair" id="voice-onair" aria-pressed="false" title="Co-host mode: it knows it's on camera and keeps private things out of it">ON AIR</button>
+      <button type="button" class="voice-onair" id="voice-onair" aria-pressed="false" title="Co-host mode: it knows it's on camera and keeps private things out of it" aria-label="On air: co-host mode, private things stay out of it">ON AIR</button>
       <span class="voice-rec-badge" id="voice-rec-badge"><span class="voice-rec-dot"></span>REC <span id="voice-rec-time">0:00</span></span>
-      <button type="button" class="voice-speed-pill" id="voice-engine">
+      <button type="button" class="voice-speed-pill" id="voice-engine" title="How the conversation runs: Live (Google), Studio or Instant">
         <span class="speed-bolt" id="voice-engine-icon">⚡</span>
         <span id="voice-engine-label">Live</span>
       </button>
@@ -1797,7 +1798,7 @@
       <button type="button" class="voice-top-btn" id="voice-filming" title="Filming mode (F): for filming the screen with a camera or phone" aria-label="Filming mode">
         <svg viewBox="0 0 24 24"><path d="M4 10h16v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="m4 10-.6-3.2 15.7-2.9.6 3.2z"/><path d="m8.2 5.9 2 3.2M13 5l2 3.3"/></svg>
       </button>
-      <button class="voice-top-btn" id="voice-fullscreen" title="Toggle Fullscreen" aria-label="Toggle fullscreen">
+      <button class="voice-top-btn" id="voice-fullscreen" title="Full screen" aria-label="Full screen">
         <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
       </button>
     </div>
@@ -1846,44 +1847,44 @@
     </div>
 
     <div class="voice-middle">
-      <p class="voice-caption" id="voice-caption" aria-live="polite"></p>
+      <p class="voice-caption" id="voice-caption" aria-live="off"></p>
 
       <div class="voice-perm-banner" id="voice-perm-banner" hidden>
         <div class="perm-banner-icon">
           <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/></svg>
         </div>
         <div class="perm-banner-content">
-          <strong id="voice-perm-title">Microphone Access Needed</strong>
-          <p id="voice-perm-text">Allow the microphone for this page in your browser, then click 'Try Allow'.</p>
+          <strong id="voice-perm-title">Microphone access needed</strong>
+          <p id="voice-perm-text">Allow the microphone for this page in your browser, then press Try again.</p>
         </div>
         <div class="perm-banner-actions">
-          <button type="button" class="btn btn-sm" id="voice-perm-retry-btn">Try Allow</button>
-          <button type="button" class="btn btn-sm" id="voice-perm-type-btn">Type & Speak</button>
+          <button type="button" class="btn btn-sm" id="voice-perm-retry-btn">Try again</button>
+          <button type="button" class="btn btn-sm" id="voice-perm-type-btn">Type instead</button>
         </div>
       </div>
     </div>
 
-    <div class="voice-hint" id="voice-hint" hidden aria-hidden="true">Tap it &middot; hold it &middot; drag to look around &middot; <kbd>M</kbd> mutes</div>
+    <div class="voice-hint" id="voice-hint" hidden aria-hidden="true" data-i18n-html="voice.hint">Tap it &middot; hold it &middot; drag to look around &middot; <kbd>M</kbd> mutes</div>
 
     <div class="voice-controls">
-      <button class="voice-ctrl" id="voice-drafts-btn" title="Drafts and transcript">
+      <button class="voice-ctrl" id="voice-drafts-btn" title="Drafts and transcript" aria-label="Drafts and transcript" aria-controls="voice-drawer" aria-expanded="false">
         <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
         <span class="voice-ctrl-badge" id="voice-drafts-badge" hidden></span>
       </button>
-      <button class="voice-ctrl" id="voice-keyboard-btn" title="Type in Voice Mode">
+      <button class="voice-ctrl" id="voice-keyboard-btn" title="Type instead of talking" aria-label="Type instead of talking">
         <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M8 16h8"/></svg>
       </button>
-      <button class="voice-ctrl" id="voice-activities-btn" title="Let's do something: games, debates, stories" aria-expanded="false" aria-controls="voice-activities">
+      <button class="voice-ctrl" id="voice-activities-btn" title="Let's do something: games, debates, stories" aria-label="Let's do something: games, debates, stories" aria-expanded="false" aria-controls="voice-activities">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>
       </button>
-      <button class="voice-ctrl" id="voice-mute" title="Microphone (M)">
+      <button class="voice-ctrl" id="voice-mute" title="Microphone (M)" aria-label="Microphone" aria-pressed="false">
         <svg class="mic-on" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg>
         <svg class="mic-off" viewBox="0 0 24 24"><path d="M15 10V6a3 3 0 0 0-5.7-1.3"/><path d="M9 9v2a3 3 0 0 0 5 2.2"/><path d="M19 11a7 7 0 0 1-1.2 3.9M5 11a7 7 0 0 0 11 5.7"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
       </button>
-      <button class="voice-ctrl rec" id="voice-record" title="Record a video">
+      <button class="voice-ctrl rec" id="voice-record" title="Record a video" aria-label="Record a video">
         <span class="rec-dot"></span>
       </button>
-      <button class="voice-ctrl end" id="voice-end" title="End conversation">
+      <button class="voice-ctrl end" id="voice-end" title="End the conversation (Esc)" aria-label="End the conversation">
         <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
       </button>
     </div>
@@ -1927,7 +1928,7 @@
     </div>
 
     <!-- Hides everything else, so only the visualizer is left; stays visible to bring it all back -->
-    <button type="button" class="voice-hide-btn" id="voice-hide" title="Hide everything" aria-pressed="false">
+    <button type="button" class="voice-hide-btn" id="voice-hide" title="Hide everything" aria-label="Hide everything" aria-pressed="false">
       <svg class="eye-off" viewBox="0 0 24 24"><path d="M17.9 17.9A10 10 0 0 1 12 19c-6.5 0-10-7-10-7a18 18 0 0 1 4.1-5.1M9.9 5.2A9 9 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-2.2 3.2"/><path d="M14.1 14.1a3 3 0 0 1-4.2-4.2"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
       <svg class="eye-on" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
     </button>

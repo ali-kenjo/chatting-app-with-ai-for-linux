@@ -1,5 +1,5 @@
 // Local voice for a local AI: listening (Whisper) and speaking (Piper) on this
-// computer, by voice/server.py. Settings → AI control installs it (about 1 GB,
+// computer, by voice/server.py. Settings → AI & privacy installs it (about 1 GB,
 // into <data folder>/voice, no root needed), the helper starts it when a
 // spoken conversation needs it, and it quits by itself when idle.
 const fs = require("fs");

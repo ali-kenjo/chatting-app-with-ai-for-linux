@@ -22,9 +22,9 @@ function apiFor({ provider, protocol, baseUrl, contextSize, keepAlive, speechUrl
   return gemini;
 }
 
-// Private mode (Settings → AI control): only local AI, nothing goes to the internet
+// Private mode (Settings → AI & privacy): only local AI, nothing goes to the internet
 const privateMode = () => settings.get().privacy?.localOnly === true;
-const PRIVATE_MESSAGE = "Private mode is on, so only a local AI can answer. Add a Local AI brain, or turn Private mode off in Settings → AI control.";
+const PRIVATE_MESSAGE = "Private mode is on, so only a local AI can answer. Add a local AI, or turn Private mode off in Settings → AI & privacy.";
 
 // Local servers rarely have a key; Gemini always does
 const keyFor = (brain) => (brain.provider === "local" ? keys.getOptionalKey(brain.id) : keys.getKey(brain.id));

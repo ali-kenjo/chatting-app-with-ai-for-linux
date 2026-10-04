@@ -251,7 +251,7 @@ document.addEventListener("friends:brains-changed", (e) => {
   warmUp();
 });
 
-// The mode changed (here, or in Settings → AI control)
+// The mode changed (here, or in Settings → AI & privacy)
 onSettings(() => {
   renderPicker();
   warmUp();

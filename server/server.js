@@ -301,7 +301,7 @@ async function chat(req, res) {
   const window = current.aiControl?.contextWindow || 20;
   const lastUser = greeting ? { role: "user", text: "" } : conversation.messages.at(-1);
 
-  // Which AI answers: see router.js (the routing mode in Settings → AI control)
+  // Which AI answers: see router.js (the routing mode in Settings → AI & privacy)
   let routePlan;
   try {
     routePlan = router.plan({

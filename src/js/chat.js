@@ -83,6 +83,14 @@ function scrollToBottom() {
   updateJump();
 }
 
+// While you're at the bottom the conversation stays there as it grows (a streaming reply, a diagram
+// drawn afterwards, follow-up chips); once you scroll up to read, it leaves you alone.
+let followBottom = true;
+for (const type of ["wheel", "touchmove"]) messagesEl.addEventListener(type, () => (followBottom = false), { passive: true });
+messagesEl.addEventListener("keydown", (e) => ["PageUp", "ArrowUp", "Home"].includes(e.key) && (followBottom = false));
+messagesEl.addEventListener("scroll", () => isNearBottom() && (followBottom = true), { passive: true });
+new MutationObserver(() => followBottom && requestAnimationFrame(scrollToBottom)).observe(messagesEl, { childList: true, subtree: true });
+
 // ----- Times and day dividers -----
 const dayKey = (at) => new Date(at).toDateString();
 
@@ -371,9 +379,7 @@ async function showSuggestions(msg) {
     chip.textContent = text;
     box.append(chip);
   }
-  const stick = isNearBottom();
   msg.querySelector(".msg-main").append(box);
-  if (stick) scrollToBottom();
 }
 
 // Send a request and stream the answer into a new reply bubble. Resolves with
@@ -382,6 +388,7 @@ async function showSuggestions(msg) {
 // plus from: <message id> to replace that message and everything after it.
 function ask(request, userMsg = null) {
   clearSuggestions();
+  followBottom = true;
   const msg = addMessage("model", { isNew: true });
   const body = msg.querySelector(".msg-body");
   msg.classList.add("pending");
@@ -409,11 +416,9 @@ function ask(request, userMsg = null) {
 
   const draw = () => {
     frame = null;
-    const stick = isNearBottom();
     setReplyText(msg, pace ? reply.slice(0, shown) : reply);
     msg._text = reply;
-    if (stick) scrollToBottom();
-    else updateJump();
+    updateJump();
   };
   // Reveal a few characters at a time, with a short pause after each sentence
   const typeMore = () => {

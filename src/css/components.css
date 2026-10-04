@@ -680,3 +680,88 @@ kbd {
 .btn-danger.solid:hover:not(:disabled) {
   background: color-mix(in srgb, var(--danger) 85%, var(--text));
 }
+
+/* ---------- The message box ---------- */
+/* The box itself shows the focus, so the text area inside it doesn't need a second frame */
+.composer textarea:focus-visible {
+  outline: none;
+}
+
+.composer:has(textarea:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* A narrow window: the text gets the whole first line, the buttons the second */
+@media (max-width: 560px) {
+  .composer {
+    flex-wrap: wrap;
+    row-gap: var(--space-1);
+  }
+
+  .composer textarea {
+    order: -1;
+    flex: 1 0 100%;
+    padding-inline: var(--space-2);
+  }
+
+  .model-menu-wrap {
+    margin-inline-start: auto;
+  }
+
+  .model-picker > span {
+    display: none;
+  }
+}
+
+/* ---------- Settings on a narrow window: the sections become a strip you scroll sideways ---------- */
+@media (max-width: 760px) {
+  .modal-nav {
+    flex-direction: column;
+    flex-shrink: 0;
+    gap: var(--space-1h);
+    padding: var(--space-3) var(--space-3) var(--space-2);
+    overflow: visible;
+  }
+
+  .modal-nav h2 {
+    display: block;
+    padding: 0 var(--space-12) 0 var(--space-1);
+    font-size: var(--fs-lg);
+  }
+
+  .settings-tabs {
+    flex-direction: row;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 3px; /* room for the focus ring */
+    margin: -3px;
+  }
+
+  .nav-group {
+    display: none;
+  }
+
+  .tab {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .settings-search {
+    order: 2;
+    padding: 0;
+  }
+
+  .settings-results {
+    order: 3;
+    margin: 0;
+  }
+
+  .settings-saved {
+    display: none;
+  }
+
+  .modal-body {
+    padding-inline: var(--space-4);
+  }
+}

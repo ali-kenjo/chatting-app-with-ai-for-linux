@@ -3,6 +3,7 @@
 // the moment it arrives. The helper keeps the API key and talks to Gemini
 // (server/live.js). The AI hears you directly, so there's no separate
 // speech-to-text step, and it can be interrupted like a person.
+import { t } from "./i18n.js";
 const HOLD = 10; // mic chunks (~0.4 s) held back while the AI talks
 const ECHO_TAIL = 0.35; // s the mic stays held after the AI stops: the room's echo
 const LEARN = 0.6; // s at the start of the AI's speech spent learning how loud its echo is
@@ -69,7 +70,7 @@ export class LiveVoice {
       ws.onclose = () => {
         const wasReady = this.ready;
         this.ready = false;
-        settle(reject, new Error("Couldn't reach the Friends helper. Is `npm start` still running?"));
+        settle(reject, new Error(t("Can't reach the Friends helper. Is `npm start` still running?")));
         if (wasReady && !this.closed) this.on.onClosed?.();
       };
     });

@@ -109,6 +109,12 @@ async function launch() {
     const s = await api("GET", "/api/settings");
     await api("PUT", "/api/settings", { ...s, theme: { ...s.theme, appearance: theme }, ui: { ...(s.ui || {}), language: lang }, onboarding: { ...(s.onboarding || {}), done: onboarding } });
     await page.setViewport({ width, height: height || (width < 500 ? 844 : 900), deviceScaleFactor: 1, isMobile: width < 500, hasTouch: width < 500 });
+    // The language the page starts in: the machine's own language would otherwise decide
+    await page.evaluateOnNewDocument((l) => {
+      try {
+        localStorage.setItem("friends.language", l);
+      } catch {}
+    }, lang);
     await page.goto(base + "/", { waitUntil: "networkidle2" });
     await sleep(400);
   };

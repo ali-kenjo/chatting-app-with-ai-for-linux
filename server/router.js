@@ -1,5 +1,5 @@
 // Which AI answers a message: a local one (on this computer), a cloud one
-// (Gemini), or both, by the mode in Settings → AI control.
+// (Gemini), or both, by the mode in Settings → AI & privacy.
 //
 //   fixed    the one brain chosen in the model menu (no routing)
 //   local    only a local AI
@@ -87,9 +87,9 @@ function plan(input) {
       throw new RouteError(
         kind === "local"
           ? deps.privateMode
-            ? "Private mode is on, so only a local AI can answer. Add one in Settings → AI control."
-            : `${how} needs a local AI. Add one in Settings → AI control.`
-          : `${how} needs a cloud AI (Gemini). Add one in Settings → AI control.`
+            ? "Private mode is on, so only a local AI can answer. Add one in Settings → AI & privacy."
+            : `${how} needs a local AI. Add one in Settings → AI & privacy.`
+          : `${how} needs a cloud AI (Gemini). Add one in Settings → AI & privacy.`
       );
     }
     return step(kind, "", brain);
@@ -103,7 +103,7 @@ function plan(input) {
   if (mode === "fixed") {
     const chosen = deps.chosen(preferId);
     if (!chosen) return { ...base, steps: [] };
-    return { ...base, steps: [{ kind: chosen.kind, brain: chosen, reason: "The brain you chose" }] };
+    return { ...base, steps: [{ kind: chosen.kind, brain: chosen, reason: "The AI you chose" }] };
   }
 
   if (mode === "local") {

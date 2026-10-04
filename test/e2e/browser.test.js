@@ -53,6 +53,8 @@ describe("The page in Chrome", { skip: !CHROME && "no Chrome found" }, () => {
     browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox", "--disable-gpu", "--use-gl=swiftshader"] });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 900 });
+    // The interface language follows the browser's; these tests read the English
+    await page.evaluateOnNewDocument(() => Object.defineProperty(navigator, "languages", { get: () => ["en-US", "en"] }));
     await page.setRequestInterception(true);
     page.on("request", (req) => {
       const url = new URL(req.url());

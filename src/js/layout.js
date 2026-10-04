@@ -32,7 +32,7 @@ document.getElementById("sidebar-backdrop").addEventListener("click", () => setS
 
 // On a phone, close the sidebar after picking something in it
 document.querySelector(".sidebar").addEventListener("click", (e) => {
-  if (narrow.matches && e.target.closest(".chat-link, #new-chat, #search-open, #voice-open")) setSidebar(false);
+  if (narrow.matches && e.target.closest(".chat-link, #new-chat, #search-open, #voice-open, #today-open, #settings-btn, #shortcuts-btn")) setSidebar(false);
 });
 narrow.addEventListener("change", () => {
   app.classList.remove("sidebar-open");

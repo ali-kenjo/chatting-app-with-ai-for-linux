@@ -1,0 +1,127 @@
+/* The voice screen's top bar and banners, in one place (they used to be spread over several files).
+   It wraps instead of squeezing: status and buttons on the first line, the six looks below on a
+   narrow window. */
+.voice-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2) var(--space-2h);
+  width: 100%;
+  max-width: 1200px;
+  padding-inline: var(--space-4);
+}
+
+.voice-status {
+  order: 1;
+  margin-inline-end: auto;
+  max-width: min(20rem, 100%);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--fs-base);
+}
+
+.voice-status > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.voice-theme-bar {
+  order: 20;
+  flex: 1 1 100%;
+  justify-content: flex-start;
+}
+
+.voice-character-switch,
+.voice-onair,
+.voice-rec-badge,
+.voice-speed-pill {
+  order: 5;
+}
+
+.voice-top-btn {
+  order: 6;
+}
+
+/* Wide enough: everything on one line, the looks in the middle */
+@media (min-width: 1100px) {
+  .voice-theme-bar {
+    order: 2;
+    flex: 0 1 auto;
+  }
+}
+
+/* A phone: the looks are icons-first and scroll */
+@media (max-width: 560px) {
+  .voice-top {
+    padding-inline: var(--space-2);
+  }
+
+  .voice-theme-btn {
+    padding-inline: var(--space-2h);
+  }
+
+  .voice-perm-banner {
+    flex-wrap: wrap;
+    padding: var(--space-3);
+    margin-inline: var(--space-2);
+  }
+
+  .perm-banner-content {
+    flex: 1 1 12rem;
+  }
+
+  .perm-banner-actions {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
+
+  .voice-caption {
+    font-size: var(--fs-lg);
+  }
+}
+
+/* Where you are in the conversation, in words and in shape (not only colour) */
+.voice-status::before {
+  display: none;
+}
+
+.voice-mode[data-state="hearing"] .voice-dot {
+  animation-duration: 0.6s;
+}
+
+.voice-mode[data-state="thinking"] .voice-dot {
+  border-radius: 2px;
+  animation: voice-think 1.2s ease-in-out infinite;
+}
+
+.voice-mode[data-state="speaking"] .voice-dot {
+  width: 14px;
+  border-radius: var(--radius-pill);
+}
+
+.voice-mode[data-state="error"] .voice-dot {
+  border-radius: 0;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+@keyframes voice-think {
+  50% { transform: rotate(90deg) scale(0.85); opacity: 0.6; }
+}
+
+/* ON AIR is the one thing that must never be missed */
+.voice-onair {
+  min-height: var(--target);
+}
+
+.voice-onair.on {
+  box-shadow: 0 0 0 2px #ff4d4d, 0 0 14px rgba(255, 77, 77, 0.55);
+}
+
+/* On a phone the controls fill the width: the "hide everything" button sits above them */
+@media (max-width: 560px) {
+  .voice-hide-btn {
+    inset-block-end: 6.5rem;
+  }
+}

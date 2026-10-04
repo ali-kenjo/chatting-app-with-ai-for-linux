@@ -1,6 +1,8 @@
 // ---------- Find in this chat ----------
 // Ctrl+F while a chat is open (or a result from the search panel): marks every
 // match in the conversation, with Enter / Shift+Enter to step through them.
+import { t, nf } from "./i18n.js";
+
 const main = document.getElementById("main");
 const messagesEl = document.getElementById("messages");
 const bar = document.getElementById("find-bar");
@@ -59,7 +61,7 @@ function go(index) {
     hit.classList.add("current");
     hit.scrollIntoView({ block: "center", behavior: "smooth" });
   }
-  count.textContent = field.value.trim() ? (hits.length ? `${current + 1} of ${hits.length}` : "No matches") : "";
+  count.textContent = field.value.trim() ? (hits.length ? t("{current} of {total}", { current: nf(current + 1), total: nf(hits.length) }) : t("No matches")) : "";
 }
 
 export function openFind(query = null) {
@@ -92,6 +94,7 @@ field.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     e.stopPropagation();
     closeFind();
+    document.getElementById("composer-input").focus();
   }
 });
 
@@ -99,7 +102,10 @@ bar.addEventListener("click", (e) => {
   const action = e.target.closest("[data-find]")?.dataset.find;
   if (action === "prev") go(current - 1);
   if (action === "next") go(current + 1);
-  if (action === "close") closeFind();
+  if (action === "close") {
+    closeFind();
+    document.getElementById("composer-input").focus();
+  }
 });
 
 document.getElementById("find-open").addEventListener("click", () => openFind());

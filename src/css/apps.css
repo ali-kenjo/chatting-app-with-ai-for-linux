@@ -40,12 +40,12 @@
 
 .app-status.on {
   background: color-mix(in srgb, #34d399 20%, transparent);
-  color: #34d399;
+  color: var(--success);
 }
 
 .app-status.warn {
   background: color-mix(in srgb, #f59e0b 20%, transparent);
-  color: #f59e0b;
+  color: var(--warning);
 }
 
 .app-status.error {
@@ -132,5 +132,5 @@
 }
 
 .builder-warning {
-  color: #f59e0b;
+  color: var(--warning);
 }

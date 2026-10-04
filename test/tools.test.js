@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 
-describe("File tools follow Settings → AI control", () => {
+describe("File tools follow Settings → AI & privacy", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "friends-tools-test-"));
   process.env.FRIENDS_DATA_DIR = path.join(tempDir, "data");
   const allowed = path.join(tempDir, "allowed");

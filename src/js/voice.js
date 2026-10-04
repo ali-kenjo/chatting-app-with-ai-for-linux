@@ -28,6 +28,7 @@ import { robot } from "./robot/index.js";
 import { updateVoiceLevels } from "./robot/bands.mjs";
 import { createFilming } from "./filming.js";
 import { characterName, activeCharacter } from "./characters.js";
+import { t } from "./i18n.js";
 import { isOnAir, onOnAir, toggleOnAir, autoOnAir, resetOnAir } from "./onair.js";
 import { activityPrompt } from "./activities.js";
 import { setVoiceHooks } from "./life.js";
@@ -75,9 +76,9 @@ let opened = 0; // bumped each time voice mode opens
 
 // ---------- Engines ----------
 const ENGINES = {
-  live: { icon: "⚡", label: "Live", title: "Live: it hears you directly and answers in real time, like a call (Gemini Live). You can cut in any time. Click for Studio voice." },
-  studio: { icon: "🎙️", label: "Studio", title: "Studio: Gemini writes each reply, then says it in a natural Gemini voice. A bit slower to start. Click for Instant voice." },
-  instant: { icon: "💬", label: "Instant", title: "Instant: your browser's own voice. Quickest to start, but robotic, and it can't be recorded. Click for Live." },
+  live: { icon: "⚡", label: t("Live"), title: t("Live: it hears you directly and answers in real time, like a call (Gemini Live). You can cut in any time. Click for Studio voice.") },
+  studio: { icon: "🎙️", label: t("Studio"), title: t("Studio: Gemini writes each reply, then says it in a natural Gemini voice. A bit slower to start. Click for Instant voice.") },
+  instant: { icon: "💬", label: t("Instant"), title: t("Instant: your browser's own voice. Quickest to start, but robotic, and it can't be recorded. Click for Live.") },
 };
 const ORDER = ["live", "studio", "instant"];
 let engineChoice = ORDER.includes(store.get("friends.voiceEngine")) ? store.get("friends.voiceEngine") : "live";
@@ -195,7 +196,7 @@ export function setVoiceTheme(theme, { save = true } = {}) {
 }
 
 function noteRobotMissing() {
-  note(`The 3D robot can't be shown: ${robot.unavailable} Showing Sunset instead.`, 5000);
+  note(t("The 3D robot can't be shown: {reason} Showing Sunset instead.", { reason: t(robot.unavailable) }), 5000);
 }
 
 // ---------- The Robot style ----------
@@ -406,7 +407,7 @@ document.addEventListener("friends:character", () => {
   systemVoice = undefined;
   if (voiceMode.hidden || filming.on) return;
   caption("", "");
-  note(`${characterName()} is here.`, 2000);
+  note(t("{name} is here.", { name: characterName() }), 2000);
   startEngine({ greet: true });
 });
 
@@ -428,7 +429,7 @@ function syncOnAir(on = isOnAir()) {
 }
 onAirButton.addEventListener("click", () => {
   toggleOnAir();
-  note(isOnAir() ? "On air: co-host mode, nothing private." : "Off air.", 2500);
+  note(isOnAir() ? t("On air: co-host mode, nothing private.") : t("Off air."), 2500);
 });
 onOnAir((on) => {
   syncOnAir(on);
@@ -476,9 +477,9 @@ function showPermBanner(canRetry, text) {
   const banner = document.getElementById("voice-perm-banner");
   if (!banner) return;
   banner.hidden = false;
-  document.getElementById("voice-perm-title").textContent = "Microphone Permission Required";
+  document.getElementById("voice-perm-title").textContent = t("Microphone access needed");
   document.getElementById("voice-perm-text").textContent =
-    text || "Click the lock 🔒 or site settings icon in your browser address bar, set Microphone to 'Allow', then click 'Try Allow'.";
+    text || t("Click the lock 🔒 or site settings icon in your browser address bar, set Microphone to “Allow”, then press Try again.");
   document.getElementById("voice-perm-retry-btn").hidden = !canRetry;
 }
 
@@ -515,7 +516,8 @@ voiceTypeForm?.addEventListener("submit", (e) => {
 const voiceHide = document.getElementById("voice-hide");
 voiceHide?.addEventListener("click", () => {
   const hidden = voiceMode.classList.toggle("ui-hidden");
-  voiceHide.title = hidden ? "Show everything" : "Hide everything";
+  voiceHide.title = hidden ? t("Show everything") : t("Hide everything");
+  voiceHide.setAttribute("aria-label", voiceHide.title);
   voiceHide.setAttribute("aria-pressed", String(hidden));
 });
 
@@ -536,13 +538,13 @@ canvas?.addEventListener("click", () => {
 });
 
 const STATUS = {
-  connecting: "Connecting…",
-  listening: "Listening…",
-  hearing: "Hearing you…",
-  thinking: "Thinking…",
-  speaking: "Speaking · tap to interrupt",
-  standby: "Microphone standby · Click to enable",
-  error: "Microphone unavailable",
+  connecting: t("Connecting…"),
+  listening: t("Listening…"),
+  hearing: t("Hearing you…"),
+  thinking: t("Thinking…"),
+  speaking: t("Speaking · tap to interrupt"),
+  standby: t("Microphone standby · Click to enable"),
+  error: t("Microphone unavailable"),
 };
 
 // A short message in the status pill that wins over the normal status for a while
@@ -565,7 +567,7 @@ function setState(next, text) {
   robot.director.voiceState(next, { muted: isMuted() });
   if (performance.now() < noteUntil) return;
   if (isMuted() && (next === "listening" || next === "hearing")) {
-    voiceStatus.textContent = "Microphone muted";
+    voiceStatus.textContent = t("Microphone muted");
   } else {
     voiceStatus.textContent = text || STATUS[next] || "";
   }
@@ -606,7 +608,7 @@ function caption(who, text) {
     <span class="caption-tag ${isUser ? "user" : "companion"}"></span>
     <span class="caption-text"></span>
   `;
-    voiceCaption.querySelector(".caption-tag").textContent = who;
+    voiceCaption.querySelector(".caption-tag").textContent = isUser ? t("You") : who;
     appendWords(voiceCaption.querySelector(".caption-text"), text, true);
   }
   captionShown = { who, text };
@@ -736,7 +738,7 @@ async function startAudio() {
 
   if (!navigator?.mediaDevices?.getUserMedia) {
     setState("standby", "Microphone not supported by browser");
-    showPermBanner(false, "Microphone is not supported in this browser. You can still type to talk with your companion.");
+    showPermBanner(false, t("Microphone is not supported in this browser. You can still type to talk with your companion."));
     return false;
   }
   if (micStream?.active) {
@@ -756,13 +758,13 @@ async function startAudio() {
       console.info("Microphone access state:", err.name, err.message);
       if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
         setState("standby", "Microphone permission needed · Click to allow");
-        showPermBanner(true, "Microphone access is blocked by your browser. Click the site settings 🔒 icon in your browser address bar to allow.");
+        showPermBanner(true, t("Microphone access is blocked by your browser. Click the site settings 🔒 icon in your browser address bar to allow."));
       } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
         setState("standby", "No microphone detected · Click to retry");
-        showPermBanner(false, "No microphone detected on this device. You can still type to talk with your companion.");
+        showPermBanner(false, t("No microphone detected on this device. You can still type to talk with your companion."));
       } else {
         setState("standby", "Microphone standby · Click to retry");
-        showPermBanner(true, "Unable to access microphone. Click 'Try Allow' below or type to converse.");
+        showPermBanner(true, t("Unable to access the microphone. Press Try again below, or type instead."));
       }
       return false;
     }
@@ -819,7 +821,7 @@ function toggleMute() {
   }
   const muted = voiceMode.classList.toggle("muted");
   micStream.getAudioTracks().forEach((t) => (t.enabled = !muted));
-  voiceMute.title = muted ? "Unmute microphone" : "Mute microphone";
+  voiceMute.title = muted ? t("Unmute microphone") : t("Mute microphone");
   voiceMute.setAttribute("aria-pressed", String(muted));
   live?.setMuted(muted);
   if (muted) {
@@ -883,7 +885,7 @@ function liveUnavailable(message) {
   live?.stop();
   live = null;
   if (voiceMode.hidden) return;
-  note(`${message} Using Studio voice instead.`, 6000);
+  note(t("{message} Using Studio voice instead.", { message }), 6000);
   startClassic("studio");
 }
 
@@ -930,13 +932,13 @@ function liveHandlers() {
     onRobot: (event) => robot.director.toolEvent(event),
     onDraft(draft) {
       addDraft(draft);
-      note(`Draft ready: ${draft.title}`, 3000);
+      note(t("Draft ready: {title}", { title: draft.title }), 3000);
     },
     onConfirm: ({ summary, details }) => promptConfirmation(summary, details),
-    onReconnecting: () => note("Reconnecting…", 10000),
+    onReconnecting: () => note(t("Reconnecting…"), 10000),
     onResumed: () => note("", 0),
     onError: (message) => liveUnavailable(message),
-    onClosed: () => liveUnavailable("The live connection closed."),
+    onClosed: () => liveUnavailable(t("The live connection closed.")),
   };
 }
 
@@ -1129,7 +1131,7 @@ export async function askInVoice(text, { greet = false, note: appNote = "" } = {
       onDraft(draft) {
         if (mine !== turn) return;
         addDraft(draft);
-        note(`Draft ready: ${draft.title}`, 3000);
+        note(t("Draft ready: {title}", { title: draft.title }), 3000);
       },
     });
 
@@ -1470,12 +1472,12 @@ const clock = (seconds) => `${Math.floor(seconds / 60)}:${String(Math.floor(seco
 
 function startRecording() {
   closeRecordPop();
-  if (!audioCtx || !aiBus) return note("Voice mode is still starting. Try again in a moment.");
-  if (!videoType()) return note("This browser can't record video.", 4000);
+  if (!audioCtx || !aiBus) return note(t("Voice mode is still starting. Try again in a moment."));
+  if (!videoType()) return note(t("This browser can't record video."), 4000);
   // The browser's own voice plays outside the page, where it can't be recorded
   if (!live && classicTts === "instant") {
     startClassic("studio");
-    note("Instant voice can't be recorded, so Studio voice is on.", 4000);
+    note(t("Instant voice can't be recorded, so Studio voice is on."), 4000);
   }
   const sources = [aiBus];
   if (recOptions.mic && micSource) sources.push(micSource);
@@ -1491,7 +1493,8 @@ function startRecording() {
   resizeCanvas();
   voiceMode.classList.add("recording");
   voiceMode.classList.toggle("canvas-captions", recOptions.captions);
-  recordButton.title = "Stop recording and save the video";
+  recordButton.title = t("Stop recording and save the video");
+  recordButton.setAttribute("aria-label", recordButton.title);
   recordTime.textContent = "0:00";
   clearInterval(recTimer);
   recTimer = setInterval(() => (recordTime.textContent = clock(recorder?.seconds || 0)), 500);
@@ -1504,11 +1507,12 @@ async function stopRecording() {
   autoOnAir("recording", false);
   clearInterval(recTimer);
   voiceMode.classList.remove("recording", "canvas-captions");
-  recordButton.title = "Record a video";
+  recordButton.title = t("Record a video");
+  recordButton.setAttribute("aria-label", recordButton.title);
   const { blob, extension, seconds } = await current.stop();
   const stamp = new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "");
   download(blob, `friends-voice-${stamp}.${extension}`);
-  note(`Saved the video (${clock(seconds)}).`, 4000);
+  note(t("Saved the video ({time}).", { time: clock(seconds) }), 4000);
   activeFrame = null;
   resizeCanvas();
 }
