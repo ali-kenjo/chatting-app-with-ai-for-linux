@@ -46,7 +46,9 @@ async function startHelper() {
   const { start } = require("../server/server");
   const server = start(port, HOST);
   await new Promise((resolve) => (server.listening ? resolve() : server.once("listening", resolve)));
-  return `http://${HOST}:${server.address().port}`;
+  // The page is opened as "localhost" (the helper only listens on 127.0.0.1): Firebase accepts
+  // localhost for Google sign-in in every project, but an IP address has to be added by hand
+  return `http://localhost:${server.address().port}`;
 }
 
 // ---------- The window ----------
