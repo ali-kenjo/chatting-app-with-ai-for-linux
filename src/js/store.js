@@ -1,6 +1,7 @@
 // Settings shared by every part of the page. Loaded from the helper once;
 // changes are applied right away and saved a moment later.
 import { api } from "./api.js";
+import { followSetting } from "./i18n.js";
 
 let settings = null;
 const listeners = new Set();
@@ -23,15 +24,31 @@ export function updateSettings(change) {
   listeners.forEach((fn) => fn(settings));
   clearTimeout(saveTimer);
   saveTimer = setTimeout(save, 400);
+  say("saving");
 }
 
+const say = (what) => document.dispatchEvent(new CustomEvent(`friends:${what}`));
+
 async function save() {
+  saveTimer = null;
   try {
     await api.settings.save(settings);
+    say("saved");
+    return true;
   } catch (err) {
     console.error("Couldn't save settings:", err.message);
+    say("save-failed");
+    return false;
   }
 }
+
+// Saves now instead of in a moment (before the page reloads, for instance)
+export function flushSettings() {
+  clearTimeout(saveTimer);
+  return settings ? save() : Promise.resolve(false);
+}
+
+export const retrySave = () => save();
 
 // Read or write a value by path, e.g. "personality.name"
 const read = (path) => path.split(".").reduce((o, k) => o?.[k], settings);
@@ -64,6 +81,7 @@ onSettings(syncControls);
 api.settings.get().then(
   (loaded) => {
     settings = loaded;
+    followSetting(settings.ui?.language);
     listeners.forEach((fn) => fn(settings));
   },
   (err) => console.error("Couldn't load settings:", err.message)

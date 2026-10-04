@@ -59,7 +59,7 @@
 .filming-frame {
   position: absolute;
   top: 50%;
-  inset-inline-start:  50%;
+  left: 50%;
   translate: -50% -50%;
   display: none;
   border: 2px solid rgba(255, 255, 255, 0.55);

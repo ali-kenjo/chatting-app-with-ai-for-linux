@@ -17,7 +17,7 @@ describe("Settings Management", () => {
   test("get returns defaults when no settings file exists", () => {
     const current = settings.get();
     assert.strictEqual(current.theme.appearance, "dark");
-    assert.strictEqual(current.font.size, 15);
+    assert.strictEqual(current.font.size, 16);
     assert.strictEqual(current.personality.voice, 1);
     assert.strictEqual(current.personality.creativity, 5);
   });

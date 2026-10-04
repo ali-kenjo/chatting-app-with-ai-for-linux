@@ -134,10 +134,10 @@ describe("Choosing the AI in the page", { skip: !CHROME && "no Chrome found" }, 
     assert.match((await lastReply()).via, /Cloud · Gemini/);
   });
 
-  test("Settings → AI control shows the same mode, and what applies to it", async () => {
+  test("Settings → AI & privacy shows the same mode, and what applies to it", async () => {
     await page.evaluate(() => {
       document.getElementById("settings-btn")?.click();
-      [...document.querySelectorAll(".modal-nav .tab")].find((t) => /AI control/.test(t.textContent))?.click();
+      document.querySelector('.modal-nav .tab[data-tab="ai-control"]')?.click();
     });
     await page.waitForSelector("#routing-mode", { visible: true });
     assert.strictEqual(await page.$eval("#routing-mode", (el) => el.value), "auto");

@@ -2,6 +2,8 @@
 import { api } from "./api.js";
 import { openSettings } from "./settings.js";
 import { getSettings, onSettings, updateSettings } from "./store.js";
+import { t, nf } from "./i18n.js";
+import { announce } from "./a11y.js";
 
 // ----- Model picker -----
 // Besides one brain of your choice, a mode can pick the AI per message (see server/router.js)
@@ -10,11 +12,11 @@ const menu = document.getElementById("model-menu");
 const CHECK = '<svg viewBox="0 0 24 24"><polyline points="5 12 10 17 19 7"/></svg>';
 
 const MODES = [
-  { id: "auto", icon: "✨", label: "Auto", desc: "Local by default; the cloud for what a message needs" },
-  { id: "dynamic", icon: "🔄", label: "Dynamic", desc: "Auto, and it reacts to how the AIs are doing" },
-  { id: "fastest", icon: "⚡", label: "Fastest", desc: "Asks both; the first answer wins" },
-  { id: "local", icon: "🔒", label: "Local only", desc: "Only an AI on this computer", needs: "local" },
-  { id: "cloud", icon: "☁️", label: "Cloud only", desc: "Only Gemini", needs: "cloud" },
+  { id: "auto", icon: "✨", label: t("Auto"), desc: t("Local by default; the cloud for what a message needs") },
+  { id: "dynamic", icon: "🔄", label: t("Dynamic"), desc: t("Auto, and it reacts to how the AIs are doing") },
+  { id: "fastest", icon: "⚡", label: t("Fastest"), desc: t("Asks both; the first answer wins") },
+  { id: "local", icon: "🔒", label: t("Local only"), desc: t("Only an AI on this computer"), needs: "local" },
+  { id: "cloud", icon: "☁️", label: t("Cloud only"), desc: t("Only Gemini"), needs: "cloud" },
 ];
 
 let brains = [];
@@ -72,37 +74,66 @@ function warmUp() {
   api.local.warm(id);
 }
 
+// A line for the start screen: who will answer a message, in plain words
+function renderStatus() {
+  const chip = document.getElementById("ws-status-indicator");
+  const text = document.getElementById("status-text");
+  const mode = getMode();
+  const enabled = brains.filter((b) => b.enabled);
+  let state = "ready";
+  let line;
+  if (!enabled.length) [state, line] = ["none", t("No AI set up yet")];
+  else if (isPrivate()) line = t("Private mode: answers stay on this computer");
+  else if (mode === "local") line = t("Answers come from this computer");
+  else if (mode === "cloud") line = t("Answers come from Gemini (cloud)");
+  else if (mode === "fixed") {
+    const brain = getSelectedBrain();
+    line = brain && isLocal(brain) ? t("Answers come from this computer") : t("Answers come from Gemini (cloud)");
+  } else line = t("Local first, cloud when needed");
+  chip.dataset.state = state;
+  text.textContent = line;
+}
+
 function renderPicker() {
+  renderStatus();
   const mode = getMode();
   const info = MODES.find((m) => m.id === mode);
   if (info) {
     picker.querySelector("strong").textContent = `${info.icon} ${info.label}`;
-    picker.querySelector("span").textContent = isPrivate() ? "Private mode" : "";
+    picker.querySelector("span").textContent = isPrivate() ? t("Private mode") : "";
   } else {
     const brain = brains.find((b) => b.id === getSelectedBrainId());
-    picker.querySelector("strong").textContent = brain ? brain.name : "Model";
+    picker.querySelector("strong").textContent = brain ? brain.name : t("Choose an AI");
     picker.querySelector("span").textContent = brain ? brain.model : "";
   }
+  picker.setAttribute("aria-label", `${t("Which AI answers")}: ${picker.textContent.replace(/\s+/g, " ").trim()}`);
   // "Answer again with the other AI" only makes sense with both kinds, outside Private mode
   document.documentElement.dataset.bothKinds = String(enabledOf("local").length > 0 && enabledOf("cloud").length > 0 && !isPrivate());
 }
 
+let group = null;
 function menuHeading(text) {
+  group = document.createElement("div");
+  group.setAttribute("role", "group");
   const heading = document.createElement("div");
   heading.className = "model-menu-heading";
+  heading.id = `model-menu-heading-${menu.children.length}`;
   heading.textContent = text;
-  menu.append(heading);
+  group.setAttribute("aria-labelledby", heading.id);
+  group.append(heading);
+  menu.append(group);
 }
 
 function renderMenu() {
   menu.innerHTML = "";
+  group = menu;
   const enabled = brains.filter((b) => b.enabled);
   const mode = getMode();
   const hasLocal = enabledOf("local").length > 0;
   const hasCloud = enabledOf("cloud").length > 0 && !isPrivate();
 
   if (enabled.length) {
-    menuHeading("Mode");
+    menuHeading(t("Mode"));
     for (const m of MODES) {
       const missing = m.needs === "local" ? !hasLocal : m.needs === "cloud" ? !hasCloud : !hasLocal && !hasCloud;
       const blocked = isPrivate() && m.id !== "local";
@@ -115,15 +146,15 @@ function renderMenu() {
       item.disabled = missing || blocked;
       item.innerHTML = `<span class="model-item-text"><strong></strong><span></span></span>${m.id === mode ? CHECK : ""}`;
       item.querySelector("strong").textContent = `${m.icon} ${m.label}`;
-      item.querySelector(".model-item-text span").textContent = blocked ? "Off in Private mode" : missing ? (m.needs === "cloud" ? "Add a Gemini brain first" : m.needs === "local" ? "Add a local AI first" : "Add an AI first") : m.desc;
-      menu.append(item);
+      item.querySelector(".model-item-text span").textContent = blocked ? t("Off in Private mode") : missing ? (m.needs === "cloud" ? t("Add a Gemini AI first") : m.needs === "local" ? t("Add a local AI first") : t("Add an AI first")) : m.desc;
+      group.append(item);
     }
-    menuHeading("One AI");
+    menuHeading(t("One AI"));
   }
   if (!enabled.length) {
     const empty = document.createElement("div");
     empty.className = "model-menu-empty";
-    empty.textContent = "No AI brains yet.";
+    empty.textContent = t("No AI is set up yet.");
     menu.append(empty);
   }
   for (const b of enabled) {
@@ -138,28 +169,58 @@ function renderMenu() {
     item.querySelector("strong").textContent = `${isLocal(b) ? "🔒" : "☁️"} ${b.name}`;
     item.querySelector(".model-item-text span").textContent = b.model;
     item.disabled = isPrivate() && !isLocal(b);
-    menu.append(item);
+    group.append(item);
   }
+  group = null;
   const manage = document.createElement("button");
   manage.type = "button";
   manage.className = "model-item manage";
+  manage.setAttribute("role", "menuitem");
   manage.dataset.manage = "";
-  manage.textContent = enabled.length ? "Manage AI brains and routing…" : "Add an AI brain…";
+  manage.textContent = enabled.length ? t("Manage your AIs and routing…") : t("Set up an AI…");
   menu.append(manage);
 }
 
-function setMenu(open) {
+const menuItems = () => [...menu.querySelectorAll(".model-item:not(:disabled)")];
+
+function setMenu(open, { focusPicker = false } = {}) {
   menu.hidden = !open;
   picker.setAttribute("aria-expanded", open);
-  if (open) renderMenu();
+  if (open) {
+    renderMenu();
+    // The keyboard lands on the chosen entry
+    (menu.querySelector('[aria-checked="true"]:not(:disabled)') || menuItems()[0])?.focus();
+  } else if (focusPicker) picker.focus();
 }
+
+// Arrows move through the entries, Esc closes and gives the focus back, Tab leaves
+menu.addEventListener("keydown", (e) => {
+  const items = menuItems();
+  const at = items.indexOf(document.activeElement);
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    items[(at + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length]?.focus();
+  } else if (e.key === "Home" || e.key === "End") {
+    e.preventDefault();
+    items[e.key === "Home" ? 0 : items.length - 1]?.focus();
+  } else if (e.key === "Escape") {
+    e.stopPropagation();
+    setMenu(false, { focusPicker: true });
+  } else if (e.key === "Tab") setMenu(false);
+});
+picker.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowDown" && menu.hidden) {
+    e.preventDefault();
+    setMenu(true);
+  }
+});
 
 picker.addEventListener("click", () => setMenu(menu.hidden));
 
 menu.addEventListener("click", (e) => {
   const item = e.target.closest(".model-item");
   if (!item) return;
-  setMenu(false);
+  setMenu(false, { focusPicker: true });
   if (item.hasAttribute("data-manage")) return openSettings("ai-control");
   if (item.dataset.mode) {
     updateSettings((s) => {
@@ -181,7 +242,7 @@ document.addEventListener("click", (e) => {
   if (!menu.hidden && !e.target.closest(".model-menu-wrap")) setMenu(false);
 });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") setMenu(false);
+  if (e.key === "Escape" && !menu.hidden) setMenu(false, { focusPicker: true });
 });
 
 document.addEventListener("friends:brains-changed", (e) => {
@@ -205,7 +266,7 @@ let items = []; // { key, file, status: "uploading" | "ready" | "error", meta, e
 let nextKey = 1;
 
 function size(bytes) {
-  return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return bytes < 1024 * 1024 ? `${nf(Math.max(1, Math.round(bytes / 1024)))} KB` : `${nf(bytes / 1024 / 1024, { maximumFractionDigits: 1 })} MB`;
 }
 
 function changed() {
@@ -223,11 +284,15 @@ function renderTray() {
     chip.innerHTML = `
       ${item.preview ? '<img alt="">' : '<span class="attachment-icon"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/></svg></span>'}
       <span class="attachment-text"><span class="attachment-name"></span><span class="attachment-meta"></span></span>
-      <button type="button" class="icon-btn small" title="Remove">${REMOVE}</button>`;
+      <button type="button" class="icon-btn small">${REMOVE}</button>`;
+    const remove = chip.querySelector("button");
+    remove.title = t("Remove {name}", { name: item.file.name });
+    remove.setAttribute("aria-label", remove.title);
     if (item.preview) chip.querySelector("img").src = item.preview;
     chip.querySelector(".attachment-name").textContent = item.file.name;
     chip.querySelector(".attachment-meta").textContent =
-      item.status === "uploading" ? "Uploading…" : item.status === "error" ? item.error : size(item.file.size);
+      item.status === "uploading" ? t("Uploading…") : item.status === "error" ? item.error : size(item.file.size);
+    chip.setAttribute("role", item.status === "error" ? "alert" : "group");
     tray.append(chip);
   }
 }
@@ -276,6 +341,8 @@ tray.addEventListener("click", (e) => {
   if (!chip) return;
   items = items.filter((i) => String(i.key) !== chip.dataset.key);
   changed();
+  announce(t("Attachment removed"));
+  document.getElementById("composer-input").focus();
 });
 
 // Paste or drop files too
@@ -287,10 +354,36 @@ document.getElementById("composer-input").addEventListener("paste", (e) => {
   }
 });
 const main = document.getElementById("main");
+const composerBox = document.getElementById("composer");
+const dropNote = document.createElement("div");
+dropNote.className = "drop-note";
+dropNote.setAttribute("aria-hidden", "true");
+dropNote.textContent = t("Drop files to attach them");
+main.append(dropNote);
+
+// Dragging files over the page: the message box lights up and says what happens on drop
+let dragDepth = 0;
+const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes("Files");
+const showDrop = (on) => {
+  main.classList.toggle("dropping", on);
+  composerBox.classList.toggle("drop-active", on);
+};
+main.addEventListener("dragenter", (e) => {
+  if (!hasFiles(e)) return;
+  dragDepth++;
+  showDrop(true);
+});
+main.addEventListener("dragleave", (e) => {
+  if (!hasFiles(e)) return;
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (!dragDepth) showDrop(false);
+});
 main.addEventListener("dragover", (e) => {
-  if ([...e.dataTransfer.types].includes("Files")) e.preventDefault();
+  if (hasFiles(e)) e.preventDefault();
 });
 main.addEventListener("drop", (e) => {
+  dragDepth = 0;
+  showDrop(false);
   if (!e.dataTransfer.files.length) return;
   e.preventDefault();
   addFiles([...e.dataTransfer.files]);

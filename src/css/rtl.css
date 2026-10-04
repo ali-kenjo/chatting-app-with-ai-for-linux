@@ -1,0 +1,38 @@
+/* Right-to-left (Arabic). Most of the mirroring happens by itself: the layout uses logical
+   properties and flex/grid, which follow <html dir>. This file covers what doesn't. */
+
+/* Icons that point somewhere are mirrored; others (a magnifier, a gear, a send arrow) are not */
+:root[dir="rtl"] :is(#sidebar-toggle, #sidebar-open, .back-link) svg,
+:root[dir="rtl"] .flip-rtl {
+  transform: scaleX(-1);
+}
+
+/* Code, formulas and their toolbar's text stay left-to-right in any language */
+.markdown pre,
+.markdown code,
+.code-block pre,
+.katex,
+.katex-display {
+  direction: ltr;
+  text-align: left;
+  unicode-bidi: isolate;
+}
+
+/* Text of one language inside text of another (an English name in an Arabic sentence); the page
+   gives each paragraph of a reply its own dir="auto" (see render.js) */
+bdi,
+.bubble,
+.chat-title,
+.search-result-title {
+  unicode-bidi: plaintext;
+}
+
+:root[dir="rtl"] .markdown ul,
+:root[dir="rtl"] .markdown ol {
+  padding-inline-start: 1.5em;
+}
+
+/* Sliders read from the start of the line: "Small … Large" flips, and so does the thumb */
+:root[dir="rtl"] input[type="range"] {
+  direction: rtl;
+}

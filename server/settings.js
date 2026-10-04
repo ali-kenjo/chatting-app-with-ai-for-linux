@@ -6,8 +6,14 @@ const characters = require("./characters");
 
 const file = path.join(dataDir, "settings.json");
 
+const LANGUAGES = ["auto", "en", "de", "ar"];
+
 const DEFAULTS = {
-  font: { family: "default", size: 15 },
+  // The interface language: "auto" follows the browser (see src/js/i18n.js)
+  ui: { language: "auto" },
+  // The first-run guide (src/js/onboarding.js): set once the person has finished or skipped it
+  onboarding: { done: false },
+  font: { family: "default", size: 16 },
   // How conversations look: "minimal" (only your messages in bubbles) or "bubbles",
   // "comfortable" or "compact" spacing, and follow-up chips under the last reply
   chat: { style: "minimal", density: "comfortable", suggestions: true },
@@ -168,6 +174,7 @@ function sanitize(input) {
     .map((m) => ({ id: String(m.id || Date.now() + Math.random()), text: m.text.trim().slice(0, 2000) }));
   const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, Math.round(n) || lo));
   s.font.size = clamp(s.font.size, 12, 22);
+  if (!LANGUAGES.includes(s.ui.language)) s.ui.language = "auto";
   if (!["minimal", "bubbles"].includes(s.chat.style)) s.chat.style = "minimal";
   if (!["comfortable", "compact"].includes(s.chat.density)) s.chat.density = "comfortable";
   s.personality.voice = s.personality.voice === 2 ? 2 : 1;

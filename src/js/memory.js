@@ -2,6 +2,8 @@
 // "Your memories" live in the settings; the AI's own notes come from the helper.
 import { api } from "./api.js";
 import { onSettings, updateSettings } from "./store.js";
+import { t } from "./i18n.js";
+import { confirmDialog } from "./dialogs.js";
 
 // ----- Your memories -----
 const memoryList = document.getElementById("memory-list");
@@ -37,26 +39,18 @@ memoryList.addEventListener("click", (e) => {
   if (btn) updateSettings((s) => (s.memory.items = s.memory.items.filter((m) => m.id !== btn.dataset.id)));
 });
 
-// Clearing needs a second click within a few seconds
-function twoStep(button, action) {
-  let timer = null;
-  button.addEventListener("click", () => {
-    if (!timer) {
-      button.textContent = "Click again to clear";
-      timer = setTimeout(() => {
-        button.textContent = "Clear";
-        timer = null;
-      }, 3000);
-      return;
-    }
-    clearTimeout(timer);
-    timer = null;
-    button.textContent = "Clear";
-    action();
+// Clearing asks first
+function askToClear(button, action, { title, message, confirm }) {
+  button.addEventListener("click", async () => {
+    if (await confirmDialog({ title, message, confirm, danger: true })) action();
   });
 }
 
-twoStep(memoryClear, () => updateSettings((s) => (s.memory.items = [])));
+askToClear(memoryClear, () => updateSettings((s) => (s.memory.items = [])), {
+  title: t("Clear everything you asked it to remember?"),
+  message: t("These memories will be deleted. This can't be undone."),
+  confirm: t("Clear memories"),
+});
 
 // ----- AI memory (its own notes) -----
 const NOTE_TYPES = {
@@ -193,13 +187,17 @@ noteList.addEventListener("click", async (e) => {
   if (btn.dataset.action === "edit") noteList.querySelector("textarea").focus();
 });
 
-twoStep(notesClear, async () => {
-  try {
-    await api.notes.clear();
-  } catch {}
-  openNoteId = editingNoteId = null;
-  loadNotes();
-});
+askToClear(
+  notesClear,
+  async () => {
+    try {
+      await api.notes.clear();
+    } catch {}
+    openNoteId = editingNoteId = null;
+    loadNotes();
+  },
+  { title: t("Clear the AI's notes?"), message: t("Everything the AI wrote down about you and your work will be deleted. This can't be undone."), confirm: t("Clear notes") }
+);
 
 // Refresh when the tab opens, and after chats (the AI may have saved something)
 document.querySelector('.tab[data-tab="memory"]').addEventListener("click", loadNotes);

@@ -1,0 +1,682 @@
+/* Shared pieces added in the design overhaul: used across panels. Built on tokens.css. */
+
+/* ---------- Settings navigation ---------- */
+.modal-nav {
+  overflow-y: auto;
+  gap: var(--space-2);
+}
+
+.settings-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-h);
+}
+
+.nav-group {
+  padding: var(--space-3) var(--space-3) var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tab {
+  min-height: var(--target);
+}
+
+.tab.active {
+  background: var(--bg-active);
+}
+
+.tab[aria-selected="true"] svg {
+  color: var(--accent);
+}
+
+.settings-search {
+  position: relative;
+  padding: 0 var(--space-1);
+}
+
+.settings-search svg {
+  position: absolute;
+  inset-inline-start: var(--space-3);
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.settings-search .field {
+  width: 100%;
+  min-width: 0;
+  padding-block: var(--space-1h);
+  padding-inline: var(--space-8) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--bg-main);
+}
+
+.settings-results {
+  list-style: none;
+  margin: 0 var(--space-1);
+  padding: var(--space-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-main);
+}
+
+.settings-result {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-1h) var(--space-2h);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.settings-result strong {
+  font-weight: 500;
+  font-size: var(--fs-sm);
+}
+
+.settings-result span {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.settings-result[aria-selected="true"],
+.settings-result:hover {
+  background: var(--bg-active);
+}
+
+.settings-result.none {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  cursor: default;
+}
+
+.settings-saved {
+  margin-top: auto;
+  padding: var(--space-2) var(--space-3);
+  min-height: 2.25rem;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.settings-saved.error {
+  color: var(--danger);
+}
+
+/* A setting you were taken to */
+.flash {
+  animation: flash 1.6s ease-out;
+}
+
+@keyframes flash {
+  0%, 40% { background: var(--bg-active); }
+  100% { background: transparent; }
+}
+
+/* ---------- Folded advanced options ---------- */
+.advanced {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-3);
+}
+
+.advanced > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  min-height: var(--target);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  cursor: pointer;
+  list-style: none;
+}
+
+.advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+.advanced > summary::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg); /* points to the end of the line; the folded part opens downwards */
+  transition: transform var(--dur-fast);
+}
+
+:root[dir="rtl"] .advanced > summary::before {
+  transform: rotate(135deg);
+}
+
+.advanced[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.advanced[open] {
+  padding-bottom: var(--space-2);
+}
+
+.advanced > summary:hover {
+  color: var(--text);
+}
+
+/* ---------- Local or cloud, in plain words ---------- */
+.explain {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+}
+
+.explain-item {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+}
+
+.explain-icon {
+  font-size: var(--fs-xl);
+  line-height: 1;
+}
+
+/* ---------- A button that looks like a link ---------- */
+.link-btn {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font: inherit;
+  padding: var(--space-h);
+}
+
+/* ---------- Buttons: every variant has hover, pressed, focus (a11y.css), disabled and loading ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--target);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-tight);
+  text-align: center;
+  background: transparent;
+  color: var(--text);
+  transition: background var(--dur-fast), border-color var(--dur-fast), transform var(--dur-fast);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn.small,
+.btn-sm {
+  min-height: 32px;
+  padding: var(--space-1h) var(--space-3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 82%, var(--text));
+  border-color: transparent;
+}
+
+.btn-primary:active:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 70%, var(--text));
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--text-muted);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.btn-danger:active:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 22%, var(--danger-bg));
+}
+
+/* Working on it: the label stays, a spinner joins it */
+.btn.is-loading {
+  pointer-events: none;
+}
+
+.btn.is-loading::after {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-inline-end-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- Icon buttons ---------- */
+.icon-btn {
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
+
+.icon-btn:active {
+  background: var(--bg-active);
+}
+
+.icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---------- The start screen ---------- */
+.voice-hero-card {
+  margin: var(--space-4) 0 var(--space-6);
+  padding: var(--space-6);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  box-shadow: none;
+  gap: var(--space-3);
+}
+
+.voice-hero-title {
+  font-size: var(--fs-2xl);
+  font-weight: 600;
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  color: var(--text);
+}
+
+.voice-hero-sub {
+  max-width: 34rem;
+  font-size: var(--fs-md);
+}
+
+.voice-hero-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.btn-hero-voice {
+  padding: var(--space-3) var(--space-6);
+  background: linear-gradient(135deg, #d9570f, #c0392b);
+  color: #fff;
+  border: 0;
+  box-shadow: 0 4px 18px rgba(192, 57, 43, 0.35);
+}
+
+.btn-hero-voice:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e5600f, #cc3a2b);
+  box-shadow: 0 6px 22px rgba(192, 57, 43, 0.5);
+}
+
+.nav-voice-hero {
+  background: transparent;
+  color: var(--text);
+}
+
+.nav-voice-hero svg {
+  color: var(--accent);
+}
+
+/* Which AI answers: a quiet line that is also the way back to the guide */
+.ws-status-indicator {
+  border: 1px solid transparent;
+  cursor: pointer;
+  min-height: 28px;
+}
+
+.ws-status-indicator:hover {
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.ws-status-indicator[data-state="ready"] .status-circle {
+  background: var(--success);
+}
+
+.ws-status-indicator[data-state="none"] .status-circle {
+  background: var(--warning);
+}
+
+.ws-status-indicator[data-state="none"] {
+  color: var(--text);
+}
+
+/* ---------- First-run guide ---------- */
+.onboarding {
+  width: 100%;
+  max-width: 44rem;
+  margin: var(--space-2) auto var(--space-6);
+  padding: var(--space-6);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  border-radius: var(--radius-xl);
+  background: var(--bg-subtle);
+  text-align: start;
+}
+
+.onboarding[hidden] {
+  display: none;
+}
+
+.onboarding h2 {
+  font-size: var(--fs-2xl);
+  font-weight: 600;
+  text-align: center;
+}
+
+.onboarding-lead {
+  margin: var(--space-2) auto var(--space-5);
+  max-width: 34rem;
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+  text-align: center;
+}
+
+.onboarding-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: var(--space-4);
+}
+
+.onboarding-option {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-main);
+}
+
+.onboarding-option-head {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.onboarding-option h3 {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+.onboarding-option p {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+}
+
+.onboarding-icon {
+  font-size: var(--fs-2xl);
+  line-height: 1.2;
+}
+
+.onboarding-status {
+  min-height: 2.5em;
+  color: var(--text) !important;
+}
+
+.onboarding-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: auto;
+}
+
+.onboarding-key {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.onboarding-key .field {
+  width: 100%;
+  min-width: 0;
+}
+
+.onboarding-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.onboarding-private {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  max-width: 30rem;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.onboarding-private strong {
+  display: block;
+  color: var(--text);
+}
+
+:root[data-private="true"] .onb-cloud {
+  display: none;
+}
+
+/* ---------- Keyboard shortcuts ---------- */
+.shortcuts-modal {
+  max-width: 760px;
+  height: auto;
+  max-height: 100%;
+}
+
+.shortcuts-body {
+  flex: 1;
+  padding: var(--space-5) var(--space-6) var(--space-6);
+  overflow-y: auto;
+}
+
+.shortcuts-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.shortcuts-head h2 {
+  font-size: var(--fs-2xl);
+  font-weight: 500;
+}
+
+.shortcuts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  gap: var(--space-5) var(--space-6);
+}
+
+.shortcuts-grid h3 {
+  margin-bottom: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.shortcuts-grid dl > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-1h) 0;
+  border-bottom: 1px solid var(--bg-hover);
+  font-size: var(--fs-sm);
+}
+
+.shortcuts-grid dt {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  order: 2;
+}
+
+.shortcuts-grid dd {
+  order: 1;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 1.75em;
+  padding: var(--space-h) var(--space-1h);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-main);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-xs);
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ---------- A reply that didn't come: what happened, and what to do ---------- */
+.msg-error {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-2h) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  color: var(--text);
+}
+
+.msg-error > svg {
+  margin-top: var(--space-h);
+  color: var(--danger);
+}
+
+.msg-error-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-h);
+  min-width: 0;
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
+}
+
+.msg-error-text strong {
+  font-weight: 600;
+  color: var(--danger);
+}
+
+.msg-error-text span {
+  overflow-wrap: anywhere;
+}
+
+.msg-error-actions {
+  grid-column: 2;
+  flex-wrap: wrap;
+}
+
+/* ---------- Dropping files on the page ---------- */
+.drop-note {
+  position: absolute;
+  inset-inline: var(--space-6);
+  bottom: var(--space-6);
+  z-index: var(--z-float);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  height: 4.5rem;
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--bg-main) 88%, var(--accent));
+  color: var(--text);
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.main.dropping .drop-note {
+  display: flex;
+}
+
+/* ---------- The model menu ---------- */
+.model-menu-heading {
+  padding: var(--space-2) var(--space-2h) var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.model-item:focus-visible,
+.model-item:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.model-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---------- A question before something that can't be undone ---------- */
+.confirm-backdrop {
+  z-index: calc(var(--z-modal) + 10);
+}
+
+.confirm-modal {
+  display: block;
+  max-width: 28rem;
+  height: auto;
+}
+
+.confirm-body {
+  padding: var(--space-6);
+}
+
+.confirm-body h2 {
+  font-size: var(--fs-xl);
+  font-weight: 600;
+}
+
+.confirm-body p {
+  margin: var(--space-2) 0 var(--space-5);
+  color: var(--text-muted);
+  line-height: var(--lh-normal);
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.btn-danger.solid {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--bg-main);
+}
+
+.btn-danger.solid:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 85%, var(--text));
+}

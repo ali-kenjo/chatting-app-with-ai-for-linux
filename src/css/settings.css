@@ -564,7 +564,8 @@ label.row {
 }
 
 .msg-via[data-kind="local"] {
-  color: #3fa56b;
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 40%, var(--border));
 }
 
 /* "Answer again with the other AI" needs both a local and a cloud AI */
@@ -593,8 +594,7 @@ label.row {
 :root[data-private="true"] .prompt-chip[data-prompt*="Drive"],
 :root[data-private="true"] .prompt-chip[data-prompt*="news"],
 :root[data-private="true"] .prompt-chip[data-prompt*="GitHub"],
-:root[data-private="true"] .ws-pill,
-:root[data-private="true"] .ws-status-indicator {
+:root[data-private="true"] .ws-pill {
   display: none;
 }
 

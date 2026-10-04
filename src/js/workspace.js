@@ -173,7 +173,6 @@ function updateAuthUI(user, hasToken) {
   const sidebarName = document.getElementById("user-name");
   const sidebarEmail = document.getElementById("user-email");
   const sidebarAuthBtn = document.getElementById("sidebar-auth-btn");
-  const statusText = document.getElementById("status-text");
 
   const wsAvatar = document.getElementById("ws-account-avatar");
   const wsName = document.getElementById("ws-account-name");
@@ -199,7 +198,6 @@ function updateAuthUI(user, hasToken) {
       sidebarAuthBtn.title = "Connected to Google Workspace";
       sidebarAuthBtn.classList.add("connected");
     }
-    if (statusText) statusText.textContent = "Google Connected";
 
     if (wsAvatar) {
       if (user.photoURL) {
@@ -221,7 +219,6 @@ function updateAuthUI(user, hasToken) {
       sidebarAuthBtn.title = "Connect Google Account";
       sidebarAuthBtn.classList.remove("connected");
     }
-    if (statusText) statusText.textContent = "Cloud Ready";
     if (wsAvatar) wsAvatar.textContent = "?";
     if (wsName) wsName.textContent = user ? user.displayName || user.email || "Signed out" : "Not connected";
     if (wsEmail) wsEmail.textContent = user ? "Sign in again to use Gmail, Calendar and Drive" : "Sign in to use Gmail, Calendar and Drive";

@@ -116,6 +116,9 @@ function apply(state) {
   updateDiagnosticBanner();
 }
 
+// The first-run guide (onboarding.js) added an AI itself
+document.addEventListener("friends:brains-apply", (e) => apply(e.detail));
+
 function updateDiagnosticBanner() {
   const def = brains.find((b) => b.id === defaultBrainId) || brains[0];
   if (!def) {
@@ -786,6 +789,8 @@ function renderRouting() {
   const mode = isPrivate() ? "local" : getSettings()?.routing?.mode || "fixed";
   document.getElementById("routing-mode-desc").textContent = isPrivate() ? "Private mode is on, so only a local AI answers." : MODE_TEXT[mode];
   routingOptions.querySelectorAll("[data-for]").forEach((el) => el.classList.toggle("is-inactive", !el.dataset.for.split(" ").includes(mode)));
+  // The fine rules are only worth showing for the modes that use them
+  document.getElementById("routing-advanced").hidden = !routingOptions.querySelector("#routing-advanced [data-for]:not(.is-inactive)");
 }
 
 onSettings(renderPrivate);

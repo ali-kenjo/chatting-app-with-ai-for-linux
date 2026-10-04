@@ -27,49 +27,55 @@
   <link rel="stylesheet" href="css/characters.css">
   <link rel="stylesheet" href="css/life.css">
   <link rel="stylesheet" href="css/apps.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/rtl.css">
+  <link rel="stylesheet" href="css/a11y.css">
   <script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js","three/addons/":"/vendor/three/addons/"}}</script>
 </head>
 <body>
+  <a class="skip-link" href="#composer-input">Skip to the message box</a>
+  <!-- Spoken to screen readers only (src/js/a11y.js) -->
+  <div class="sr-only" id="sr-status" role="status" aria-live="polite" aria-atomic="true" data-keep-active></div>
+  <div class="sr-only" id="sr-alert" role="alert" aria-live="assertive" aria-atomic="true" data-keep-active></div>
   <div class="app">
 
     <!-- Sidebar -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar" aria-label="Sidebar">
       <div class="sidebar-header">
         <div class="brand">
           <span>Friends</span>
         </div>
-        <button class="icon-btn" id="sidebar-toggle" title="Hide sidebar">
+        <button class="icon-btn" id="sidebar-toggle" title="Hide the sidebar" aria-controls="sidebar">
           <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><line x1="9" y1="4" x2="9" y2="20"/></svg>
         </button>
       </div>
 
-      <nav class="nav">
-        <a href="#" class="nav-item" id="new-chat">
+      <nav class="nav" aria-label="Main">
+        <button type="button" class="nav-item" id="new-chat">
           <svg viewBox="0 0 24 24"><path d="M12 20h8"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
           <span>New chat</span>
-        </a>
-        <a href="#" class="nav-item active" id="chats-nav" title="Show or hide your chats">
+        </button>
+        <button type="button" class="nav-item active" id="chats-nav" aria-expanded="true" aria-controls="chat-history" title="Show or hide your chats">
           <svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>
           <span>Chats</span>
-        </a>
-        <a href="#" class="nav-item" id="search-open" title="Search (Ctrl+K)">
+        </button>
+        <button type="button" class="nav-item" id="search-open" title="Search your chats (Ctrl+K)">
           <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/></svg>
           <span>Search</span>
-        </a>
-        <a href="#today" class="nav-item" id="today-open" title="Tasks, reminders, habits and journal">
+        </button>
+        <button type="button" class="nav-item" id="today-open" title="Tasks, reminders, habits and journal">
           <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><polyline points="9 15 11 17 15 13"/></svg>
           <span>Today</span>
           <span class="nav-badge" id="today-badge" hidden></span>
-        </a>
-        <a href="#" class="nav-item nav-voice-hero" id="voice-open">
+        </button>
+        <button type="button" class="nav-item nav-voice-hero" id="voice-open">
           <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg>
-          <span>Voice Conversation</span>
-          <span class="badge-hero">Hero</span>
-        </a>
+          <span>Voice conversation</span>
+        </button>
       </nav>
 
       <!-- Saved chats, grouped by date (filled by chats.js) -->
-      <div class="section chat-history" id="chat-history"></div>
+      <div class="section chat-history" id="chat-history" role="region" aria-label="Your chats" data-no-i18n></div>
 
       <div class="sidebar-footer">
         <div class="user" id="user-profile-row">
@@ -78,10 +84,13 @@
             <div class="user-name" id="user-name">You</div>
             <div class="user-email" id="user-email">Google not connected</div>
           </div>
-          <button class="icon-btn auth-status-btn" id="sidebar-auth-btn" title="Sign in with Google">
+          <button class="icon-btn auth-status-btn" id="sidebar-auth-btn" title="Sign in with Google" aria-label="Google account">
             <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6a4 4 0 1 0 4 4 4 4 0 0 0-4-4zm0 6a2 2 0 1 1 2-2 2 2 0 0 1-2 2z"/></svg>
           </button>
-          <button class="icon-btn" id="settings-btn" title="Settings">
+          <button class="icon-btn" id="shortcuts-btn" title="Keyboard shortcuts (?)" aria-haspopup="dialog">
+            <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>
+          </button>
+          <button class="icon-btn" id="settings-btn" title="Settings (Ctrl+,)">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
           </button>
         </div>
@@ -92,7 +101,7 @@
 
     <!-- Main -->
     <main class="main" id="main">
-      <button class="icon-btn sidebar-show" id="sidebar-open" title="Show sidebar">
+      <button class="icon-btn sidebar-show" id="sidebar-open" title="Show the sidebar" aria-controls="sidebar">
         <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><line x1="9" y1="4" x2="9" y2="20"/></svg>
       </button>
       <!-- Find in this chat (Ctrl+F) -->
@@ -103,7 +112,7 @@
       <div class="character-switch" id="character-switch" role="radiogroup" aria-label="Who you're talking to"></div>
       <div class="find-bar" id="find-bar" role="search" hidden>
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/></svg>
-        <input type="text" id="find-input" placeholder="Find in this chat" autocomplete="off" spellcheck="false" aria-label="Find in this chat">
+        <input type="text" id="find-input" dir="auto" placeholder="Find in this chat" autocomplete="off" spellcheck="false" aria-label="Find in this chat">
         <span class="find-count" id="find-count" aria-live="polite"></span>
         <button type="button" class="icon-btn" data-find="prev" title="Older match (Enter)">
           <svg viewBox="0 0 24 24"><polyline points="6 15 12 9 18 15"/></svg>
@@ -116,7 +125,9 @@
         </button>
       </div>
 
-      <div class="messages" id="messages" aria-live="polite"></div>
+      <!-- The conversation. Not a live region: a streaming reply would be read out word by word. Finished
+           replies are announced through #sr-status (src/js/chat.js). -->
+      <div class="messages" id="messages" role="log" aria-live="off" aria-label="Conversation" tabindex="0" data-no-i18n></div>
 
       <!-- The robot next to your chats (src/js/robot/dock.js) -->
       <div class="robot-dock" id="robot-dock" hidden>
@@ -134,35 +145,74 @@
         <button type="button" class="jump-latest" id="jump-latest" title="Jump to the latest message" hidden>
           <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="6 13 12 19 18 13"/></svg>
         </button>
-        <h1 class="greeting" id="greeting">Hello</h1>
+        <h1 class="sr-only">Friends</h1>
+        <p class="greeting" id="greeting">Hello</p>
 
-        <!-- Hero Voice Conversation Showcase -->
-        <div class="voice-hero-card" id="voice-hero-card">
-          <div class="voice-hero-head">
-            <span class="live-dot"></span>
-            <span class="voice-hero-badge">Voice Conversation · Hero Experience</span>
-          </div>
-          <h2 class="voice-hero-title">Speak Naturally with Your Companion</h2>
-          <p class="voice-hero-sub">Calming audio-reactive soundwaves, instant barge-in intelligence, and zero typing required.</p>
+        <!-- First run: nothing answers yet (src/js/onboarding.js) -->
+        <section class="onboarding" id="onboarding" aria-labelledby="onboarding-title" hidden>
+          <h2 id="onboarding-title">Let's get you chatting</h2>
+          <p class="onboarding-lead">Friends needs an AI to answer you. Pick one below. You can change it, or add more, at any time in Settings.</p>
 
-          <div class="voice-hero-visual-preview">
-            <div class="hero-wave-bars">
-              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+          <div class="onboarding-options">
+            <div class="onboarding-option" id="onb-local">
+              <div class="onboarding-option-head">
+                <span class="onboarding-icon" aria-hidden="true">🔒</span>
+                <div>
+                  <h3>An AI on this computer</h3>
+                  <p>Private: your messages never leave this computer. Works offline.</p>
+                </div>
+              </div>
+              <p class="onboarding-status" id="onb-local-status" role="status">Looking for an AI on this computer…</p>
+              <div class="onboarding-actions" id="onb-local-actions"></div>
+              <p class="onboarding-help" id="onb-local-help" hidden>None found yet. Install <a href="https://ollama.com/download" target="_blank" rel="noopener noreferrer">Ollama</a> (free), run <code>ollama pull llama3.2</code> in a terminal, then look again.</p>
             </div>
+
+            <form class="onboarding-option onb-cloud" id="onb-cloud">
+              <div class="onboarding-option-head">
+                <span class="onboarding-icon" aria-hidden="true">☁️</span>
+                <div>
+                  <h3>Gemini, Google's cloud AI</h3>
+                  <p>Faster and smarter. Your messages are sent to Google to be answered.</p>
+                </div>
+              </div>
+              <label class="onboarding-key">
+                <span class="row-label">Your free key</span>
+                <input class="field" type="password" name="key" id="onb-key" autocomplete="off" spellcheck="false" placeholder="Paste it here" required>
+              </label>
+              <div class="onboarding-actions">
+                <a class="btn" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Get a free key</a>
+                <button type="submit" class="btn btn-primary" id="onb-cloud-save">Connect Gemini</button>
+              </div>
+              <p class="form-error" id="onb-cloud-error" role="alert" hidden></p>
+            </form>
           </div>
 
-          <div class="voice-hero-actions" style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;">
+          <div class="onboarding-foot">
+            <label class="onboarding-private">
+              <input type="checkbox" class="toggle" data-setting="privacy.localOnly">
+              <span><strong>Private mode</strong> Only an AI on this computer answers, and nothing is sent to the internet.</span>
+            </label>
+            <button type="button" class="link-btn" id="onb-skip">Not now</button>
+          </div>
+        </section>
+
+        <!-- Talk instead of typing -->
+        <div class="voice-hero-card" id="voice-hero-card">
+          <h2 class="voice-hero-title">Talk instead of typing</h2>
+          <p class="voice-hero-sub">Speak naturally. It answers out loud, and you can interrupt it any time.</p>
+
+          <div class="voice-hero-actions">
             <button type="button" class="btn btn-primary btn-hero-voice" id="hero-voice-btn">
               <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg>
-              <span>Start Voice Conversation</span>
+              <span>Start a voice conversation</span>
             </button>
-            <a href="/?voice=true" target="_blank" rel="noopener noreferrer" class="btn btn-outline" id="hero-voice-tab-btn" style="border-radius:999px;font-size:14px;padding:11px 20px;text-decoration:none;" title="Open in Standalone Browser Tab (Direct Mic Prompt)">
-              <span>Open in Full Tab ↗</span>
+            <a href="/?voice=true" target="_blank" rel="noopener noreferrer" class="btn btn-ghost" id="hero-voice-tab-btn" title="Opens voice mode in its own browser tab, which asks for the microphone right away">
+              <span>Open in its own tab</span>
             </a>
           </div>
 
           <!-- Things to do together, a different few each time (src/js/activities.js) -->
-          <div class="voice-hero-prompts" id="hero-prompts" aria-label="Let's do something"></div>
+          <div class="voice-hero-prompts" id="hero-prompts" role="group" aria-label="Let's do something"></div>
         </div>
 
         <!-- Connected Apps Quick Bar -->
@@ -187,10 +237,10 @@
             <svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
             <span>GitHub</span>
           </button>
-          <div class="ws-status-indicator" id="ws-status-indicator">
-            <span class="status-circle"></span>
-            <span class="status-text" id="status-text">Cloud Ready</span>
-          </div>
+          <button type="button" class="ws-status-indicator" id="ws-status-indicator" data-state="none" title="Which AI answers">
+            <span class="status-circle" aria-hidden="true"></span>
+            <span class="status-text" id="status-text">No AI set up yet</span>
+          </button>
         </div>
 
         <div class="attachments" id="attachments" hidden></div>
@@ -200,7 +250,7 @@
           </button>
           <input type="file" id="attach-input" multiple hidden
             accept="image/png,image/jpeg,image/webp,application/pdf,text/*,.md,.csv,.json,.xml,.yml,.yaml,.js,.ts,.py,.sh,.sql,.log">
-          <input type="text" id="composer-input" placeholder="Ask anything, or tap Voice Conversation above" autocomplete="off">
+          <textarea id="composer-input" rows="1" dir="auto" placeholder="Ask anything…" aria-label="Message" autocomplete="off" enterkeyhint="send"></textarea>
           <div class="model-menu-wrap">
             <button type="button" class="model-picker" id="model-picker" aria-haspopup="menu" aria-expanded="false">
               <strong>Model</strong> <span></span>
@@ -208,7 +258,7 @@
             </button>
             <div class="model-menu" id="model-menu" role="menu" hidden></div>
           </div>
-          <button type="submit" class="send-btn" id="send-btn" title="Send" disabled>
+          <button type="submit" class="send-btn" id="send-btn" title="Send (Enter)" aria-label="Send" disabled>
             <svg class="i-send" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
             <svg class="i-stop" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>
           </button>
@@ -219,51 +269,59 @@
   </div>
 
   <!-- Settings panel -->
-  <div class="modal-backdrop" id="settings-modal" hidden>
+  <div class="modal-backdrop" id="settings-modal" data-modal data-modal-focus=".tab.active" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
 
       <div class="modal-nav">
         <h2 id="settings-title">Settings</h2>
-        <button class="tab active" data-tab="font">
-          <svg viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
-          <span>Chat look</span>
-        </button>
-        <button class="tab" data-tab="theme">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg>
-          <span>Theme</span>
-        </button>
-        <button class="tab" data-tab="ai-control">
-          <svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><polyline points="9 12 11 14 15 10"/></svg>
-          <span>AI control</span>
-        </button>
-        <button class="tab" data-tab="memory">
-          <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><line x1="9" y1="2" x2="9" y2="6"/><line x1="15" y1="2" x2="15" y2="6"/><line x1="9" y1="18" x2="9" y2="22"/><line x1="15" y1="18" x2="15" y2="22"/><line x1="2" y1="9" x2="6" y2="9"/><line x1="2" y1="15" x2="6" y2="15"/><line x1="18" y1="9" x2="22" y2="9"/><line x1="18" y1="15" x2="22" y2="15"/></svg>
-          <span>Memory</span>
-        </button>
-        <button class="tab" data-tab="personality">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14a4 4 0 0 0 8 0"/><line x1="9" y1="9.5" x2="9" y2="9.5"/><line x1="15" y1="9.5" x2="15" y2="9.5"/></svg>
-          <span>Characters</span>
-        </button>
-        <button class="tab" data-tab="life">
-          <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><polyline points="9 15 11 17 15 13"/></svg>
-          <span>Daily life</span>
-        </button>
-        <button class="tab" data-tab="builder">
-          <svg viewBox="0 0 24 24"><polyline points="8 7 3 12 8 17"/><polyline points="16 7 21 12 16 17"/><line x1="14" y1="4" x2="10" y2="20"/></svg>
-          <span>Builder</span>
-        </button>
-        <button class="tab" data-tab="robot">
-          <svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="4"/><line x1="9.5" y1="12.5" x2="9.5" y2="14.5"/><line x1="14.5" y1="12.5" x2="14.5" y2="14.5"/><path d="M7.5 8 6 4.5M16.5 8 18 4.5"/></svg>
-          <span>Robot</span>
-        </button>
-        <button class="tab" data-tab="integrations">
-          <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-          <span>Connected Apps</span>
-        </button>
-        <button class="tab" data-tab="data">
-          <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
-          <span>Data &amp; backups</span>
-        </button>
+        <div class="settings-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/></svg>
+          <input type="search" id="settings-search" class="field" placeholder="Search settings" aria-label="Search settings" autocomplete="off" spellcheck="false" aria-controls="settings-results" aria-expanded="false">
+        </div>
+        <ul class="settings-results" id="settings-results" aria-label="Matching settings" hidden></ul>
+        <div class="settings-tabs" id="settings-tabs" role="tablist" aria-orientation="vertical" aria-label="Settings sections">
+          <div class="nav-group" role="presentation">Look &amp; language</div>
+          <button class="tab active" data-tab="appearance" role="tab" id="tab-appearance" aria-controls="pane-appearance" aria-selected="true" tabindex="0">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg>
+            <span>Appearance</span>
+          </button>
+          <div class="nav-group" role="presentation">Your companion</div>
+          <button class="tab" data-tab="personality" role="tab" id="tab-personality" aria-controls="pane-personality" aria-selected="false" tabindex="-1">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14a4 4 0 0 0 8 0"/><line x1="9" y1="9.5" x2="9" y2="9.5"/><line x1="15" y1="9.5" x2="15" y2="9.5"/></svg>
+            <span>Characters</span>
+          </button>
+          <button class="tab" data-tab="memory" role="tab" id="tab-memory" aria-controls="pane-memory" aria-selected="false" tabindex="-1">
+            <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><line x1="9" y1="2" x2="9" y2="6"/><line x1="15" y1="2" x2="15" y2="6"/><line x1="9" y1="18" x2="9" y2="22"/><line x1="15" y1="18" x2="15" y2="22"/><line x1="2" y1="9" x2="6" y2="9"/><line x1="2" y1="15" x2="6" y2="15"/><line x1="18" y1="9" x2="22" y2="9"/><line x1="18" y1="15" x2="22" y2="15"/></svg>
+            <span>Memory</span>
+          </button>
+          <button class="tab" data-tab="life" role="tab" id="tab-life" aria-controls="pane-life" aria-selected="false" tabindex="-1">
+            <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><polyline points="9 15 11 17 15 13"/></svg>
+            <span>Daily life</span>
+          </button>
+          <button class="tab" data-tab="robot" role="tab" id="tab-robot" aria-controls="pane-robot" aria-selected="false" tabindex="-1">
+            <svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="4"/><line x1="9.5" y1="12.5" x2="9.5" y2="14.5"/><line x1="14.5" y1="12.5" x2="14.5" y2="14.5"/><path d="M7.5 8 6 4.5M16.5 8 18 4.5"/></svg>
+            <span>Robot</span>
+          </button>
+          <div class="nav-group" role="presentation">AI &amp; apps</div>
+          <button class="tab" data-tab="ai-control" role="tab" id="tab-ai-control" aria-controls="pane-ai-control" aria-selected="false" tabindex="-1">
+            <svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><polyline points="9 12 11 14 15 10"/></svg>
+            <span>AI &amp; privacy</span>
+          </button>
+          <button class="tab" data-tab="integrations" role="tab" id="tab-integrations" aria-controls="pane-integrations" aria-selected="false" tabindex="-1">
+            <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <span>Connected apps</span>
+          </button>
+          <button class="tab" data-tab="builder" role="tab" id="tab-builder" aria-controls="pane-builder" aria-selected="false" tabindex="-1">
+            <svg viewBox="0 0 24 24"><polyline points="8 7 3 12 8 17"/><polyline points="16 7 21 12 16 17"/><line x1="14" y1="4" x2="10" y2="20"/></svg>
+            <span>Builder</span>
+          </button>
+          <div class="nav-group" role="presentation">Your data</div>
+          <button class="tab" data-tab="data" role="tab" id="tab-data" aria-controls="pane-data" aria-selected="false" tabindex="-1">
+            <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
+            <span>Data &amp; backups</span>
+          </button>
+        </div>
+        <p class="settings-saved" id="settings-saved" role="status" aria-live="polite"></p>
       </div>
 
       <div class="modal-body">
@@ -271,9 +329,46 @@
           <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
         </button>
 
-        <!-- Chat font -->
-        <section class="pane active" data-pane="font">
-          <h3>Chat look</h3>
+        <!-- Appearance: language, theme, and how chats look -->
+        <section class="pane active" data-pane="appearance" id="pane-appearance" role="tabpanel" aria-labelledby="tab-appearance">
+          <h3>Appearance</h3>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Language</div>
+            <p class="hint">The language of the buttons and menus. It doesn't change the language the AI speaks: talk to it in any language.</p>
+          </div></div>
+          <div class="row">
+            <div class="row-label" id="language-label">Interface language</div>
+            <select class="field" id="language-select" aria-labelledby="language-label">
+              <option value="auto">Automatic (like the browser)</option>
+              <option value="en">English</option>
+              <option value="de">Deutsch</option>
+              <option value="ar">العربية</option>
+            </select>
+          </div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Theme</div>
+          </div></div>
+          <div class="row-label" id="appearance-label">Colors</div>
+          <div class="choice-grid" id="appearance" role="radiogroup" aria-labelledby="appearance-label">
+            <button class="choice selected" data-appearance="dark" role="radio" aria-checked="true"><span class="swatch dark"></span>Dark</button>
+            <button class="choice" data-appearance="light" role="radio" aria-checked="false"><span class="swatch light"></span>Light</button>
+            <button class="choice" data-appearance="system" role="radio" aria-checked="false"><span class="swatch system"></span>System</button>
+          </div>
+          <div class="row-label" id="accent-label">Accent color</div>
+          <div class="colors" id="accent-colors" role="radiogroup" aria-labelledby="accent-label">
+            <button class="color selected" role="radio" aria-checked="true" data-color="#6f9cf5" style="background:#6f9cf5" aria-label="Blue"></button>
+            <button class="color" role="radio" aria-checked="false" data-color="#a78bfa" style="background:#a78bfa" aria-label="Violet"></button>
+            <button class="color" role="radio" aria-checked="false" data-color="#34d399" style="background:#34d399" aria-label="Green"></button>
+            <button class="color" role="radio" aria-checked="false" data-color="#f59e0b" style="background:#f59e0b" aria-label="Amber"></button>
+            <button class="color" role="radio" aria-checked="false" data-color="#f472b6" style="background:#f472b6" aria-label="Pink"></button>
+          </div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Chat text</div>
+            <p class="hint">How conversations look. Changes show in the preview right away.</p>
+          </div></div>
           <div class="row">
             <div class="row-label">Font family</div>
             <select class="field" data-setting="font.family">
@@ -285,7 +380,7 @@
           </div>
           <div class="row">
             <div class="row-label">Font size</div>
-            <div class="slider"><span>Small</span><input type="range" class="range" min="12" max="22" value="15" data-setting="font.size"><span>Large</span></div>
+            <div class="slider"><span>Small</span><input type="range" class="range" min="12" max="22" value="16" data-setting="font.size"><span>Large</span></div>
           </div>
           <div class="row">
             <div>
@@ -320,29 +415,9 @@
           </div>
         </section>
 
-        <!-- Theme -->
-        <section class="pane" data-pane="theme">
-          <h3>Theme</h3>
-          <div class="row-label">Appearance</div>
-          <div class="choice-grid" id="appearance">
-            <button class="choice selected" data-appearance="dark"><span class="swatch dark"></span>Dark</button>
-            <button class="choice" data-appearance="light"><span class="swatch light"></span>Light</button>
-            <button class="choice" data-appearance="system"><span class="swatch system"></span>System</button>
-          </div>
-          <div class="row-label">Accent color</div>
-          <div class="colors" id="accent-colors">
-            <button class="color selected" data-color="#6f9cf5" style="background:#6f9cf5" aria-label="Blue"></button>
-            <button class="color" data-color="#a78bfa" style="background:#a78bfa" aria-label="Violet"></button>
-            <button class="color" data-color="#34d399" style="background:#34d399" aria-label="Green"></button>
-            <button class="color" data-color="#f59e0b" style="background:#f59e0b" aria-label="Amber"></button>
-            <button class="color" data-color="#f472b6" style="background:#f472b6" aria-label="Pink"></button>
-          </div>
-        </section>
-
-
         <!-- AI control -->
-        <section class="pane" data-pane="ai-control">
-          <h3>AI control & intelligence</h3>
+        <section class="pane" data-pane="ai-control" id="pane-ai-control" role="tabpanel" aria-labelledby="tab-ai-control">
+          <h3>AI &amp; privacy</h3>
 
           <div class="ai-overview" id="ai-overview">
             <!-- Diagnostics & Live Status Banner -->
@@ -366,6 +441,17 @@
               <div>
                 <div class="subhead-title">Privacy & local AI</div>
                 <p class="hint">Run models on this computer, so your chats never leave it.</p>
+              </div>
+            </div>
+
+            <div class="explain" id="local-vs-cloud">
+              <div class="explain-item">
+                <span class="explain-icon" aria-hidden="true">🔒</span>
+                <p><strong>Local AI</strong> runs on this computer. Your messages never leave it, and it works offline. It can be slower on an older computer.</p>
+              </div>
+              <div class="explain-item">
+                <span class="explain-icon" aria-hidden="true">☁️</span>
+                <p><strong>Cloud AI</strong> (Gemini) runs on Google's servers. It is faster and smarter, but your messages are sent to Google to be answered.</p>
               </div>
             </div>
 
@@ -442,6 +528,8 @@
                 </select>
               </label>
 
+              <details class="advanced" id="routing-advanced">
+                <summary>More routing rules</summary>
               <div class="row-label routing-sub" data-for="auto dynamic">Auto and Dynamic send a message to the cloud when…</div>
               <label class="row" data-for="auto dynamic">
                 <div><div class="row-label">It has a PDF or picture</div><div class="row-desc">Local models can't read PDFs, and most can't see pictures</div></div>
@@ -475,6 +563,7 @@
                   <option value="180">3 minutes</option>
                 </select>
               </label>
+              </details>
             </div>
 
             <!-- AI Reasoning & Execution Policy -->
@@ -501,6 +590,8 @@
               </button>
             </div>
 
+            <details class="advanced">
+              <summary>Advanced: memory window and tools</summary>
             <div class="row">
               <div>
                 <div class="row-label">Context memory window</div>
@@ -522,6 +613,8 @@
                 <option value="all">All</option>
               </select>
             </div>
+
+            </details>
 
             <label class="row">
               <div>
@@ -554,9 +647,9 @@
             <ul class="brain-list" id="brain-list"></ul>
             <p class="form-error" id="brain-list-error" hidden></p>
 
-            <div class="subhead">
+            <div class="subhead" id="permissions-section">
               <div>
-                <div class="subhead-title">Permissions</div>
+                <div class="subhead-title">Permissions and file access</div>
                 <p class="hint">Choose what the AI is allowed to do on your computer.</p>
               </div>
             </div>
@@ -687,7 +780,8 @@
               <span class="row-desc" id="key-desc">Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a></span>
             </label>
 
-            <div class="form-field" id="ollama-field" hidden>
+            <details class="form-field advanced" id="ollama-field" hidden>
+              <summary class="row-label">Advanced: memory use</summary>
               <span class="row-label">Context size</span>
               <select class="field" name="contextSize">
                 <option value="0">Ollama's default (4096)</option>
@@ -708,7 +802,7 @@
                 <option value="1440">All day</option>
               </select>
               <span class="row-desc">Loaded models answer at once; unloading frees memory.</span>
-            </div>
+            </details>
 
             <details class="form-field" id="speech-field" hidden>
               <summary class="row-label">Voice (optional)</summary>
@@ -734,7 +828,7 @@
         </section>
 
         <!-- Memory -->
-        <section class="pane" data-pane="memory">
+        <section class="pane" data-pane="memory" id="pane-memory" role="tabpanel" aria-labelledby="tab-memory">
           <h3>Memory</h3>
 
           <div class="subhead">
@@ -800,7 +894,7 @@
         </section>
 
         <!-- AI personality -->
-        <section class="pane" data-pane="personality">
+        <section class="pane" data-pane="personality" id="pane-personality" role="tabpanel" aria-labelledby="tab-personality">
           <h3>Characters</h3>
 
           <div class="subhead"><div>
@@ -953,7 +1047,7 @@
         </section>
 
         <!-- Robot: the AI's 3D body (src/js/robot/) -->
-        <section class="pane" data-pane="robot">
+        <section class="pane" data-pane="robot" id="pane-robot" role="tabpanel" aria-labelledby="tab-robot">
           <h3>Robot</h3>
           <p class="hint">A small robot that is the AI's body: pick "Robot" in voice mode's style bar, and it also sits next to your text chats.</p>
 
@@ -1147,7 +1241,7 @@
         </section>
 
         <!-- Connected Apps & Workspace -->
-        <section class="pane" data-pane="integrations" id="integrations-pane">
+        <section class="pane" data-pane="integrations" id="pane-integrations" role="tabpanel" aria-labelledby="tab-integrations">
           <h3>Connected Apps</h3>
 
           <div class="subhead">
@@ -1348,7 +1442,7 @@
         </section>
 
         <!-- Builder mode -->
-        <section class="pane" data-pane="builder">
+        <section class="pane" data-pane="builder" id="pane-builder" role="tabpanel" aria-labelledby="tab-builder">
           <h3>Builder</h3>
           <p class="hint">Build websites, apps and SaaS products together: the AI starts projects, edits code, runs tests and builds, and shows you a live preview. It works only inside the folders you allow in <a href="#" data-open-tab="ai-control">AI control → File access</a>, with the permissions set there.</p>
           <label class="row">
@@ -1398,7 +1492,7 @@
         </section>
 
         <!-- Daily life -->
-        <section class="pane" data-pane="life">
+        <section class="pane" data-pane="life" id="pane-life" role="tabpanel" aria-labelledby="tab-life">
           <h3>Daily life</h3>
           <p class="hint">Tasks, reminders, habits and a journal, kept on this computer. Open them with Today in the sidebar, or just tell your AI ("remind me at 6 to call Mom", "I went to the gym").</p>
           <label class="row">
@@ -1446,7 +1540,7 @@
         </section>
 
         <!-- Data & backups -->
-        <section class="pane" data-pane="data">
+        <section class="pane" data-pane="data" id="pane-data" role="tabpanel" aria-labelledby="tab-data">
           <h3>Data &amp; backups</h3>
           <div class="storage-line">
             <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><line x1="8" y1="20" x2="16" y2="20"/><line x1="12" y1="16" x2="12" y2="20"/></svg>
@@ -1495,7 +1589,7 @@
   </div>
 
   <!-- Today: tasks, reminders, habits, journal (src/js/life.js) -->
-  <div class="modal-backdrop life-backdrop" id="life-modal" hidden>
+  <div class="modal-backdrop life-backdrop" id="life-modal" data-modal data-modal-focus=".life-tab.active" hidden>
     <div class="modal life-modal" role="dialog" aria-modal="true" aria-labelledby="life-title">
       <div class="life-head">
         <h2 id="life-title">Today</h2>
@@ -1598,22 +1692,84 @@
   </div>
 
   <!-- A reminder going off, or the briefing being ready (src/js/life.js) -->
-  <div class="life-toasts" id="life-toasts" aria-live="assertive"></div>
+  <div class="life-toasts" id="life-toasts" aria-live="assertive" data-keep-active></div>
 
   <!-- Search chats -->
-  <div class="search-backdrop" id="search-modal" hidden>
-    <div class="search-panel" role="dialog" aria-modal="true" aria-label="Search chats">
+  <div class="search-backdrop" id="search-modal" data-modal hidden>
+    <div class="search-panel" role="dialog" aria-modal="true" aria-label="Search your chats">
       <div class="search-input-row">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/></svg>
-        <input type="text" id="search-input" placeholder="Search chats" autocomplete="off" spellcheck="false">
+        <input type="text" id="search-input" dir="auto" placeholder="Search your chats" aria-label="Search your chats" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="true" aria-controls="search-results" aria-autocomplete="list">
         <kbd>Esc</kbd>
       </div>
-      <ul class="search-results" id="search-results"></ul>
+      <ul class="search-results" id="search-results" role="listbox" aria-label="Matching chats" data-no-i18n></ul>
+    </div>
+  </div>
+
+  <!-- Keyboard shortcuts (src/js/shortcuts.js): press ? anywhere -->
+  <div class="modal-backdrop" id="shortcuts-modal" data-modal hidden>
+    <div class="modal shortcuts-modal" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title">
+      <div class="shortcuts-body">
+        <div class="shortcuts-head">
+          <h2 id="shortcuts-title">Keyboard shortcuts</h2>
+          <button type="button" class="icon-btn" id="shortcuts-close" title="Close" aria-label="Close">
+            <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="shortcuts-grid">
+          <section aria-labelledby="sc-everywhere">
+            <h3 id="sc-everywhere">Everywhere</h3>
+            <dl>
+              <div><dt><kbd>Ctrl</kbd> <kbd>K</kbd></dt><dd>Search your chats</dd></div>
+              <div><dt><kbd>Ctrl</kbd> <kbd>F</kbd></dt><dd>Find in this chat</dd></div>
+              <div><dt><kbd>Alt</kbd> <kbd>N</kbd></dt><dd>Start a new chat</dd></div>
+              <div><dt><kbd>Ctrl</kbd> <kbd>,</kbd></dt><dd>Open Settings</dd></div>
+              <div><dt><kbd>?</kbd></dt><dd>Show this list</dd></div>
+              <div><dt><kbd>Esc</kbd></dt><dd>Close the window that is open</dd></div>
+            </dl>
+          </section>
+          <section aria-labelledby="sc-writing">
+            <h3 id="sc-writing">Writing</h3>
+            <dl>
+              <div><dt><kbd>Enter</kbd></dt><dd>Send the message</dd></div>
+              <div><dt><kbd>Shift</kbd> <kbd>Enter</kbd></dt><dd>Start a new line</dd></div>
+              <div><dt><kbd>Ctrl</kbd> <kbd>V</kbd></dt><dd>Paste a picture or file to attach it</dd></div>
+              <div><dt><kbd>Tab</kbd></dt><dd>Reach the buttons under a message (copy, answer again, read aloud…)</dd></div>
+            </dl>
+          </section>
+          <section aria-labelledby="sc-chats">
+            <h3 id="sc-chats">In the list of chats</h3>
+            <dl>
+              <div><dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Move between chats</dd></div>
+              <div><dt><kbd>F2</kbd></dt><dd>Rename the chat</dd></div>
+              <div><dt><kbd>Delete</kbd></dt><dd>Delete the chat (it asks first)</dd></div>
+            </dl>
+          </section>
+          <section aria-labelledby="sc-voice">
+            <h3 id="sc-voice">Voice conversation</h3>
+            <dl>
+              <div><dt><kbd>M</kbd></dt><dd>Mute or unmute the microphone</dd></div>
+              <div><dt><kbd>F</kbd></dt><dd>Filming mode</dd></div>
+              <div><dt><kbd>Esc</kbd></dt><dd>End the conversation</dd></div>
+            </dl>
+          </section>
+          <section aria-labelledby="sc-filming">
+            <h3 id="sc-filming">Filming mode (also for a presentation clicker)</h3>
+            <dl>
+              <div><dt><kbd>Space</kbd> <kbd>S</kbd> <kbd>F5</kbd></dt><dd>Start or pause</dd></div>
+              <div><dt><kbd>M</kbd> <kbd>Page Up</kbd> <kbd>←</kbd></dt><dd>Microphone on or off</dd></div>
+              <div><dt><kbd>I</kbd> <kbd>Page Down</kbd> <kbd>→</kbd></dt><dd>Cut the AI off</dd></div>
+              <div><dt><kbd>C</kbd> <kbd>B</kbd> <kbd>.</kbd></dt><dd>Captions on or off</dd></div>
+              <div><dt><kbd>Esc</kbd></dt><dd>Leave filming mode</dd></div>
+            </dl>
+          </section>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- Voice mode -->
-  <div class="voice-mode" id="voice-mode" hidden>
+  <div class="voice-mode" id="voice-mode" role="dialog" aria-modal="true" aria-label="Voice conversation" data-modal data-modal-focus="#voice-mute" hidden>
     <canvas class="voice-waves" id="voice-waves"></canvas>
     <!-- The Robot style: the shared 3D canvas is placed here (src/js/robot/) -->
     <div class="voice-robot" id="voice-robot" aria-hidden="true"></div>
