@@ -1,0 +1,348 @@
+/* ---------- Today: tasks, reminders, habits, journal (src/js/life.js) ---------- */
+.nav-badge {
+  margin-inline-start: auto;
+  min-width: 20px;
+  padding: 1px var(--space-1h);
+  border-radius: var(--radius-pill);
+  background: var(--bg-active);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-align: center;
+}
+
+.nav-badge.overdue {
+  background: var(--danger);
+  color: #111;
+}
+
+.nav-badge[hidden],
+.nav-item[hidden] {
+  display: none;
+}
+
+.life-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(760px, calc(100vw - 32px));
+  height: min(760px, calc(100vh - 48px));
+  padding: 0;
+  overflow: hidden;
+}
+
+.life-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-4) var(--space-2h);
+  padding-inline: var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.life-head h2 {
+  font-size: var(--fs-2xl);
+  font-weight: 500;
+}
+
+.life-tabs {
+  display: flex;
+  gap: var(--space-1);
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.life-tab {
+  padding: var(--space-1h) var(--space-3);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  font-size: var(--fs-base);
+  white-space: nowrap;
+}
+
+.life-tab:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.life-tab.active {
+  background: var(--bg-active);
+  color: var(--text);
+}
+
+.life-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-6) var(--space-6);
+}
+
+.life-pane {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-2h);
+}
+
+.life-pane.active {
+  display: flex;
+}
+
+.life-date {
+  font-size: var(--fs-3xl);
+  font-weight: 400;
+}
+
+.life-section-title {
+  margin-top: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.life-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.life-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2h);
+  padding: var(--space-2) var(--space-2h);
+  border-radius: var(--radius-md);
+  background: var(--bg-main);
+}
+
+.life-item:hover {
+  background: var(--bg-subtle);
+}
+
+.life-check {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.life-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.life-title {
+  overflow-wrap: anywhere;
+}
+
+.life-item.done .life-title {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.life-item.high .life-title::before {
+  content: "! ";
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.life-meta {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.life-meta.overdue {
+  color: var(--danger);
+}
+
+.life-entry {
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+
+.life-icon {
+  font-size: var(--fs-lg);
+}
+
+.life-item .icon-btn.armed {
+  color: var(--danger);
+}
+
+.life-add,
+.life-journal-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.life-add .field:first-child,
+.life-journal-quick .field {
+  flex: 1;
+  min-width: 180px;
+}
+
+.life-list-name {
+  width: 110px;
+}
+
+.life-emoji {
+  width: 56px;
+  text-align: center;
+}
+
+.life-add .field[name="name"] {
+  flex: 1;
+  min-width: 180px;
+}
+
+.life-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1h);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.habit-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.habit-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1h);
+  padding: var(--space-1h) var(--space-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--bg-main);
+  transition: background var(--dur-fast), border-color var(--dur-fast);
+}
+
+.habit-check:hover {
+  border-color: var(--accent);
+}
+
+.habit-check.done {
+  background: var(--bg-active);
+  border-color: var(--accent);
+}
+
+.habit-check.done .habit-name::after {
+  content: " ✓";
+}
+
+.habit-streak {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.habit-streak:empty {
+  display: none;
+}
+
+.life-item.habit .habit-check {
+  flex-shrink: 0;
+}
+
+.habit-week {
+  display: flex;
+  gap: 3px;
+}
+
+.habit-week i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--bg-hover);
+}
+
+.habit-week i.on {
+  background: var(--accent);
+}
+
+.mood-pick {
+  display: flex;
+  gap: var(--space-h);
+}
+
+.mood-pick button {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: var(--fs-2xl);
+  opacity: 0.55;
+  transition: opacity var(--dur-fast), background var(--dur-fast);
+}
+
+.mood-pick button:hover,
+.mood-pick button.selected {
+  opacity: 1;
+  background: var(--bg-active);
+}
+
+.life-journal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* A reminder going off */
+.life-toasts {
+  position: fixed;
+  inset-inline-end: 16px;
+  bottom: 16px;
+  z-index: var(--z-top);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: min(420px, calc(100vw - 32px));
+}
+
+.life-toast {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2h);
+  padding-block: var(--space-3) var(--space-3);
+  padding-inline: var(--space-3h) var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--bg-input);
+  border: 1px solid var(--accent);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  animation: life-toast-in 0.25s ease-out;
+}
+
+.life-toast-icon {
+  font-size: var(--fs-3xl);
+}
+
+.life-toast-text {
+  flex: 1;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+}
+
+.life-toast-text span {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+@keyframes life-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .life-toast {
+    animation: none;
+  }
+}

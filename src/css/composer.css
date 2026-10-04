@@ -1,0 +1,330 @@
+/* ---------- Layout extras ---------- */
+.app.sidebar-hidden .sidebar {
+  display: none;
+}
+
+.sidebar-show {
+  display: none;
+  position: absolute;
+  top: 12px;
+  inset-inline-start: 12px;
+  z-index: var(--z-float);
+}
+
+.app.sidebar-hidden .sidebar-show {
+  display: grid;
+}
+
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-sidebar-backdrop);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.chat-history.folded {
+  display: none;
+}
+
+/* ---------- Your memories ---------- */
+.memory-add {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.memory-add .field {
+  flex: 1;
+  min-width: 0;
+}
+
+.memory-list .memory-empty {
+  padding: var(--space-3) var(--space-3h);
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+/* ---------- Model picker ---------- */
+.model-menu-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.model-picker span:empty {
+  display: none;
+}
+
+.model-menu {
+  position: absolute;
+  inset-inline-end: 0;
+  bottom: calc(100% + 10px);
+  z-index: var(--z-menu);
+  min-width: 240px;
+  padding: var(--space-1h);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.model-menu[hidden] {
+  display: none;
+}
+
+.model-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2h);
+  padding: var(--space-2) var(--space-2h);
+  border-radius: var(--radius-md);
+  text-align: start;
+}
+
+.model-item:hover {
+  background: var(--bg-hover);
+}
+
+.model-item-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.model-item-text span {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.model-item svg {
+  width: 18px;
+  height: 18px;
+  color: var(--accent);
+}
+
+.model-item.manage {
+  margin-top: var(--space-1);
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 10px 10px;
+  color: var(--text-muted);
+}
+
+.model-menu-empty {
+  padding: var(--space-2) var(--space-2h);
+  color: var(--text-muted);
+}
+
+/* ---------- Attachments ---------- */
+.attachments {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: -28px; /* sits close above the composer (the column has a 40px gap) */
+}
+
+.has-chat .attachments {
+  margin-bottom: var(--space-2h);
+}
+
+.attachments[hidden] {
+  display: none;
+}
+
+.attachment {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2h);
+  max-width: 260px;
+  padding-block: var(--space-1h) var(--space-1h);
+  padding-inline: var(--space-2) var(--space-1h);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+}
+
+.attachment img,
+.attachment-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.attachment-icon {
+  display: grid;
+  place-items: center;
+  background: var(--bg-hover);
+  color: var(--text-muted);
+}
+
+.attachment-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.attachment-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--fs-sm);
+}
+
+.attachment-meta {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.attachment.uploading {
+  opacity: 0.7;
+}
+
+.attachment.error {
+  border-color: var(--danger-border);
+}
+
+.attachment.error .attachment-meta {
+  color: var(--danger);
+}
+
+.msg-files {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.msg-files:not(:empty) {
+  margin-bottom: var(--space-2);
+}
+
+.msg-image {
+  max-width: 240px;
+  max-height: 240px;
+  border-radius: var(--radius-lg);
+  object-fit: cover;
+}
+
+.msg-file {
+  padding: var(--space-2) var(--space-3h);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  font-size: var(--fs-sm);
+}
+
+.msg-file:hover {
+  background: var(--bg-hover);
+}
+
+/* ---------- What the AI did, and "Ask before acting" ---------- */
+.activity:not(:empty) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1h);
+  margin-bottom: var(--space-2h);
+}
+
+.activity-item {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding-block: 3px 3px;
+  padding-inline: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  overflow-wrap: anywhere;
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.activity-icon {
+  font-size: var(--fs-xs);
+}
+
+.activity-fold {
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+.activity-fold summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-block: 3px 3px;
+  padding-inline: var(--space-2h) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.activity-fold summary::-webkit-details-marker {
+  display: none;
+}
+
+.activity-fold summary::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  margin-inline-start: var(--space-h);
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform var(--dur-base);
+}
+
+.activity-fold[open] summary::after {
+  transform: translateY(1px) rotate(-135deg);
+}
+
+.activity-fold summary:hover {
+  color: var(--text);
+}
+
+.activity-icons {
+  letter-spacing: 2px;
+}
+
+.activity-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1h);
+  margin-block: var(--space-2) 0;
+  margin-inline: var(--space-2h) 0;
+  padding-inline-start: var(--space-3);
+  border-inline-start: 2px solid var(--border);
+}
+
+.confirm-card,
+.voice-confirm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-block: var(--space-3) var(--space-3);
+  padding-inline: var(--space-4) var(--space-3);
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  background: var(--bg-input);
+  font-size: var(--fs-base);
+}
+
+.confirm-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.confirm-card.answered {
+  border-color: var(--border);
+  opacity: 0.8;
+}

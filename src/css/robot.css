@@ -1,0 +1,275 @@
+/* ---------- The robot (src/js/robot/) ---------- */
+/* The shared 3D canvas fills whichever place shows the robot */
+.robot-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Settings → Robot */
+.robot-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2h);
+}
+
+.robot-preview {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: radial-gradient(ellipse at 50% 45%, #26272c, #0b0b0d 75%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+.robot-preview.unavailable {
+  display: none;
+}
+
+.robot-preview-note {
+  padding: var(--space-2h) var(--space-3h);
+  border-radius: var(--radius-md);
+  background: var(--bg-main);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+
+.robot-try {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2h);
+}
+
+.robot-try-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.robot-try-field .field {
+  min-width: 150px;
+}
+
+/* A row of choices (shot, place in the picture, where you sit) */
+.seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+}
+
+.seg button {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
+.seg button:hover {
+  color: var(--text);
+}
+
+.seg button.selected {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.seg button:focus-visible,
+.robot-shells .color:focus-visible,
+.robot-eye-choices .choice:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.robot-shells .color {
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.robot-eye-choices .choice {
+  align-items: center;
+  font-weight: 500;
+}
+
+/* The robot's face as a small picture: a dark screen, two eyes in the accent color */
+.face-icon-big {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3h);
+  width: 92px;
+  height: 58px;
+  border-radius: var(--radius-xl);
+  background: #0b0d12;
+  box-shadow: 0 0 0 5px var(--robot-shell, #ede4d6);
+  margin: var(--space-1h) 0 var(--space-1);
+}
+
+.face-icon-big i {
+  display: block;
+  width: 12px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+.face-icon-big[data-eyes="round"] i {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+}
+
+.face-icon-big[data-eyes="wide"] i {
+  width: 22px;
+  height: 13px;
+  border-radius: var(--radius-sm);
+}
+
+.row-desc.warn {
+  color: #f5b35a;
+}
+
+.robot-model {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2h);
+  padding: var(--space-3) var(--space-3h);
+  border-radius: var(--radius-md);
+  background: var(--bg-main);
+}
+
+.robot-model-status {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.robot-model-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Voice mode's Robot style: the 3D robot fills the screen behind the controls */
+.voice-robot {
+  position: absolute;
+  inset: 0;
+  display: none;
+}
+
+.voice-mode.robot-style .voice-robot {
+  display: block;
+}
+
+/* The 2D canvas is only the video frame here (the robot is copied into it) */
+.voice-mode.robot-style .voice-waves {
+  visibility: hidden;
+}
+
+.voice-mode.robot-style.framed .voice-waves {
+  visibility: visible;
+}
+
+.voice-mode.robot-style.framed .voice-robot {
+  visibility: hidden;
+}
+
+/* Captions sit low, below its face, like subtitles */
+.voice-mode.robot-style .voice-middle {
+  justify-content: flex-end;
+  padding: 0 0 var(--space-5);
+}
+
+.voice-mode.robot-style .voice-caption {
+  padding: var(--space-1h) var(--space-3h);
+  border-radius: var(--radius-md);
+  background: rgba(10, 10, 12, 0.55);
+  color: #f4f1ec;
+}
+
+.voice-mode.robot-style .voice-caption:empty {
+  display: none;
+}
+
+.voice-mode[data-style="robot"] .voice-dot {
+  background: var(--accent);
+}
+
+.voice-robot-only {
+  display: none;
+}
+
+.voice-mode.robot-style .voice-robot-only {
+  display: grid;
+}
+
+.voice-top-btn.active {
+  background: color-mix(in srgb, var(--accent) 30%, rgba(30, 31, 32, 0.8));
+  color: #fff;
+}
+
+/* Six styles fit on wide screens; on narrower ones the bar scrolls */
+.voice-theme-bar {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.voice-theme-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.voice-theme-btn {
+  flex-shrink: 0;
+}
+
+.voice-top {
+  min-width: 0;
+}
+
+.voice-scene-pop {
+  position: absolute;
+  top: 78px;
+  inset-inline-end: 16px;
+  z-index: var(--z-popover);
+  width: min(380px, calc(100% - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: rgba(24, 24, 26, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-sheet);
+  animation: drawer-in 0.2s ease;
+}
+
+.voice-scene-pop[hidden],
+.voice-mode.ui-hidden .voice-scene-pop {
+  display: none;
+}
+
+.voice-seg button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Six styles and the robot's buttons need a little more room in the top bar */
+.voice-top {
+  max-width: 1200px;
+}
+
+.voice-status {
+  flex-shrink: 1;
+  min-width: 0;
+}

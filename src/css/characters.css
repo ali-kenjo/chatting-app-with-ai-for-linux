@@ -1,0 +1,253 @@
+/* ---------- Characters (src/js/characters.js) ---------- */
+.character-switch {
+  position: absolute;
+  top: 12px;
+  inset-inline-start:  50%;
+  transform: translateX(-50%);
+  z-index: var(--z-overlay);
+  display: flex;
+  gap: var(--space-1);
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  max-width: calc(100% - 140px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.character-switch[hidden] {
+  display: none;
+}
+
+.character-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1h);
+  padding-block: 3px 3px;
+  padding-inline: 3px var(--space-3);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
+
+.character-chip:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+
+.character-chip[aria-checked="true"] {
+  color: var(--text);
+  background: color-mix(in srgb, var(--c) 22%, transparent);
+}
+
+.character-dot {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--c) 35%, var(--bg-hover));
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.character-chip[aria-checked="true"] .character-dot {
+  background: var(--c);
+  color: #111;
+}
+
+/* In voice mode it sits in the top bar */
+.voice-character-switch {
+  position: static;
+  transform: none;
+  max-width: none;
+  background: rgba(30, 31, 32, 0.7);
+  backdrop-filter: blur(12px);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.voice-character-switch .character-chip {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.voice-character-switch .character-chip[aria-checked="true"],
+.voice-character-switch .character-chip:hover {
+  color: #fff;
+}
+
+.char-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-2h);
+}
+
+.char-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2h);
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+}
+
+.char-card.active {
+  border-color: var(--c);
+  box-shadow: 0 0 0 1px var(--c) inset;
+}
+
+.char-avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--c);
+  color: #111;
+  font-weight: 700;
+  font-size: var(--fs-xl);
+}
+
+.char-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-h);
+}
+
+.char-tagline,
+.char-voice {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.35;
+}
+
+.char-actions {
+  display: flex;
+  gap: var(--space-1h);
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.char-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2h);
+  padding: var(--space-3h);
+  border-radius: var(--radius-lg);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+}
+
+.char-editor[hidden],
+.char-editor:empty {
+  display: none;
+}
+
+.char-editor-head {
+  font-weight: 600;
+}
+
+.char-editor .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.char-voice-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2h);
+}
+
+.char-voice-row .form-field {
+  flex: 1;
+  min-width: 140px;
+}
+
+.char-voice-row .btn.playing {
+  background: var(--bg-active);
+}
+
+/* ---------- On air (co-host mode) ---------- */
+.voice-onair {
+  padding: var(--space-1h) var(--space-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(30, 31, 32, 0.7);
+  backdrop-filter: blur(12px);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  transition: background var(--dur-fast), color var(--dur-fast), box-shadow var(--dur-fast);
+}
+
+.voice-onair:hover {
+  color: #fff;
+}
+
+.voice-onair.on {
+  background: #d93025;
+  border-color: #d93025;
+  color: #fff;
+  box-shadow: 0 0 18px rgba(217, 48, 37, 0.55);
+}
+
+/* ---------- Things to do together ---------- */
+.activity-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-1h);
+}
+
+.voice-activities {
+  width: min(420px, calc(100% - 32px));
+}
+
+.voice-activities .activity-chips {
+  justify-content: flex-start;
+}
+
+.voice-activities .prompt-chip {
+  color: #fff;
+}
+
+/* ---------- Conversations it remembers ---------- */
+.episode .note-head {
+  cursor: default;
+}
+
+.episode-text {
+  padding: 0 var(--space-3) var(--space-2h);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+
+.episode-text:empty {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .character-switch {
+    top: 56px;
+    max-width: calc(100% - 32px);
+  }
+
+  .character-name {
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
