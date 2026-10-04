@@ -234,6 +234,10 @@
           <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><polyline points="9 15 11 17 15 13"/></svg>
           <span>Daily life</span>
         </button>
+        <button class="tab" data-tab="builder">
+          <svg viewBox="0 0 24 24"><polyline points="8 7 3 12 8 17"/><polyline points="16 7 21 12 16 17"/><line x1="14" y1="4" x2="10" y2="20"/></svg>
+          <span>Builder</span>
+        </button>
         <button class="tab" data-tab="robot">
           <svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="4"/><line x1="9.5" y1="12.5" x2="9.5" y2="14.5"/><line x1="14.5" y1="12.5" x2="14.5" y2="14.5"/><path d="M7.5 8 6 4.5M16.5 8 18 4.5"/></svg>
           <span>Robot</span>
@@ -1309,6 +1313,56 @@
             <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             <span>Your Google sign-in token is kept in this window's memory only, never saved to disk. Sending an email or adding an event asks you first (Settings → AI control → Confirm workspace actions). None of this is available in Private mode.</span>
           </div>
+        </section>
+
+        <!-- Builder mode -->
+        <section class="pane" data-pane="builder">
+          <h3>Builder</h3>
+          <p class="hint">Build websites, apps and SaaS products together: the AI starts projects, edits code, runs tests and builds, and shows you a live preview. It works only inside the folders you allow in <a href="#" data-open-tab="ai-control">AI control → File access</a>, with the permissions set there.</p>
+          <label class="row">
+            <div><div class="row-label">Builder tools</div><div class="row-desc">Editing parts of files, searching code, project starters and the preview</div></div>
+            <input type="checkbox" class="toggle" data-setting="builder.enabled">
+          </label>
+          <p class="form-error" id="builder-folders-note" hidden>No folder is allowed yet. Add one (for example ~/projects) in AI control → File access, with create, read and edit allowed.</p>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Running commands</div>
+            <p class="hint">Installing packages, tests, builds, git and dev servers, in a terminal the AI controls.</p>
+          </div></div>
+          <div class="choice-grid builder-modes" id="builder-modes" role="radiogroup" aria-label="Running commands">
+            <button type="button" class="choice" data-mode="off"><span class="choice-title">⛔ Off</span><span class="choice-desc">No commands at all</span></button>
+            <button type="button" class="choice" data-mode="suggest"><span class="choice-title">💬 Suggest only</span><span class="choice-desc">It tells you the command; you run it</span></button>
+            <button type="button" class="choice" data-mode="ask"><span class="choice-title">✋ Ask every time</span><span class="choice-desc">You approve each command</span></button>
+            <button type="button" class="choice" data-mode="smart"><span class="choice-title">🧠 Smart</span><span class="choice-desc">Safe ones (tests, builds, git status) run by themselves; the rest ask</span></button>
+            <button type="button" class="choice" data-mode="auto"><span class="choice-title">🚀 Auto</span><span class="choice-desc">Everything runs except risky commands, which ask</span></button>
+          </div>
+          <p class="hint builder-warning" id="builder-auto-warning" hidden>⚠️ In Auto, a web page or file the AI reads could try to trick it into running something. Use it for projects you trust, and keep "Never without asking" up to date.</p>
+          <div class="form-field">
+            <div class="row-label">Smart may also run</div>
+            <span class="row-desc">One command beginning per line, e.g. <code>npm install</code> or <code>docker compose up</code></span>
+            <textarea class="field textarea" id="builder-allow" rows="3" spellcheck="false" placeholder="npm install&#10;npm run dev"></textarea>
+          </div>
+          <div class="form-field">
+            <div class="row-label">Never without asking</div>
+            <span class="row-desc">Any command containing one of these asks, even in Auto (sudo, deleting outside the project, git push, ssh and others always do)</span>
+            <textarea class="field textarea" id="builder-block" rows="3" spellcheck="false" placeholder="prisma migrate reset&#10;--production"></textarea>
+          </div>
+          <div class="row">
+            <div class="row-label">Time limit per command</div>
+            <select class="field" data-setting="builder.timeout" data-type="number">
+              <option value="30">30 seconds</option>
+              <option value="60">1 minute</option>
+              <option value="120">2 minutes</option>
+              <option value="300">5 minutes</option>
+              <option value="600">10 minutes</option>
+            </select>
+          </div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Running now</div>
+            <p class="hint">Dev servers, watchers and previews it started. They stop when Friends quits.</p>
+          </div></div>
+          <ul class="life-list" id="builder-running"></ul>
         </section>
 
         <!-- Daily life -->

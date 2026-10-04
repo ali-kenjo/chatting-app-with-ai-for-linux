@@ -57,6 +57,14 @@ const DEFAULTS = {
     briefing: { auto: false, time: "08:00" }, // a briefing waiting as a chat every morning
     briefingNews: true, // headlines in the briefing (not in Private mode)
   },
+  // Builder mode (builder.js): code tools, project starters, commands, preview
+  builder: {
+    enabled: true, // the code tools, starters and preview (inside the allowed folders)
+    commands: "ask", // BUILDER_MODES: off | suggest | ask | smart | auto
+    allow: [], // more commands Smart may run by itself (their beginnings)
+    block: [], // commands that always ask, also in Auto (parts of them)
+    timeout: 120, // seconds a command may take
+  },
   // The desktop app (Electron)
   desktop: {
     tray: true, // keeps running in the tray when the window is closed, so reminders still come
@@ -120,6 +128,7 @@ const DEFAULTS = {
   },
 };
 
+const BUILDER_MODES = ["off", "suggest", "ask", "smart", "auto"];
 const ON_AIR = { formats: ["podcast", "reaction", "qa", "debate", "explainer", "storytime", "free"] };
 
 // Allowed values of the robot's choices
@@ -177,6 +186,11 @@ function sanitize(input) {
   s.backup.keep = clamp(s.backup.keep, 3, 60);
   s.characters = characters.sanitize(s.characters);
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(s.life.briefing.time)) s.life.briefing.time = "08:00";
+  if (!BUILDER_MODES.includes(s.builder.commands)) s.builder.commands = "ask";
+  const list = (v) => [...new Set(v.filter((x) => typeof x === "string").map((x) => x.trim()).filter(Boolean))].slice(0, 100).map((x) => x.slice(0, 200));
+  s.builder.allow = list(s.builder.allow);
+  s.builder.block = list(s.builder.block);
+  s.builder.timeout = clamp(s.builder.timeout, 10, 600);
   s.companion.interests = s.companion.interests.trim().slice(0, 1000);
   if (!ON_AIR.formats.includes(s.onAir.format)) s.onAir.format = "podcast";
   s.onAir.show = s.onAir.show.trim().slice(0, 80);

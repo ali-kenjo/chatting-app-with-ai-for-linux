@@ -6341,3 +6341,12 @@ details.form-field[open] {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* ---------- Builder (src/js/builder.js) ---------- */
+.builder-modes {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+.builder-warning {
+  color: #f59e0b;
+}

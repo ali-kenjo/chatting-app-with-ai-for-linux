@@ -28,6 +28,7 @@ const life = require("./life");
 const briefing = require("./briefing");
 const connectors = require("./connectors");
 const mcp = require("./mcp");
+const builder = require("./builder");
 const { execFile } = require("child_process");
 
 const PORT = defaultPort;
@@ -706,6 +707,10 @@ const routes = [
   ["DELETE", /^\/api\/mcp\/([\w-]+)$/, (req, id) => mcp.remove(id)],
   ["POST", /^\/api\/mcp\/([\w-]+)\/restart$/, async (req, id) => (await mcp.restart(id), mcp.list().find((s) => s.id === id))],
 
+  // Builder mode: what's running (commands in the background, previews)
+  ["GET", /^\/api\/builder\/running$/, () => builder.running()],
+  ["POST", /^\/api\/builder\/([\w-]+)\/stop$/, (req, id) => builder.stop(id)],
+
   ["GET", /^\/api\/backups$/, () => ({ dir: backup.dir, backups: backup.list() })],
   ["POST", /^\/api\/backups$/, () => backup.create("manual", { keep: settings.get().backup.keep })],
   ["POST", /^\/api\/backups\/import$/, async (req, id, url) => backup.restore(await readBody(req, 1024 * 1024 * 1024), { mode: restoreMode(url) })],
@@ -784,7 +789,7 @@ function start(port = PORT, host = HOST) {
   briefing.schedule(briefingReady);
   // Apps connected through MCP start in the background; they stop with Friends
   mcp.startAll();
-  process.once("exit", () => mcp.stopAll());
+  process.once("exit", () => (mcp.stopAll(), builder.stopAll()));
   const connections = new Set();
   let isShuttingDown = false;
 
@@ -837,6 +842,7 @@ function start(port = PORT, host = HOST) {
     isShuttingDown = true;
     logger.info(`Received ${signal}. Shutting down gracefully...`);
     mcp.stopAll();
+    builder.stopAll();
 
     server.close(() => {
       logger.info("Closed HTTP server. Exiting process.");
