@@ -1,5 +1,35 @@
 # Changelog
 
+## Unreleased: the design overhaul
+
+A product-design pass over the whole interface, in the branch `design-overhaul`. The audit, the design system and screenshots before and after (English, German, Arabic) are in `docs/design/`. The version number is unchanged.
+
+### Added
+- **German and Arabic** (Settings → Appearance → Language; "Automatic" follows the browser). 1,275 texts in each language, with plurals (Arabic has six forms), numbers and dates by `Intl`. English stays the source text, and any text without a translation shows in English.
+- **Right to left.** Arabic mirrors the whole layout: sidebar, dialogs, messages, buttons, sliding panels, arrows. Each paragraph of a reply takes its own direction, so Arabic with English or German inside it reads right; code and formulas stay left to right.
+- **A first-run guide.** With no AI set up, the start screen finds a local AI by itself (one click to use it), takes a Gemini key, explains local vs cloud and Private mode in plain words, and the "which AI answers" line under it is truthful (it said "Cloud Ready" whatever the state).
+- **Settings in groups, with search.** Appearance (language, theme, chat text), Characters, Memory, Daily life, Robot, AI & privacy, Connected apps, Builder, Data & backups. A search box finds a setting and takes you to it; advanced options (routing rules, how much of the chat the AI sees, an Ollama AI's memory use) fold away; saving says so.
+- **Keyboard shortcuts** (press **?**): Alt+N new chat, Ctrl+, Settings, F2 and Delete in the list of chats, arrow keys in the list, menus, tabs and Settings; Enter sends and Shift+Enter breaks the line in the now-growing message box.
+- **A question before anything that can't be undone**: one accessible dialog for clearing memory, notes and remembered conversations, deleting or restoring a backup, **importing in "replace" mode (which used to replace everything without asking)**, resetting or deleting a character, disconnecting an app.
+- `npm run test:a11y` (axe-core over the main surfaces, dark and light, English and Arabic), `npm run i18n` (translation coverage), `npm run design:shots` (every surface, state, language, theme and width).
+- Tests: translation completeness and plurals, the language setting, first run, keyboard-only use, focus trapping, Arabic layout, German text expansion, touch targets and 200% zoom.
+
+### Changed
+- **Accessibility**: dialogs make the page behind them inert, take the focus in and give it back; the conversation is no longer a live region (a finished reply is announced once); tabs, radio groups, the model menu and the message actions have the right roles; one visible focus ring in both themes; 44 px targets on touch screens; reduced motion, higher contrast and forced colours are honoured; contrast fixed (the accent colours were 1.9 to 2.7:1 on the light theme; accent text is now darker there). axe-core: 52 serious or critical findings before, none now.
+- **Chat**: wider reading column and 1.7 line height (16 px by default; the size setting still scales everything), the conversation keeps following the bottom as a diagram or the follow-up chips appear, errors say what happened and what to do (Try again, Try the other AI, Check AI settings, Set up an AI), files dropped on the page light up the message box, the "who answered" badge is always visible, focusable and explains why.
+- **Sidebar**: the profile row and Settings stay in view while the chat list scrolls; real buttons instead of links; chats move with the arrow keys; a skeleton while they load.
+- **Voice screen**: the top bar wraps instead of squeezing (it broke below about 1100 px and on phones); states differ by shape as well as colour.
+- **Wording**: "brain" is "AI", "AI control" is "AI & privacy", no internal terms on the first screen ("Hero Experience", "barge-in intelligence").
+- The stylesheet is 19 small files built on design tokens (type scale in rem, a 4 px space grid, radius, elevation, motion, layers; two breakpoints) with logical properties, instead of one 6,000-line file with 27 `z-index`es and 19 font sizes. About 45 dead rules went. It is larger (115 KB to 152 KB, 21 KB to 29 KB gzipped): the new pieces are bigger than the dead ones.
+
+### Dev dependencies
+- `axe-core` (accessibility checks, `npm run test:a11y`). Nothing new at run time.
+
+### Fixed
+- The "Sign in with Google" button no longer sticks out of the settings on a phone or with longer words.
+- The start screen's top is no longer cut off in a small window.
+- The hero title is no longer invisible on the light theme.
+
 ## 0.3.2
 
 ### Fixed

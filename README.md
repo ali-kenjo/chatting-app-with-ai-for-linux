@@ -1,6 +1,6 @@
 # Friends
 
-A personal AI companion for Linux, in its own window or your browser. Its brain can be Google Gemini (cloud) or any AI model running on your own computer, so chats can stay completely private.
+A personal AI companion for Linux, in its own window or your browser. The AI behind it can be Google Gemini (cloud) or any AI model running on your own computer, so chats can stay completely private.
 
 - **Two characters to talk to for hours**: **Atlas** (calm, sharp, dry-witted, always a step ahead) and **Mira** (bright, playful, fearless, your most honest friend), or your own. Switch with one tap. They remember your conversations, follow up on what you told them, and never let a conversation run dry.
 - **Your on-camera co-host**: voice conversations with a 3D robot body, filming mode and video recording, and **ON AIR** co-host mode that keeps everything private off camera.
@@ -32,7 +32,7 @@ npm start       # then open http://localhost:3000
 
 - Stop it with `Ctrl+C`. Another port: `PORT=3001 npm start`. Development with reload: `npm run dev`.
 - `npm run doctor` checks Node.js, the dependencies, your data folder, the port, API-key storage and any local AI server.
-- Then open **Settings → AI control**: a local AI (Ollama, LM Studio…) shows up there by itself, or add a Gemini brain with a free key from [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
+- The first time, the start screen guides you: it finds a local AI (Ollama, LM Studio…) by itself and offers it with one click, or takes a Gemini key (free from [aistudio.google.com/apikey](https://aistudio.google.com/apikey)). You can do the same, and add more, any time in **Settings → AI & privacy**.
 
 ### 3. Linux desktop app (Electron)
 
@@ -52,7 +52,7 @@ Or download the `.deb` from the [Releases](../../releases) page. After changing 
 - **It keeps running in the tray** when you close the window, so reminders still come (Settings → Daily life; quit from the tray icon or with Ctrl+Q). It can start when you log in, quietly in the tray.
 - On a Wayland session it runs natively (X11 otherwise). The window remembers its size and position; a second launch focuses the first window.
 - The window only shows the app itself. The microphone and camera are granted to that page only, links open in your browser, and Google sign-in gets its own popup.
-- Google sign-in (Gmail, Calendar, Drive, YouTube, Tasks) is optional, needs a free Firebase project of your own, and is never loaded in Private mode. With **Stay signed in** (below) you sign in once instead of every time the app opens. Set it up in **Settings → Connected Apps → Set up Google sign-in**: the steps are listed there, and you paste the web app's `firebaseConfig` from the Firebase console (it's kept in `~/.config/friends/firebase-applet-config.json`). Add `127.0.0.1` and `localhost` under Authentication → Settings → Authorized domains. (A `firebase-applet-config.json` next to the app, as in `firebase-applet-config.example.json`, still works.)
+- Google sign-in (Gmail, Calendar, Drive, YouTube, Tasks) is optional, needs a free Firebase project of your own, and is never loaded in Private mode. With **Stay signed in** (below) you sign in once instead of every time the app opens. Set it up in **Settings → Connected apps → Set up Google sign-in**: the steps are listed there, and you paste the web app's `firebaseConfig` from the Firebase console (it's kept in `~/.config/friends/firebase-applet-config.json`). Add `127.0.0.1` and `localhost` under Authentication → Settings → Authorized domains. (A `firebase-applet-config.json` next to the app, as in `firebase-applet-config.example.json`, still works.)
 
 ### 4. Docker
 
@@ -67,7 +67,7 @@ docker build -t friends .
 docker run -d -p 127.0.0.1:3000:3000 -v friends_data:/home/node/.config/friends --name friends-app friends
 ```
 
-Open `http://localhost:3000`. Chats persist in the `friends_data` volume. (If you publish it on another host port, e.g. `-p 127.0.0.1:8080:3000`, also set `ALLOWED_HOSTS=localhost:8080`.) The port is only published on this computer; to reach it from other devices, publish `3000:3000` and set `ALLOWED_HOSTS` to the address you use. To use Ollama running on the host: run Ollama with `OLLAMA_HOST=0.0.0.0` and add the brain with the address `http://host.docker.internal:11434` (the compose file already provides that name).
+Open `http://localhost:3000`. Chats persist in the `friends_data` volume. (If you publish it on another host port, e.g. `-p 127.0.0.1:8080:3000`, also set `ALLOWED_HOSTS=localhost:8080`.) The port is only published on this computer; to reach it from other devices, publish `3000:3000` and set `ALLOWED_HOSTS` to the address you use. To use Ollama running on the host: run Ollama with `OLLAMA_HOST=0.0.0.0` and add the AI with the address `http://host.docker.internal:11434` (the compose file already provides that name).
 
 To also set up local voice during the install: `./scripts/install.sh --voice` (or later: `npm run voice:setup`).
 
@@ -77,11 +77,11 @@ To also set up local voice during the install: `./scripts/install.sh --voice` (o
 |---|---|
 | Something doesn't work | `npm run doctor` says what's missing and how to fix it |
 | `Port 3000 is already in use` | `PORT=3001 npm start` |
-| "Can't reach the AI server" | Start it (`ollama serve`), then **Look again** in Settings → AI control |
-| The first local reply takes a minute | The model is being loaded into memory; later replies are fast. *Keep the model loaded* in the brain's settings keeps it ready |
-| Long chats forget the beginning | Raise the **Context size** of an Ollama brain (Settings → AI control → edit the brain) |
-| A local AI can't listen | Set up **Local voice** (Settings → AI control, or `npm run voice:setup`) |
-| Google asks you to sign in every time | Update to 0.3.2 or newer (it renews the sign-in by itself); if it still asks, set up **Stay signed in for good** (Settings → Connected Apps) |
+| "Can't reach the AI server" | Start it (`ollama serve`), then **Look again** in Settings → AI & privacy |
+| The first local reply takes a minute | The model is being loaded into memory; later replies are fast. *Keep the model loaded* (under Advanced in the AI's settings) keeps it ready |
+| Long chats forget the beginning | Raise the **Context size** of an Ollama AI (Settings → AI & privacy → edit the AI → Advanced) |
+| A local AI can't listen | Set up **Local voice** (Settings → AI & privacy, or `npm run voice:setup`) |
+| Google asks you to sign in every time | Update to 0.3.2 or newer (it renews the sign-in by itself); if it still asks, set up **Stay signed in for good** (Settings → Connected apps) |
 | Gemini is slow or doesn't answer | The free tier allows only a few requests a day per model. Friends switches to other Gemini models by itself and says when they're all used up; turning on billing for your key in Google AI Studio raises the limits a lot |
 
 ---
@@ -133,10 +133,12 @@ The server also emits structured request logs with status codes and duration met
 Friends' tests use Node.js's built-in `node:test` and `node:assert`:
 
 ```bash
-npm test               # unit and HTTP integration tests (over 300, about 20 seconds, no network)
+npm test               # unit and HTTP integration tests (over 340, about 20 seconds, no network)
 npm run check          # every script parses, JSON is valid, the page needs no internet to start
-npm run test:e2e       # the real page in Chrome against the real helper and a fake Ollama
-                       #   (needs Chrome; set CHROME_PATH if it isn't in the usual place)
+npm run test:e2e       # the real page in Chrome against the real helper and a fake Ollama: first run, the keyboard,
+                       #   languages and right-to-left, touch targets, zoom (needs Chrome; set CHROME_PATH if it isn't in the usual place)
+npm run test:a11y      # axe-core over the main surfaces, dark and light, English and Arabic
+npm run i18n           # how complete the German and Arabic translations are
 npm audit              # dependencies with known vulnerabilities
 ```
 
@@ -159,21 +161,21 @@ Continuous Integration runs on GitHub Actions (`.github/workflows/ci.yml`): chec
 
 ## Private: AI models on your own computer
 
-Open **Settings → AI control**. Under **Privacy & local AI**, Friends lists the model servers it finds running on this computer and adds a model with one click. (Or **Add brain → Local AI** to give an address yourself.) Nothing is sent to Google or anyone else; chats, notes and files stay here.
+Open **Settings → AI & privacy**. Under **Privacy & local AI**, Friends lists the model servers it finds running on this computer and adds a model with one click. (Or **Add an AI → Local AI** to give an address yourself.) Nothing is sent to Google or anyone else; chats, notes and files stay here.
 
 - **Private mode** (the switch there) makes it strict: only a local AI answers, and Gemini, Gemini Live, Google sign-in, Google tools, GitHub search and news are all off. Nothing is sent to the internet, and the page loads nothing from other websites.
-- **Ollama** is used through its own API, so each brain has a **context size** (default 8192 tokens; Ollama's own default of 4096 cuts long chats off) and **keep the model loaded** (how long it stays in memory). Other servers use their own settings.
+- **Ollama** is used through its own API, so each AI has a **context size** (default 8192 tokens; Ollama's own default of 4096 cuts long chats off) and **keep the model loaded** (how long it stays in memory). Other servers use their own settings.
 
-It works with every server that offers the OpenAI-compatible API, open source or closed source: **Ollama**, **LM Studio**, **llama.cpp** (`llama-server`), **Jan**, **vLLM**, **LocalAI**, **KoboldCpp**, text-generation-webui and more. Pick one of the presets (or "Other…" and type an address). Friends lists the models the server has, checks that the chosen one answers, and saves it like any other brain. An API key is optional; it is only ever sent to that server.
+It works with every server that offers the OpenAI-compatible API, open source or closed source: **Ollama**, **LM Studio**, **llama.cpp** (`llama-server`), **Jan**, **vLLM**, **LocalAI**, **KoboldCpp**, text-generation-webui and more. Pick one of the presets (or "Other…" and type an address). Friends lists the models the server has, checks that the chosen one answers, and saves it like any other AI. An API key is optional; it is only ever sent to that server.
 
 ```bash
 ollama pull llama3.1      # example; any model works
-npm start                 # then: Settings → AI control → Add brain → Local AI
+npm start                 # then: Settings → AI & privacy → Add an AI → Local AI
 ```
 
-What works with a local brain: chat with streaming replies, memory and notes, file tools, drafts, chat summaries, follow-up suggestions, edit/regenerate, images (with a vision model), and tool use (models that can't use tools still chat). Reasoning models' `<think>` text is hidden. What's different:
+What works with a local AI: chat with streaming replies, memory and notes, file tools, drafts, chat summaries, follow-up suggestions, edit/regenerate, images (with a vision model), and tool use (models that can't use tools still chat). Reasoning models' `<think>` text is hidden. What's different:
 
-- **Voice** — Gemini Live is Google's, so a local brain uses *Studio* voice. Click **Set up** under **Local voice** (same card; or run `npm run voice:setup`) to install Whisper (listening) and Piper (speaking): one download of about 1 GB into `~/.config/friends/voice`, no root needed, needs Python 3.9+ with `venv` (`sudo apt install python3 python3-venv`). Then you can talk to a local AI and hear it answer, in English, German and Arabic, with the two voices from *AI personality* (female/male), fully offline. It starts when you talk and quits when idle. Without it the AI speaks with your browser's own voice (also local) but can't listen, unless you give the brain your own speech-to-text server under **Voice (optional)** (OpenAI-style `/audio/transcriptions`). Whisper runs on the CPU: expect a second or two per sentence you say. Setup is refused in Private mode, because it downloads.
+- **Voice** — Gemini Live is Google's, so a local AI uses *Studio* voice. Click **Set up** under **Local voice** (same card; or run `npm run voice:setup`) to install Whisper (listening) and Piper (speaking): one download of about 1 GB into `~/.config/friends/voice`, no root needed, needs Python 3.9+ with `venv` (`sudo apt install python3 python3-venv`). Then you can talk to a local AI and hear it answer, in English, German and Arabic, with the two voices from *AI personality* (female/male), fully offline. It starts when you talk and quits when idle. Without it the AI speaks with your browser's own voice (also local) but can't listen, unless you give the AI your own speech-to-text server under **Voice (optional)** (OpenAI-style `/audio/transcriptions`). Whisper runs on the CPU: expect a second or two per sentence you say. Setup is refused in Private mode, because it downloads.
 - **Google tools** (Drive, Calendar, Gmail) are offered to a local AI only after you sign in with Google. PDFs can't be read by most local models.
 - **Memory and speed** — a larger context needs more (video) memory; on a small graphics card lower it, or the model runs partly on the CPU and slows down. Bigger models are slower on weak hardware; the first request loads the model, which can take a minute. For servers other than Ollama, set the context size in the server itself.
 - **Fast first reply** — when a local model becomes the one that answers, Friends loads it into memory right away (and the speech models when voice mode opens), so the first message doesn't wait for it.
@@ -181,11 +183,11 @@ What works with a local brain: chat with streaming replies, memory and notes, fi
 
 ## Choosing the AI: local, cloud, or both
 
-The model menu next to the message box (and **Settings → AI control → Which AI answers**) has these modes:
+The model menu next to the message box (and **Settings → AI & privacy → Which AI answers**) has these modes:
 
 | Mode | What it does |
 |---|---|
-| **One AI** | Every message goes to the one brain you pick (the old behaviour). |
+| **One AI** | Every message goes to the one AI you pick (the old behaviour). |
 | **✨ Auto** | Short and ordinary messages go to a local AI. The cloud AI takes what a local model can't: a PDF (or a picture a local model can't see), a chat too long for the local model's memory, a hard question (long, detailed, code, multi-step). Each of these rules can be switched off. If one AI fails or sends nothing, the other answers. |
 | **🔄 Dynamic** | Auto, and it reacts to how things are going. A local AI that stays silent for too long (you set the patience), fails or sends an empty reply is replaced by the cloud, and left alone for 10 minutes; a cloud AI that had trouble is skipped for a while. |
 | **⚡ Fastest** | Asks the local and the cloud AI at once; whichever starts answering first wins and the other is cancelled. |
@@ -205,7 +207,7 @@ Gemini's free tier allows only a small number of requests per model per day (for
 - A model whose quota is used up (or that's busy) is skipped until Google says it's back, and the next one answers: newer and older Flash models, then the light ones. When every model is out, it says so and when they're back.
 - Background jobs (follow-up suggestions, memories of conversations, summaries, the briefing) use a light model with its own quota, so they don't eat into your replies.
 - Gemini Live tries its other voice models when one runs out, before falling back to Studio voice.
-- Replies think only briefly, so the first words come in about 2 seconds; **Deep** (Settings → AI control → Reasoning) thinks at length when you need it.
+- Replies think only briefly, so the first words come in about 2 seconds; **Deep** (Settings → AI & privacy → How it thinks) thinks at length when you need it.
 
 For a lot of daily use, turn on billing for your key in Google AI Studio, or add a local AI for the small jobs.
 
@@ -257,17 +259,17 @@ Settings → **Connected Apps**. Each app has its own card: switch it on, set it
 | Home Assistant | address + long-lived token | lights, switches, heating, blinds, media and scenes by voice; locks, alarms and covers always ask; works in Private mode on your own network |
 | **Any app (MCP)** | an MCP server | its tools; each action asks unless you trust the app |
 
-**Staying signed in to Google.** Google's sign-in gives Friends access for an hour at a time. Friends renews it by itself when it opens and every 50 minutes (a sign-in window may flash up for a moment and close itself), so you normally sign in only once. If that doesn't work for you, there's a way that needs no window at all, with an OAuth client of your own: in your Firebase project's Google Cloud console, create a client of type **Desktop app** (Google Auth Platform → Clients), paste its ID and secret into Settings → Connected Apps → **Stay signed in**, and press **Publish app** under Audience (otherwise Google ends the sign-in after 7 days). Friends keeps the refresh token in your system keyring and renews access by itself, also for voice mode and the morning briefing. The steps are listed in the app.
+**Staying signed in to Google.** Google's sign-in gives Friends access for an hour at a time. Friends renews it by itself when it opens and every 50 minutes (a sign-in window may flash up for a moment and close itself), so you normally sign in only once. If that doesn't work for you, there's a way that needs no window at all, with an OAuth client of your own: in your Firebase project's Google Cloud console, create a client of type **Desktop app** (Google Auth Platform → Clients), paste its ID and secret into Settings → Connected apps → **Stay signed in**, and press **Publish app** under Audience (otherwise Google ends the sign-in after 7 days). Friends keeps the refresh token in your system keyring and renews access by itself, also for voice mode and the morning briefing. The steps are listed in the app.
 
 Tokens are kept in your system keyring (never in backups or sent to the page). Google needs YouTube Data API v3 and Google Tasks API turned on in your Firebase project's Google Cloud project, and one sign-out and sign-in after updating (for the new permissions).
 
 **MCP** (Model Context Protocol) connects thousands of apps: add a server that runs on this computer (a command such as `npx -y @playwright/mcp@latest`) or at an address (Streamable HTTP, with an optional token). There are ready-made starts for a browser (Playwright), code docs (Context7), Git, files, a knowledge graph, fetch, and GitHub's own MCP server. Choose per app: always ask, ask except for what only reads, or never ask. In Private mode only apps you mark as working on this computer are used.
 
-A local AI gets the essential tools (Settings → AI control → Tools for a local AI), so small models stay focused; Gemini gets all of them.
+A local AI gets the essential tools (Settings → AI & privacy → Tools for a local AI), so small models stay focused; Gemini gets all of them.
 
 ## Builder mode
 
-Settings → **Builder**. Build websites, apps and SaaS products with your character as a senior developer, inside the folders you allow in AI control → File access.
+Settings → **Builder**. Build websites, apps and SaaS products with your character as a senior developer, inside the folders you allow in AI & privacy → Permissions and file access.
 
 - **Starters**: a website, a SaaS landing page, a Node.js API with tests, a React app (Vite), and Next.js (through `create-next-app`).
 - **Code tools**: change part of a file, search code, read lines, see the project tree; plus the file tools (create, read, edit, move, delete).
@@ -294,13 +296,16 @@ Settings → **Builder**. Build websites, apps and SaaS products with your chara
 - **Persistent Memory**: Explicit user memories and AI-maintained long-term memory notes.
 - **Characters**: Atlas, Mira or your own, with voices, looks, response length, speaking speed and custom instructions (see above).
 - **Secure File Access**: Sandboxed file interactions restricted strictly to allowed directories, respecting permission grids and confirmation prompts.
-- **Theme & Appearance**: Dark, light, and system themes; accent colors; chat font and size; message style (Minimal or Bubbles) and spacing (Comfortable or Compact).
+- **Appearance** (Settings → Appearance): the **language** of the interface (English, Deutsch, العربية, or like the browser; Arabic mirrors the whole layout), dark, light and system themes, accent colors, chat font and size, message style (Minimal or Bubbles) and spacing (Comfortable or Compact).
+- **Keyboard**: press **?** for the list. **Ctrl+K** search, **Ctrl+F** find in this chat, **Alt+N** new chat, **Ctrl+,** Settings, **Enter** sends and **Shift+Enter** starts a new line; in the list of chats **↑ ↓** move, **F2** renames and **Delete** deletes; in voice mode **M** mutes and **F** starts filming mode. A skip link and the Tab key reach everything; dialogs keep the focus inside and give it back.
+- **Settings search**: the box at the top of Settings finds a setting by name or description, opens its section and shows where it is.
+- **Accessible**: labelled landmarks and dialogs, a quiet live region (finished replies are announced once, not word by word), visible focus in both themes, 44 px touch targets, reduced motion, higher contrast, and 200% zoom (see [Design](#design-accessibility-and-languages)).
 
 ---
 
 ## The robot
 
-A small, friendly hovering robot is the AI's body: a rounded head with a glossy face screen (two expressive eyes and a mouth), glowing fins, two paddle arms, and a hover ring. It glows in your accent color (Settings → Theme). While *you* talk, its fins switch to a second color, so viewers can see who's speaking.
+A small, friendly hovering robot is the AI's body: a rounded head with a glossy face screen (two expressive eyes and a mouth), glowing fins, two paddle arms, and a hover ring. It glows in your accent color (Settings → Appearance). While *you* talk, its fins switch to a second color, so viewers can see who's speaking.
 
 - **In voice mode**, pick **🤖 Robot** in the style bar. It boots up while connecting, listens with its fins perked, leans in and turns to you while you talk (with little "mm-hm" nods when you pause), looks up and aside while thinking, and talks with its mouth, eyes, head and fins following the AI's voice. It waves at its first words and again when you press End. It works with all three engines (Live, Studio, Instant). The 🎥 button opens its scene: background, camera shot, its place in the picture, where you sit, the cinematic camera and Follow my face. It also **roams its room**: it drifts closer and turns to you while you talk, backs away while it thinks and wanders about while it speaks (banking into turns). **Tap it** and it reacts (more taps escalate to a victory spin), **hold it** and it gets affectionate, **drag the empty room** to look around. The room has a glossy floor with its reflection, drifting light at different depths, a light shaft and floor rings that swell with its voice (and close in on it while you talk). Buttons fade away after a few quiet seconds; **M** mutes. Roaming and room effects can be switched off in Settings → Robot, and both stay off while filming.
 - **Next to your text chats**, a small robot sits in the bottom right corner, in the free space beside the conversation, so it never covers anything. It hides on narrow windows. Fold it away with its arrow button, bring it back with the little face; that's remembered. It watches you type, thinks while a reply is on its way, "talks" as the text comes in, shows the reply's mood, bounces when you like a reply, nods when you pin one, and talks along with Read aloud. Click it to say hi.
@@ -373,9 +378,18 @@ Root                  the whole robot, standing on the ground (optional)
 
 ---
 
+## Design, accessibility and languages
+
+- **Languages.** The interface is in English, German and Arabic (Settings → Appearance → Language; "Automatic" follows the browser; the choice reloads the page in the new language). English is the source text: `t("Open settings")` returns it, or its translation from `src/js/i18n/de.js` / `ar.js`. The static page is translated once on load; plurals use `Intl.PluralRules` (Arabic has six forms); numbers and dates follow the language (Arabic uses 0-9). Right-to-left is a layout, not a patch: the stylesheet uses logical properties, each paragraph of a reply takes its own direction, and code and formulas stay left to right. Anything you add, run `npm run i18n` (`-- --missing` lists what needs translating); `test/i18n.test.js` fails until every text has a translation in every language. To add a language, add its file (and an entry in `src/js/i18n-core.mjs`).
+- **Design system.** Tokens for colour, type, space, radius, elevation, motion and layers in `src/css/tokens.css`; the stylesheet is 19 small files. See [`docs/design/design-system.md`](docs/design/design-system.md). The audit that led to it, with screenshots before and after in the three languages: [`docs/design/audit.md`](docs/design/audit.md).
+- **Accessibility check.** `npm run test:a11y` runs [axe-core](https://github.com/dequelabs/axe-core) (a development dependency) over the main surfaces (first run, start, chat, model menu, search, every Today tab, every Settings section, voice, filming), in dark and light, English and Arabic, with a fake local AI, and fails on serious or critical violations. `--langs en,de,ar`, `--themes dark`, `--accent "#f59e0b"` and `--all-impacts` narrow or widen it. Needs Chrome (`CHROME_PATH`).
+- **Screenshots.** `npm run design:shots <name>` captures every surface at 1440, 1024, 768 and 390 px, dark and light, in the languages you name (`--langs en,de,ar`), into `docs/design/screenshots/<name>/`.
+
+---
+
 ## Architecture & Data Storage
 
-- `src/` — Static browser application (`index.html`, `style.css`, ES modules).
+- `src/` — Static browser application (`index.html`, `css/` in 19 ordered files, ES modules). `src/js/i18n*.js` and `i18n/` are the translations; `a11y.js` keeps focus in dialogs and speaks to screen readers; `onboarding.js` is the first-run guide; `shortcuts.js`, `dialogs.js` (the "are you sure" dialog).
   - `src/js/robot/` — the robot. Pure logic in `.mjs` modules that `node:test` checks (springs and the layer mixer, moods and gestures as poses, the mood classifier, the animator, the director that turns app events into moods, clicker keys, voice bands). The browser side: `engine.js` (one shared three.js renderer that draws only where the robot is visible), `model.js` (the robot and custom models), `face.js` (eyes and mouth drawn with signed distance functions into a texture), `scene.js`, `dock.js`, `facetrack.js`, `settings-pane.js`, and `index.js`, which loads three.js only when a robot is first shown.
   - `src/js/filming.js` — filming mode. `src/models/face/` — the face detector model for Follow my face.
   - three.js and MediaPipe are served from `node_modules` under `/vendor/`; an import map (allowed by its hash in the page's security policy) names `three` and `three/addons/`.
