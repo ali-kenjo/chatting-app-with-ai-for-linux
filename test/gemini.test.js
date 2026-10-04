@@ -45,6 +45,30 @@ describe("Gemini requests", () => {
     assert.deepStrictEqual(calls[0].body.generationConfig.thinkingConfig, { thinkingLevel: "low" });
   });
 
+  test("a model whose quota is used up is skipped until it's back; a busy one too", async () => {
+    const models = { models: ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash"].map((m) => ({ name: `models/${m}`, supportedGenerationMethods: ["generateContent"] })) };
+    const calls = fakeFetch((url) => {
+      if (url.includes("/models?")) return json(models);
+      if (url.includes("gemini-3.8-flash")) return json({ error: { message: "quota", details: [{ "@type": "type.googleapis.com/google.rpc.RetryInfo", retryDelay: "3600s" }] } }, 429);
+      if (url.includes("gemini-3.7-flash")) return json({ error: { message: "This model is currently experiencing high demand." } }, 503);
+      return sse("from 3.6");
+    });
+    let text = "";
+    await gemini.streamChat({ key: "q1", model: "gemini-3.8-flash", contents: [], onText: (t) => (text += t) });
+    assert.strictEqual(text, "from 3.6");
+    const tried = () => calls.filter((c) => c.url.includes(":stream")).map((c) => c.url.match(/models\/([^:]+)/)[1]);
+    assert.deepStrictEqual(tried(), ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash"], "a busy model isn't asked twice");
+    calls.length = 0;
+    await gemini.streamChat({ key: "q1", model: "gemini-3.8-flash", contents: [], onText() {} });
+    assert.deepStrictEqual(tried(), ["gemini-3.6-flash"], "next time straight to one that works");
+    assert.ok(gemini.isExhausted("q1", "gemini-3.8-flash") && !gemini.isExhausted("q2", "gemini-3.8-flash"));
+  });
+
+  test("when nothing is left, the error says so and when it's back", async () => {
+    fakeFetch((url) => (url.includes("/models?") ? json({ models: [{ name: "models/gemini-3.8-flash", supportedGenerationMethods: ["generateContent"] }] }) : json({ error: { message: "quota", details: [{ "@type": "type.googleapis.com/google.rpc.RetryInfo", retryDelay: "7200s" }] } }, 429)));
+    await assert.rejects(gemini.generateText({ key: "q3", model: "gemini-3.8-flash", prompt: "x" }), /busy or out of free quota right now \(back in about 2 hours\)/);
+  });
+
   test("generateText returns the reply as plain text", async () => {
     const calls = fakeFetch(() => json({ candidates: [{ content: { parts: [{ text: "thinking…", thought: true }, { text: "A summary." }] } }] }));
     const text = await gemini.generateText({ key: "k5", model: "gemini-3.8-flash", prompt: "Summarize" });

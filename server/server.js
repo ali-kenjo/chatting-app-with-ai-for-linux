@@ -29,6 +29,7 @@ const briefing = require("./briefing");
 const connectors = require("./connectors");
 const mcp = require("./mcp");
 const builder = require("./builder");
+const google = require("./google");
 const { execFile } = require("child_process");
 
 const PORT = defaultPort;
@@ -232,7 +233,8 @@ async function chat(req, res) {
   // note: the same for something the app tells it (a reminder went off), in voice mode.
   const appNote = voice === true && typeof note === "string" && note.trim() ? note.trim().slice(0, 1000) : "";
   const greeting = (greet === true && voice === true) || Boolean(appNote);
-  const activeToken = googleAccessToken || headerToken;
+  // The page's Google token, else the one Friends keeps itself (Stay signed in)
+  const activeToken = googleAccessToken || headerToken || (await googleToken());
   const attached = [];
   for (const id of Array.isArray(files) ? files.slice(0, 10) : []) {
     try {
@@ -339,7 +341,8 @@ async function chat(req, res) {
       contents,
       system: prompt.build(current, { voice, toolsOffered: offered, summary: conversation.summary?.text, onAir, chatId: conversation.id }),
       temperature: prompt.temperature(current),
-      fast: voice || current.aiControl?.reasoningEffort === "fast",
+      // Thinking at length makes a reply start 10+ seconds later; only "Deep" does
+      fast: voice || current.aiControl?.reasoningEffort !== "deep",
       tools: offered,
       isFreeTool: tools.isRobotTool,
       signal,
@@ -408,6 +411,12 @@ async function chat(req, res) {
   // of AIs a local one does it (private and free).
   const summarizer = answeredBy && (routePlan.mode === "fixed" || routePlan.mode === "force") ? answeredBy.brain : brains.forTask() || answeredBy?.brain;
   if (summarizer) summary.update(conversation.id, { api: summarizer.api, key: summarizer.key, model: summarizer.model, window }).catch((err) => logger.debug("Summary skipped:", err.message));
+}
+
+// Your Google access token when you stay signed in (none in Private mode)
+async function googleToken() {
+  if (settings.get().privacy.localOnly) return null;
+  return google.token().catch((err) => (logger.warn("Google token:", err.message), null));
 }
 
 // ---------- Voice ----------
@@ -699,7 +708,14 @@ const routes = [
   ["GET", /^\/api\/life\/journal$/, (req, id, url) => life.listEntries({ days: Number(url.searchParams.get("days")) || 30 })],
   ["POST", /^\/api\/life\/journal$/, async (req) => life.addEntry(await readJson(req))],
   ["DELETE", /^\/api\/life\/journal\/([\w-]+)$/, (req, id) => life.removeEntry(id)],
-  ["POST", /^\/api\/life\/briefing$/, async (req) => briefing.make({ googleAccessToken: (await readJson(req)).googleAccessToken || null })],
+  ["POST", /^\/api\/life\/briefing$/, async (req) => briefing.make({ googleAccessToken: (await readJson(req)).googleAccessToken || (await googleToken()) })],
+
+  // Staying signed in to Google (google.js)
+  ["GET", /^\/api\/google\/status$/, () => (settings.get().privacy.localOnly ? { private: true } : google.status())],
+  ["PUT", /^\/api\/google\/client$/, async (req) => google.setClient(await readJson(req))],
+  ["DELETE", /^\/api\/google\/client$/, () => google.removeClient()],
+  ["GET", /^\/api\/google\/token$/, async () => ({ accessToken: await googleToken() })],
+  ["POST", /^\/api\/google\/disconnect$/, () => google.disconnect()],
 
   // Connected apps (Settings → Connected Apps) and MCP servers
   ["GET", /^\/api\/connectors$/, () => ({ apps: connectors.list(settings.get()), mcp: mcp.list() })],
@@ -747,6 +763,32 @@ async function handle(req, res) {
 
   if (pathname === "/api/chat" && req.method === "POST") return chat(req, res);
   if (pathname === "/api/events" && req.method === "GET") return events(req, res);
+  // The sign-in popup opens here (this app's own address, so the desktop app allows it) and goes on to Google
+  if (pathname === "/api/google/signin" && req.method === "GET") {
+    try {
+      if (settings.get().privacy.localOnly) throw new Error("Private mode is on, so Google sign-in is off.");
+      const { url: to } = google.start(`http://${req.headers.host}`);
+      res.writeHead(302, securityHeaders({ Location: to }));
+      return res.end();
+    } catch (err) {
+      res.writeHead(200, securityHeaders({ "Content-Type": "text/html; charset=utf-8" }));
+      return res.end(google.callbackPage(false, err.message));
+    }
+  }
+  // Google's sign-in popup comes back here
+  if (pathname === "/api/google/callback" && req.method === "GET") {
+    let ok = true;
+    let message = "";
+    try {
+      await google.finish(Object.fromEntries(url.searchParams));
+      for (const client of eventClients) client.write(`event: google\ndata: ${JSON.stringify(google.status())}\n\n`);
+    } catch (err) {
+      ok = false;
+      message = err.message;
+    }
+    res.writeHead(200, securityHeaders({ "Content-Type": "text/html; charset=utf-8" }));
+    return res.end(google.callbackPage(ok, message));
+  }
   if (pathname === "/api/voice/speak" && req.method === "POST") return speak(req, res);
   const file = pathname.match(/^\/api\/attachments\/([\w-]+)$/);
   if (file && req.method === "GET") return download(req, res, file[1]);

@@ -1,5 +1,5 @@
 // ---------- Workspace Client UI & Integrations ----------
-import { getAccessToken, isConnected, googleSignIn, logout, getCurrentUser, initAuth, resetAuth, getSetup } from "./auth.js";
+import { getAccessToken, isConnected, googleSignIn, logout, getCurrentUser, initAuth, resetAuth, getSetup, loadKeptSignIn, getKept } from "./auth.js";
 import { api } from "./api.js";
 import { openSettings, closeSettings } from "./settings.js";
 import { getSettings } from "./store.js";
@@ -215,6 +215,8 @@ function updateAuthUI(user, hasToken) {
   } else {
     // Signed out (or the access token is gone after a reload): nothing may look connected
     if (sidebarEmail) sidebarEmail.textContent = user ? "Google: sign in again" : "Google not connected";
+    // Firebase's sign-in only lasts until the app closes: point to the lasting one
+    if (wsEmail && user && !getKept().configured) wsEmail.title = "Set up “Stay signed in” below, so you don't have to sign in every time.";
     if (sidebarAuthBtn) {
       sidebarAuthBtn.title = "Connect Google Account";
       sidebarAuthBtn.classList.remove("connected");
@@ -229,10 +231,8 @@ function updateAuthUI(user, hasToken) {
   }
 }
 
-// Bind clicks & lifecycle on load
-document.addEventListener("DOMContentLoaded", () => {
-  initAuth();
-});
+// On load: the lasting sign-in when there is one (no sign-in needed); else Firebase's
+loadKeptSignIn().then((signedIn) => signedIn || initAuth());
 
 document.addEventListener("friends:auth-changed", (e) => {
   const { user, hasToken } = e.detail || {};
@@ -326,6 +326,57 @@ document.getElementById("hero-prompts")?.addEventListener("click", (e) => {
   const promptText = chip.dataset.prompt;
   if (promptText) sendPrompt(promptText);
 });
+
+// ----- Stay signed in (server/google.js): an OAuth client of your own -----
+const keptBox = document.getElementById("gsi-kept");
+const keptId = document.getElementById("gsi-kept-id");
+const keptSecret = document.getElementById("gsi-kept-secret");
+const keptStatus = document.getElementById("gsi-kept-status");
+const keptRemove = document.getElementById("gsi-kept-remove");
+const keptOrigin = document.getElementById("gsi-kept-origin");
+
+function renderKept(k = getKept()) {
+  if (k.private) {
+    keptStatus.textContent = "Private mode is on, so Google sign-in is off.";
+    keptStatus.className = "test-feedback";
+    return;
+  }
+  keptRemove.hidden = !k.configured;
+  if (document.activeElement !== keptId) keptId.value = k.clientId || "";
+  keptSecret.placeholder = k.configured ? "Saved (type to replace)" : "GOCSPX-…";
+  keptStatus.className = `test-feedback${k.connected ? " ok" : ""}`;
+  keptStatus.textContent = k.connected
+    ? `✓ Signed in as ${k.account?.email || "your account"}; it stays that way.`
+    : k.configured
+      ? "✓ Set up. Click “Sign in with Google” above (once)."
+      : "Not set up: you sign in again each time Friends opens.";
+}
+keptOrigin.textContent = location.origin;
+document.addEventListener("friends:google-kept", (e) => renderKept(e.detail));
+
+document.getElementById("gsi-kept-save").addEventListener("click", async () => {
+  keptStatus.className = "test-feedback";
+  keptStatus.textContent = "Saving…";
+  try {
+    const res = await fetch("/api/google/client", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId: keptId.value, clientSecret: keptSecret.value }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Couldn't save.");
+    keptSecret.value = "";
+    await loadKeptSignIn();
+    renderKept(data);
+    if (!data.connected) await signIn();
+  } catch (err) {
+    keptStatus.textContent = `⚠️ ${err.message}`;
+    keptStatus.className = "test-feedback error";
+  }
+});
+
+keptRemove.addEventListener("click", async () => {
+  await fetch("/api/google/client", { method: "DELETE" }).catch(() => {});
+  await logout().catch(() => {});
+  await loadKeptSignIn();
+});
+keptBox.addEventListener("toggle", () => keptBox.open && loadKeptSignIn());
 
 // ----- Setting up Google sign-in (a Firebase project of your own) -----
 const setupBox = document.getElementById("gsi-setup");

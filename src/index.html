@@ -1172,6 +1172,24 @@
           </div>
           <p class="form-error" id="gsi-error" hidden></p>
 
+          <details class="form-field" id="gsi-kept">
+            <summary class="row-label">Stay signed in (recommended)</summary>
+            <span class="row-desc">Without this, Google's sign-in lasts until Friends closes (at most an hour). With an OAuth client of your own, you sign in once and stay signed in; the sign-in is kept in your system keyring.</span>
+            <ol class="row-desc setup-steps">
+              <li>Open <a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener noreferrer">console.cloud.google.com → Google Auth Platform → Clients</a> and pick your Firebase project at the top.</li>
+              <li><strong>Create client</strong> → Application type <strong>Desktop app</strong> → name it Friends → Create. Copy the <strong>Client ID</strong> and <strong>Client secret</strong> into the boxes below.</li>
+              <li>Under <strong>Audience</strong>, press <strong>Publish app</strong> (otherwise Google ends the sign-in after 7 days). When you sign in, Google says it hasn't verified the app: that's your own app, so choose Advanced → Go to Friends.</li>
+              <li>Under <strong>APIs &amp; Services → Library</strong>, make sure Gmail, Google Calendar, Google Drive, YouTube Data API v3 and Google Tasks API are on.</li>
+            </ol>
+            <span class="row-desc">Friends signs in from <code id="gsi-kept-origin"></code>; a Desktop app client allows that by itself.</span>
+            <label class="form-field"><span class="row-label">Client ID</span><input class="field" id="gsi-kept-id" autocomplete="off" spellcheck="false" placeholder="…apps.googleusercontent.com"></label>
+            <label class="form-field"><span class="row-label">Client secret</span><input class="field" id="gsi-kept-secret" type="password" autocomplete="off" spellcheck="false"></label>
+            <div class="form-test-bar">
+              <button type="button" class="btn small btn-primary" id="gsi-kept-save">Save and sign in</button>
+              <button type="button" class="btn small" id="gsi-kept-remove" hidden>Remove</button>
+              <span class="test-feedback" id="gsi-kept-status"></span>
+            </div>
+          </details>
           <details class="form-field" id="gsi-setup">
             <summary class="row-label">Set up Google sign-in (one time)</summary>
             <span class="row-desc">Gmail, Calendar and Drive need a free Firebase project that belongs to you. Nothing is shared with anyone else.</span>

@@ -54,7 +54,7 @@ async function request(url, options) {
   }
 }
 
-// Gemini sometimes answers 500/503 for a moment; such a request is tried once more
+// Gemini sometimes answers 500 for a moment; such a request is tried once more
 const RETRY_MS = Number(process.env.FRIENDS_GEMINI_RETRY_MS ?? 1000);
 
 async function post(url, key, body, signal) {
@@ -65,7 +65,8 @@ async function post(url, key, body, signal) {
     body: JSON.stringify(body),
   });
   let res = await send();
-  if (res.status === 500 || res.status === 503) {
+  // A hiccup (500) is tried once more; a busy model (503) isn't: another model answers sooner
+  if (res.status === 500) {
     logger.warn(`Gemini ${res.status}, trying again`);
     await new Promise((resolve) => setTimeout(resolve, RETRY_MS));
     if (signal?.aborted) throw signal.reason;
@@ -116,11 +117,45 @@ async function cachedModels(key) {
 // Fallback models when rate limits (429) or deprecated model (404) are hit
 const FALLBACK_MODELS = [
   "gemini-3.8-flash",
+  "gemini-3.7-flash",
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+  "gemini-flash-latest",
   "gemini-3-flash-preview",
+  "gemini-2.5-flash",
+  "gemini-3.5-flash-lite",
   "gemini-flash-lite-latest",
   "gemini-3.1-flash-lite",
-  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
 ];
+
+// For the small background jobs (follow-up chips, memories, summaries, the
+// briefing): a light model, so they don't use up the main model's free quota
+const TASK_MODEL = "gemini-flash-lite-latest";
+
+// Models whose quota is used up, per key, until Gemini says they're back.
+// They're skipped until then, so a reply doesn't wait for a request that fails.
+const exhausted = new Map(); // key → Map(model → until, ms)
+
+function retryMs(delay) {
+  const seconds = parseFloat(String(delay || "").replace(/s$/, ""));
+  return Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds * 1000, 24 * 60 * 60 * 1000) : 60 * 1000;
+}
+
+function markExhausted(key, model, retryDelay, ms = retryMs(retryDelay)) {
+  if (!exhausted.has(key)) exhausted.set(key, new Map());
+  exhausted.get(key).set(model, Date.now() + ms);
+}
+
+const isExhausted = (key, model) => (exhausted.get(key)?.get(model) || 0) > Date.now();
+
+// "in about 6 hours" for the soonest model to come back
+function backIn(key, models) {
+  const soonest = Math.min(...models.map((m) => exhausted.get(key)?.get(m) || Infinity));
+  if (!Number.isFinite(soonest)) return "";
+  const minutes = Math.max(1, Math.round((soonest - Date.now()) / 60000));
+  return minutes < 90 ? ` (back in about ${minutes} minute${minutes === 1 ? "" : "s"})` : ` (back in about ${Math.round(minutes / 60)} hours)`;
+}
 
 // Models that answered 404 (retired, or not offered to this key), per key.
 // The models list can still name a retired model, so this is learned by trying;
@@ -137,21 +172,28 @@ async function withFallback(key, model, attempt) {
   const candidates = [model, ...FALLBACK_MODELS.filter((m) => m !== model)];
   let lastError = null;
   let available; // looked up only once a fallback is needed
+  let tried = 0;
 
   for (const current of candidates) {
-    if (skip.has(current)) continue;
+    if (skip.has(current) || isExhausted(key, current)) continue;
     if (current !== model) {
       if (available === undefined) available = await cachedModels(key);
       if (available && !available.includes(current)) continue;
     }
+    tried++;
     try {
       return await attempt(current);
     } catch (err) {
       lastError = err;
       if (err.name === "AbortError" || err.final || !canFallBack(err)) throw err;
       if (err.status === 404) unavailable.set(key, skip.add(current));
+      if (err.status === 429) markExhausted(key, current, err.retryDelay);
+      if (err.overloaded) markExhausted(key, current, null, 2 * 60 * 1000); // busy: rest it for a moment
       logger.warn(`Gemini model ${current} ${err.status === 404 ? "isn't available" : err.overloaded ? "is overloaded" : "hit a limit"}, trying the next one`);
     }
+  }
+  if (!tried || lastError?.status === 429 || lastError?.overloaded) {
+    throw new GeminiError(`Every Gemini model your key can use is busy or out of free quota right now${backIn(key, candidates)}. Try again in a little while, add a local AI in Settings → AI control, or turn on billing for your key in Google AI Studio for higher limits.`);
   }
   throw lastError || new GeminiError("Gemini's rate limit or quota was reached. Wait a moment and try again.");
 }
@@ -196,7 +238,9 @@ const liveCache = new Map(); // key → { models, at }
 
 async function liveModels(key) {
   const cached = liveCache.get(key);
-  if (cached && Date.now() - cached.at < 30 * 60 * 1000) return cached.models;
+  // Ones whose quota is used up go last (they're tried only if nothing else works)
+  const order = (list) => [...list.filter((m) => !isExhausted(key, m)), ...list.filter((m) => isExhausted(key, m))];
+  if (cached && Date.now() - cached.at < 30 * 60 * 1000) return order(cached.models);
   let available = [];
   try {
     available = namesFor(await fetchModels(key), "bidiGenerateContent");
@@ -207,7 +251,7 @@ async function liveModels(key) {
   const models = available.length ? [...LIVE_MODELS.filter((m) => available.includes(m)), ...extra] : [...LIVE_MODELS];
   if (!models.length) models.push(...LIVE_MODELS);
   liveCache.set(key, { models, at: Date.now() });
-  return models;
+  return order(models);
 }
 
 // Live models that take function calls without pausing their speech: calls
@@ -390,6 +434,7 @@ async function speak({ key, text, voice }) {
 
   let lastErr = null;
   for (const model of candidates) {
+    if (isExhausted(key, model)) continue;
     try {
       const res = await post(`${API}/models/${encodeURIComponent(model)}:generateContent`, key, {
         contents: [{ role: "user", parts: [{ text }] }],
@@ -409,6 +454,7 @@ async function speak({ key, text, voice }) {
     } catch (err) {
       lastErr = err;
       if (err.status === 429 || err.status === 404 || /quota|rate limit|not found/i.test(err.message)) {
+        if (err.status === 429) markExhausted(key, model, err.retryDelay);
         logger.warn(`Gemini TTS model ${model} returned ${err.status || err.message}, trying the next one`);
         continue;
       }
@@ -438,4 +484,4 @@ async function searchWeb({ key, model, query, signal }) {
   });
 }
 
-module.exports = { GeminiError, searchWeb, listModels, checkModel, streamChat, transcribe, speak, generateText, liveModels, preferLiveModel, liveAsyncTools, LIVE_MODELS };
+module.exports = { GeminiError, TASK_MODEL, markExhausted, isExhausted, searchWeb, listModels, checkModel, streamChat, transcribe, speak, generateText, liveModels, preferLiveModel, liveAsyncTools, LIVE_MODELS };

@@ -233,10 +233,13 @@ const getByKind = (kind, preferId) => {
 // a local AI when there is one (private and free), else the cloud
 function forTask() {
   const mode = privateMode() ? "local" : settings.get().routing.mode;
-  if (mode === "fixed") return getForChat(null);
-  if (mode === "local") return getByKind("local");
-  if (mode === "cloud") return getByKind("cloud");
-  return getByKind("local") || getByKind("cloud");
+  let brain;
+  if (mode === "fixed") brain = getForChat(null);
+  else if (mode === "local") brain = getByKind("local");
+  else if (mode === "cloud") brain = getByKind("cloud");
+  else brain = getByKind("local") || getByKind("cloud");
+  // Gemini does these on a light model, which has its own free quota (and falls back to the others)
+  return brain?.provider === "gemini" ? { ...brain, model: gemini.TASK_MODEL } : brain;
 }
 
 // The brain for listening and speaking: a local AI only when its voice is ready

@@ -16,6 +16,7 @@ async function make({ googleAccessToken = null } = {}) {
   const current = settings.get();
   const brain = brains.forTask();
   if (!brain) throw new Error("NO_BRAIN");
+  if (!googleAccessToken && !current.privacy.localOnly) googleAccessToken = await require("./google").token().catch(() => null);
   const data = await tools.briefing({ settings: current, googleAccessToken });
   const character = characters.active(current);
   const user = prompt.userName(current);

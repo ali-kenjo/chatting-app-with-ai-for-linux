@@ -145,6 +145,7 @@ class LiveSession {
     this.robot = robot === true;
     this.onAir = onAir === true;
     this.googleAccessToken = typeof googleAccessToken === "string" ? googleAccessToken : null;
+    this.pageToken = Boolean(this.googleAccessToken); // otherwise the one Friends keeps (renewed per tool call)
     try {
       // Gemini Live is the cloud: in the routing modes the cloud brain is used (the page only starts Live when that's wanted)
       this.brain = settings.get().routing.mode === "fixed" ? brains.getForChat(Number(brainId) || null) : brains.getByKind("cloud", Number(brainId) || null);
@@ -392,6 +393,7 @@ class LiveSession {
     this.toolsRunning++;
     const functionResponses = [];
     try {
+      if (!this.pageToken && !settings.get().privacy.localOnly) this.googleAccessToken = await require("./google").token().catch(() => null);
       for (const call of calls) {
         if (this.cancelled.has(call.id)) continue;
         const result = await tools.run(call.name, call.args || {}, this.toolContext());
@@ -472,7 +474,10 @@ class LiveSession {
 
     if (!this.everReady) {
       // The first setup failed: try the next model when it was about the model
-      if (/model|not found|not supported|unsupported/i.test(why) && this.modelIndex < this.models.length - 1) {
+      // Another Live model has its own quota, so a used-up one isn't the end
+      const quota = /quota|exhausted|rate limit|429/i.test(why);
+      if (quota) gemini.markExhausted(this.brain.key, this.models[this.modelIndex], null, 30 * 60 * 1000);
+      if ((quota || /model|not found|not supported|unsupported/i.test(why)) && this.modelIndex < this.models.length - 1) {
         this.modelIndex++;
         return this.connect();
       }
