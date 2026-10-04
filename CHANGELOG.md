@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0
+
+### Added
+- **Backups**: your chats, memory, settings and everything else you keep in Friends are backed up once a day by themselves (the last 10 are kept), and before every restore. Settings → Data & backups lists them, backs up now, restores, and exports or imports a backup (optionally with attachments) to take your data to another computer. `npm run backup` does it from the terminal. API keys are never in a backup.
+- **`npm run update`**: tests, backs up, builds and installs the desktop app in one step.
+- **Releases**: tagging a version builds the `.deb` on GitHub and publishes it with a checksum; Dependabot proposes dependency updates.
+
+### Changed
+- Node.js 22 or newer is needed (Node 20 is no longer maintained).
+
 ## 0.2.0
 
 ### Added
