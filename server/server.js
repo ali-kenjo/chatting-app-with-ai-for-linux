@@ -26,6 +26,8 @@ const episodes = require("./episodes");
 const { ACTIVITIES } = require("./activities");
 const life = require("./life");
 const briefing = require("./briefing");
+const connectors = require("./connectors");
+const mcp = require("./mcp");
 const { execFile } = require("child_process");
 
 const PORT = defaultPort;
@@ -325,7 +327,8 @@ async function chat(req, res) {
   const run = async (step, { signal, started }) => {
     const brain = step.brain;
     // Google tools are left out for a local AI until you're signed in with Google
-    const offered = tools.declarations(current, { voice, robot: robotOnScreen === true, workspace: brain.provider !== "local" || Boolean(activeToken), onAir });
+    const all = tools.declarations(current, { voice, robot: robotOnScreen === true, workspace: brain.provider !== "local" || Boolean(activeToken), onAir });
+    const offered = brain.provider === "local" ? tools.forLocal(all, current) : all;
     const contents = toContents(conversation.messages, summary.windowStart(conversation, window), characters.others(current));
     // The greeting's note from the app goes last, as if said, but it's never saved
     if (greeting) contents.push({ role: "user", parts: [{ text: appNote ? prompt.appNote(current, appNote) : prompt.greeting(current, { chatId: conversation.messages.length ? conversation.id : null, onAir }) }] });
@@ -694,6 +697,15 @@ const routes = [
   ["DELETE", /^\/api\/life\/journal\/([\w-]+)$/, (req, id) => life.removeEntry(id)],
   ["POST", /^\/api\/life\/briefing$/, async (req) => briefing.make({ googleAccessToken: (await readJson(req)).googleAccessToken || null })],
 
+  // Connected apps (Settings → Connected Apps) and MCP servers
+  ["GET", /^\/api\/connectors$/, () => ({ apps: connectors.list(settings.get()), mcp: mcp.list() })],
+  ["PUT", /^\/api\/connectors\/([\w-]+)$/, async (req, id) => connectors.save(id, await readJson(req))],
+  ["DELETE", /^\/api\/connectors\/([\w-]+)$/, (req, id) => connectors.remove(id)],
+  ["POST", /^\/api\/connectors\/([\w-]+)\/test$/, (req, id) => connectors.test(id)],
+  ["POST", /^\/api\/mcp$/, async (req) => mcp.save(await readJson(req))],
+  ["DELETE", /^\/api\/mcp\/([\w-]+)$/, (req, id) => mcp.remove(id)],
+  ["POST", /^\/api\/mcp\/([\w-]+)\/restart$/, async (req, id) => (await mcp.restart(id), mcp.list().find((s) => s.id === id))],
+
   ["GET", /^\/api\/backups$/, () => ({ dir: backup.dir, backups: backup.list() })],
   ["POST", /^\/api\/backups$/, () => backup.create("manual", { keep: settings.get().backup.keep })],
   ["POST", /^\/api\/backups\/import$/, async (req, id, url) => backup.restore(await readBody(req, 1024 * 1024 * 1024), { mode: restoreMode(url) })],
@@ -770,6 +782,9 @@ function start(port = PORT, host = HOST) {
   // Reminders go off, and the morning briefing is made
   life.schedule();
   briefing.schedule(briefingReady);
+  // Apps connected through MCP start in the background; they stop with Friends
+  mcp.startAll();
+  process.once("exit", () => mcp.stopAll());
   const connections = new Set();
   let isShuttingDown = false;
 
@@ -821,6 +836,7 @@ function start(port = PORT, host = HOST) {
     if (isShuttingDown) return;
     isShuttingDown = true;
     logger.info(`Received ${signal}. Shutting down gracefully...`);
+    mcp.stopAll();
 
     server.close(() => {
       logger.info("Closed HTTP server. Exiting process.");

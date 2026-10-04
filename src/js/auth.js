@@ -21,6 +21,9 @@ const SCOPES = [
   "https://www.googleapis.com/auth/documents.readonly",
   "https://www.googleapis.com/auth/spreadsheets.readonly",
   "https://www.googleapis.com/auth/presentations.readonly",
+  "https://www.googleapis.com/auth/gmail.compose", // drafts
+  "https://www.googleapis.com/auth/youtube.readonly", // your channel's numbers, comments, search
+  "https://www.googleapis.com/auth/tasks", // Google Tasks
 ];
 
 let authInstance = null;

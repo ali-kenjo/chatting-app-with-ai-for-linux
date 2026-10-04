@@ -6213,3 +6213,131 @@ details.form-field[open] {
     animation: none;
   }
 }
+
+/* ---------- Connected apps (src/js/apps.js) ---------- */
+.app-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.app-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  min-width: 0;
+}
+
+.app-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.app-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.app-status {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: var(--bg-hover);
+  color: var(--text-muted);
+}
+
+.app-status.on {
+  background: color-mix(in srgb, #34d399 20%, transparent);
+  color: #34d399;
+}
+
+.app-status.warn {
+  background: color-mix(in srgb, #f59e0b 20%, transparent);
+  color: #f59e0b;
+}
+
+.app-status.error {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.app-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.app-setup > summary {
+  cursor: pointer;
+  color: var(--link);
+  font-size: 13px;
+}
+
+.app-setup[open] {
+  gap: 8px;
+}
+
+.app-setup .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.app-link {
+  color: var(--link);
+  font-size: 13px;
+}
+
+.mcp-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mcp-where {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.mcp-tools {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.mcp-tools code {
+  color: var(--text);
+}
+
+.mcp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.mcp-form .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ws-detail-command {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

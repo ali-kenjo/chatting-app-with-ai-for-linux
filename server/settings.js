@@ -91,6 +91,7 @@ const DEFAULTS = {
     searchGrounding: true,
     confirmTools: true,
     contextWindow: 20,
+    localTools: "essential", // "essential" | "all": how many tools a local AI gets (see tools.forLocal)
   },
   // The AI's 3D robot body (Settings → Robot): the "Robot" style in voice mode
   // and the little one next to text chats. See src/js/robot/.
@@ -172,6 +173,7 @@ function sanitize(input) {
   s.aiControl.searchGrounding = Boolean(s.aiControl.searchGrounding);
   s.aiControl.confirmTools = Boolean(s.aiControl.confirmTools);
   s.aiControl.contextWindow = clamp(s.aiControl.contextWindow || 20, 5, 50);
+  if (!["essential", "all"].includes(s.aiControl.localTools)) s.aiControl.localTools = "essential";
   s.backup.keep = clamp(s.backup.keep, 3, 60);
   s.characters = characters.sanitize(s.characters);
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(s.life.briefing.time)) s.life.briefing.time = "08:00";

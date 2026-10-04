@@ -129,4 +129,48 @@ function deleteKey(id) {
   } catch {}
 }
 
-module.exports = { setKey, getKey, getOptionalKey, deleteKey, isSystemKeyringOperational };
+// ---------- Other secrets (connector tokens), by name ----------
+// Kept the same way as API keys: the system keyring, else the private file.
+const NAME = /^[\w.-]{1,80}$/;
+
+function setSecret(name, value) {
+  if (!NAME.test(name)) throw new Error("Bad secret name.");
+  if (isSystemKeyringOperational()) {
+    try {
+      new Entry(SERVICE, name).setPassword(value);
+      return;
+    } catch (err) {
+      logger.warn(`Failed to save to system keyring, falling back to secure file store: ${err.message}`);
+    }
+  }
+  const secrets = loadFileSecrets();
+  secrets[name] = value;
+  saveFileSecrets(secrets);
+}
+
+function getSecret(name) {
+  if (!NAME.test(name)) return "";
+  if (isSystemKeyringOperational()) {
+    try {
+      const value = new Entry(SERVICE, name).getPassword();
+      if (value) return value;
+    } catch {}
+  }
+  return loadFileSecrets()[name] || "";
+}
+
+function deleteSecret(name) {
+  if (!NAME.test(name)) return;
+  if (isSystemKeyringOperational()) {
+    try {
+      new Entry(SERVICE, name).deletePassword();
+    } catch {}
+  }
+  const secrets = loadFileSecrets();
+  if (name in secrets) {
+    delete secrets[name];
+    saveFileSecrets(secrets);
+  }
+}
+
+module.exports = { setKey, getKey, getOptionalKey, deleteKey, isSystemKeyringOperational, setSecret, getSecret, deleteSecret };
