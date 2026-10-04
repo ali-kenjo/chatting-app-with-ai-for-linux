@@ -64,7 +64,7 @@ describe("The page in Chrome", { skip: !CHROME && "no Chrome found" }, () => {
     });
     page.on("pageerror", (err) => problems.push(`page error: ${err.message}`));
     page.on("console", (msg) => msg.type() === "error" && !/Failed to load resource/.test(msg.text()) && problems.push(`console: ${msg.text()}`));
-    await page.goto(base, { waitUntil: "networkidle0" });
+    await page.goto(base, { waitUntil: "networkidle2" });
   });
 
   after(async () => {

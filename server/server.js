@@ -24,6 +24,9 @@ const backup = require("./backup");
 const characters = require("./characters");
 const episodes = require("./episodes");
 const { ACTIVITIES } = require("./activities");
+const life = require("./life");
+const briefing = require("./briefing");
+const { execFile } = require("child_process");
 
 const PORT = defaultPort;
 const VOICE_CHAT_TITLE = "Voice conversation"; // the same as live.js uses
@@ -220,10 +223,12 @@ function toContents(messages, start = 0, others = {}) {
 async function chat(req, res) {
   const authHeader = req.headers.authorization || "";
   const headerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  const { chatId = null, text = "", retry = false, from = null, force = null, brainId = null, voice = false, robot: robotOnScreen = false, attachments: files = [], googleAccessToken, onAir: onAirFlag = false, greet = false } = await readJson(req);
+  const { chatId = null, text = "", retry = false, from = null, force = null, brainId = null, voice = false, robot: robotOnScreen = false, attachments: files = [], googleAccessToken, onAir: onAirFlag = false, greet = false, note = "" } = await readJson(req);
   const onAir = onAirFlag === true;
-  // greet: voice mode just opened; the AI speaks first (nothing of yours is added)
-  const greeting = greet === true && voice === true;
+  // greet: voice mode just opened; the AI speaks first (nothing of yours is added).
+  // note: the same for something the app tells it (a reminder went off), in voice mode.
+  const appNote = voice === true && typeof note === "string" && note.trim() ? note.trim().slice(0, 1000) : "";
+  const greeting = (greet === true && voice === true) || Boolean(appNote);
   const activeToken = googleAccessToken || headerToken;
   const attached = [];
   for (const id of Array.isArray(files) ? files.slice(0, 10) : []) {
@@ -323,7 +328,7 @@ async function chat(req, res) {
     const offered = tools.declarations(current, { voice, robot: robotOnScreen === true, workspace: brain.provider !== "local" || Boolean(activeToken), onAir });
     const contents = toContents(conversation.messages, summary.windowStart(conversation, window), characters.others(current));
     // The greeting's note from the app goes last, as if said, but it's never saved
-    if (greeting) contents.push({ role: "user", parts: [{ text: prompt.greeting(current, { chatId: conversation.messages.length ? conversation.id : null, onAir }) }] });
+    if (greeting) contents.push({ role: "user", parts: [{ text: appNote ? prompt.appNote(current, appNote) : prompt.greeting(current, { chatId: conversation.messages.length ? conversation.id : null, onAir }) }] });
     await brain.api.streamChat({
       key: brain.key,
       model: brain.model,
@@ -543,6 +548,41 @@ async function smartMood({ text, heard }) {
   return { mood: await robot.readMood({ brain, text, heard }) };
 }
 
+// ---------- Things happening while you're away from the page ----------
+// The page listens on /api/events (server-sent events): reminders going off and
+// a briefing that's ready. The desktop app shows them as notifications itself;
+// otherwise, with no page open, notify-send does (Linux).
+const eventClients = new Set();
+let nativeNotify = null; // set by the desktop app: fn({ title, body, action })
+
+function events(req, res) {
+  res.writeHead(200, securityHeaders({ "Content-Type": "text/event-stream; charset=utf-8", Connection: "keep-alive" }));
+  res.write(`event: hello\ndata: ${JSON.stringify({ native: Boolean(nativeNotify) })}\n\n`);
+  eventClients.add(res);
+  const beat = setInterval(() => res.write(": still here\n\n"), 25000);
+  req.on("close", () => {
+    clearInterval(beat);
+    eventClients.delete(res);
+  });
+}
+
+function broadcast(type, data, { title, body, action } = {}) {
+  for (const res of eventClients) res.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`);
+  if (!settings.get().life.notify) return;
+  if (nativeNotify) return nativeNotify({ title, body, action });
+  if (!eventClients.size && process.platform === "linux") {
+    execFile("notify-send", ["--app-name=Friends", "-i", "friends", title, body], () => {});
+  }
+}
+
+life.onReminder((r) => broadcast("reminder", r, { title: `⏰ ${r.text}`, body: "Friends reminder", action: { type: "reminder", id: r.id } }));
+const briefingReady = (made) => broadcast("briefing", made, { title: "☀️ Your briefing is ready", body: made.title, action: { type: "open-chat", id: made.chatId } });
+
+// The desktop app (electron/main.js) shows notifications itself
+function setNativeNotify(fn) {
+  nativeNotify = fn;
+}
+
 // ---------- Backups (Settings → Data) ----------
 // A restore changes files that some modules keep in memory
 backup.onRestore(() => {
@@ -635,6 +675,25 @@ const routes = [
   ["POST", /^\/api\/attachments$/, (req) => upload(req)],
   ["POST", /^\/api\/voice\/transcribe$/, (req) => transcribe(req)],
 
+  // Tasks, reminders, habits, journal (life.js) and the briefing
+  ["GET", /^\/api\/life\/today$/, () => life.today()],
+  ["GET", /^\/api\/life\/tasks$/, (req, id, url) => life.listTasks({ list: url.searchParams.get("list") || undefined, includeDone: url.searchParams.get("done") === "1" })],
+  ["POST", /^\/api\/life\/tasks$/, async (req) => life.addTask(await readJson(req))],
+  ["PATCH", /^\/api\/life\/tasks\/([\w-]+)$/, async (req, id) => life.updateTask(id, await readJson(req))],
+  ["DELETE", /^\/api\/life\/tasks\/([\w-]+)$/, (req, id) => life.removeTask(id)],
+  ["GET", /^\/api\/life\/reminders$/, () => life.listReminders()],
+  ["POST", /^\/api\/life\/reminders$/, async (req) => life.addReminder(await readJson(req))],
+  ["POST", /^\/api\/life\/reminders\/([\w-]+)\/snooze$/, async (req, id) => life.snooze(id, (await readJson(req)).minutes)],
+  ["DELETE", /^\/api\/life\/reminders\/([\w-]+)$/, (req, id) => life.removeReminder(id)],
+  ["GET", /^\/api\/life\/habits$/, () => life.listHabits()],
+  ["POST", /^\/api\/life\/habits$/, async (req) => life.addHabit(await readJson(req))],
+  ["POST", /^\/api\/life\/habits\/([\w-]+)\/log$/, async (req, id) => life.logHabit(id, await readJson(req))],
+  ["DELETE", /^\/api\/life\/habits\/([\w-]+)$/, (req, id) => life.removeHabit(id)],
+  ["GET", /^\/api\/life\/journal$/, (req, id, url) => life.listEntries({ days: Number(url.searchParams.get("days")) || 30 })],
+  ["POST", /^\/api\/life\/journal$/, async (req) => life.addEntry(await readJson(req))],
+  ["DELETE", /^\/api\/life\/journal\/([\w-]+)$/, (req, id) => life.removeEntry(id)],
+  ["POST", /^\/api\/life\/briefing$/, async (req) => briefing.make({ googleAccessToken: (await readJson(req)).googleAccessToken || null })],
+
   ["GET", /^\/api\/backups$/, () => ({ dir: backup.dir, backups: backup.list() })],
   ["POST", /^\/api\/backups$/, () => backup.create("manual", { keep: settings.get().backup.keep })],
   ["POST", /^\/api\/backups\/import$/, async (req, id, url) => backup.restore(await readBody(req, 1024 * 1024 * 1024), { mode: restoreMode(url) })],
@@ -667,6 +726,7 @@ async function handle(req, res) {
   if (!isTrusted(req)) return sendJson(res, 403, { error: "Forbidden" });
 
   if (pathname === "/api/chat" && req.method === "POST") return chat(req, res);
+  if (pathname === "/api/events" && req.method === "GET") return events(req, res);
   if (pathname === "/api/voice/speak" && req.method === "POST") return speak(req, res);
   const file = pathname.match(/^\/api\/attachments\/([\w-]+)$/);
   if (file && req.method === "GET") return download(req, res, file[1]);
@@ -707,6 +767,9 @@ function start(port = PORT, host = HOST) {
   backup.schedule(settings.get);
   // Quiet conversations become memories, in the background (a local AI does it when there is one)
   episodes.schedule({ getBrain: () => brains.forTask(), getSettings: settings.get });
+  // Reminders go off, and the morning briefing is made
+  life.schedule();
+  briefing.schedule(briefingReady);
   const connections = new Set();
   let isShuttingDown = false;
 
@@ -784,4 +847,4 @@ function start(port = PORT, host = HOST) {
 
 if (require.main === module) start();
 
-module.exports = { start, handle, computeAllowedHosts };
+module.exports = { start, handle, computeAllowedHosts, setNativeNotify };

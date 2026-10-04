@@ -42,7 +42,7 @@ async function main() {
     if (!page) throw new Error("The app window never loaded the page.");
     const problems = [];
     page.on("pageerror", (err) => problems.push(err.message));
-    await page.reload({ waitUntil: "networkidle0" });
+    await page.reload({ waitUntil: "networkidle2" });
     await page.evaluate(() => {
       document.getElementById("settings-btn")?.click();
       [...document.querySelectorAll(".modal-nav .tab")].find((t) => /AI control/.test(t.textContent))?.click();

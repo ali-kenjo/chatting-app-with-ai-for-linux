@@ -810,11 +810,12 @@ export function askFromVoice(text, { onChunk = null, onDraft = null, robot: robo
   return ask({ chatId: currentChatId, text, voice: true, robot: robotShown, onAir, brainId: getSelectedBrainId(), onChunk, onDraft }, userMsg);
 }
 
-// Voice mode opened: the AI speaks first (nothing of yours is added to the chat)
-export function greetFromVoice(text, { onChunk = null, onDraft = null, robot: robotShown = false, onAir = false } = {}) {
+// Voice mode opened (or the app has something to say, like a reminder: note):
+// the AI speaks first, and nothing of yours is added to the chat
+export function greetFromVoice(text, { onChunk = null, onDraft = null, robot: robotShown = false, onAir = false, note = "" } = {}) {
   if (active) stopActive();
   main.classList.add("has-chat");
-  return ask({ chatId: currentChatId, greet: true, voice: true, robot: robotShown, onAir, brainId: getSelectedBrainId(), onChunk, onDraft });
+  return ask({ chatId: currentChatId, greet: !note, note, voice: true, robot: robotShown, onAir, brainId: getSelectedBrainId(), onChunk, onDraft });
 }
 
 // Voice mode's Live voice saved turns to this chat on the helper: it's the open one now

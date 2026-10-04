@@ -49,6 +49,19 @@ const DEFAULTS = {
     greeting: true, // starts voice conversations with something from last time
     interests: "", // what you love talking about, for fresh topics
   },
+  // Tasks, reminders, habits and the journal (life.js), and the daily briefing
+  life: {
+    enabled: true, // the AI gets the tools and the Today panel shows
+    notify: true, // reminders as notifications on this computer
+    speak: true, // in voice mode, the character says a reminder out loud
+    briefing: { auto: false, time: "08:00" }, // a briefing waiting as a chat every morning
+    briefingNews: true, // headlines in the briefing (not in Private mode)
+  },
+  // The desktop app (Electron)
+  desktop: {
+    tray: true, // keeps running in the tray when the window is closed, so reminders still come
+    autostart: false, // starts (in the tray) when you log in
+  },
   // On camera: co-host mode for videos, streams and podcasts
   onAir: {
     auto: true, // on by itself in filming mode and while recording
@@ -161,6 +174,7 @@ function sanitize(input) {
   s.aiControl.contextWindow = clamp(s.aiControl.contextWindow || 20, 5, 50);
   s.backup.keep = clamp(s.backup.keep, 3, 60);
   s.characters = characters.sanitize(s.characters);
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(s.life.briefing.time)) s.life.briefing.time = "08:00";
   s.companion.interests = s.companion.interests.trim().slice(0, 1000);
   if (!ON_AIR.formats.includes(s.onAir.format)) s.onAir.format = "podcast";
   s.onAir.show = s.onAir.show.trim().slice(0, 80);
@@ -200,9 +214,18 @@ function get() {
   return cache;
 }
 
+// fn(settings) after every change (the desktop app follows Settings → Desktop)
+const listeners = new Set();
+const onChange = (fn) => (listeners.add(fn), () => listeners.delete(fn));
+
 function set(input) {
   cache = sanitize(input);
   writeJson(file, cache);
+  for (const fn of listeners) {
+    try {
+      fn(cache);
+    } catch {}
+  }
   return cache;
 }
 
@@ -212,4 +235,4 @@ function reload() {
   return get();
 }
 
-module.exports = { get, set, reload, sanitize, DEFAULTS, ROBOT, ROUTING, ON_AIR };
+module.exports = { get, set, reload, onChange, sanitize, DEFAULTS, ROBOT, ROUTING, ON_AIR };

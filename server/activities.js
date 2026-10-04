@@ -17,6 +17,7 @@ const ACTIVITIES = [
   { id: "content-ideas", emoji: "🎬", title: "Content ideas", prompt: "Let's brainstorm video ideas. Pitch me five ideas with a strong hook each, for short-form and long-form, then help me pick the best one." },
   { id: "riddle", emoji: "🧩", title: "Riddles", prompt: "Give me a riddle. Give hints if I get stuck, and keep track of how many I solve." },
   { id: "recommend", emoji: "🍿", title: "Recommendation duel", prompt: "Recommendation duel: we take turns recommending a movie, series, song or book to each other, and explain why in one sentence." },
+  { id: "plan-day", emoji: "🗓️", title: "Plan my day", prompt: "Help me plan my day: look at what's on today (tasks, reminders, calendar, habits), suggest a realistic order with times, and add anything we decide as tasks or reminders." },
   { id: "my-day", emoji: "☀️", title: "Talk about my day", prompt: "Ask me about my day, really listen, and help me find the best moment in it." },
   { id: "surprise", emoji: "🎲", title: "Surprise me", prompt: "Surprise me: pick something fun for us to do or talk about right now, something we haven't done before." },
 ];

@@ -60,7 +60,7 @@ async function main() {
       if (u.hostname === "127.0.0.1" && u.pathname.startsWith("/api/voice/") || u.pathname === "/api/chat") calls.push(`${res.request().method()} ${u.pathname} ${res.status()}`);
       else if (!["127.0.0.1", "localhost"].includes(u.hostname) && !/^(data|blob):/.test(res.url())) calls.push(`EXTERNAL ${res.url()}`);
     });
-    await page.goto(urlBase, { waitUntil: "networkidle0" });
+    await page.goto(urlBase, { waitUntil: "networkidle2" });
     await page.evaluate(() => document.getElementById("voice-open").click());
     step("voice mode opened; listening to the fake microphone…");
 

@@ -42,7 +42,7 @@ describe("Choosing the AI in the page", { skip: !CHROME && "no Chrome found" }, 
     await page.setViewport({ width: 1280, height: 900 });
     page.on("pageerror", (err) => problems.push(err.message));
     page.on("console", (msg) => msg.type() === "error" && !/Failed to load resource/.test(msg.text()) && problems.push(msg.text()));
-    await page.goto(`http://127.0.0.1:${server.address().port}`, { waitUntil: "networkidle0" });
+    await page.goto(`http://127.0.0.1:${server.address().port}`, { waitUntil: "networkidle2" });
   });
 
   after(async () => {
@@ -153,7 +153,7 @@ describe("Choosing the AI in the page", { skip: !CHROME && "no Chrome found" }, 
 
   test("Private mode: the cloud modes and the cloud AI are off in the menu", async () => {
     await page.evaluate(() => fetch("/api/settings").then((r) => r.json()).then((s) => fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...s, privacy: { localOnly: true } }) })));
-    await page.reload({ waitUntil: "networkidle0" });
+    await page.reload({ waitUntil: "networkidle2" });
     await openMenu();
     const items = await menuItems();
     const by = (label) => items.find((i) => i.text.includes(label));
