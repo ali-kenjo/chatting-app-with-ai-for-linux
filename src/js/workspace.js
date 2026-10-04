@@ -1,5 +1,6 @@
 // ---------- Workspace Client UI & Integrations ----------
-import { getAccessToken, isConnected, googleSignIn, logout, getCurrentUser, initAuth } from "./auth.js";
+import { getAccessToken, isConnected, googleSignIn, logout, getCurrentUser, initAuth, resetAuth, getSetup } from "./auth.js";
+import { api } from "./api.js";
 import { openSettings, closeSettings } from "./settings.js";
 import { getSettings } from "./store.js";
 
@@ -224,7 +225,8 @@ document.addEventListener("friends:auth-changed", (e) => {
 // Why signing in didn't work, in words a person can act on (null: they closed the popup)
 function signInProblem(err) {
   const code = err?.code || "";
-  if (getSettings()?.privacy?.localOnly) return "Private mode is on, so Google sign-in is off. Turn it off in Settings → AI control.";
+  if (getSettings()?.privacy?.localOnly || code === "friends/private") return "Private mode is on, so Google sign-in is off. Turn it off in Settings → AI control.";
+  if (code === "friends/not-configured") return "Google sign-in needs a one-time setup with a Firebase project of your own. Open \"Set up Google sign-in\" below.";
   if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return null;
   if (code === "auth/unauthorized-domain") {
     return `Google sign-in isn't allowed from ${location.hostname} yet. In the Firebase console, open Authentication → Settings → Authorized domains and add "${location.hostname}", then try again.`;
@@ -308,3 +310,49 @@ document.getElementById("hero-prompts")?.addEventListener("click", (e) => {
   if (promptText) sendPrompt(promptText);
 });
 
+// ----- Setting up Google sign-in (a Firebase project of your own) -----
+const setupBox = document.getElementById("gsi-setup");
+const setupText = document.getElementById("gsi-config");
+const setupStatus = document.getElementById("gsi-config-status");
+const setupSave = document.getElementById("gsi-config-save");
+const setupRemove = document.getElementById("gsi-config-remove");
+
+function renderSetup() {
+  const state = getSetup();
+  setupBox.dataset.state = state;
+  if (state === "not-configured") setupBox.open = true;
+  setupRemove.hidden = state !== "ready";
+  setupStatus.className = "test-feedback";
+  setupStatus.textContent =
+    state === "ready" ? "✓ Set up. Click “Sign in with Google” above." : state === "private" ? "Private mode is on, so Google sign-in is off." : "Not set up yet.";
+}
+
+document.addEventListener("friends:google-setup", renderSetup);
+
+setupSave?.addEventListener("click", async () => {
+  setupSave.disabled = true;
+  setupStatus.className = "test-feedback";
+  setupStatus.textContent = "Saving…";
+  try {
+    await api.google.saveConfig(setupText.value);
+    setupText.value = "";
+    resetAuth();
+    await initAuth();
+    renderSetup();
+    setupStatus.textContent = "✓ Saved. Now click “Sign in with Google”. If Google says the domain isn't allowed, add 127.0.0.1 and localhost under Authorized domains (step 3).";
+    setupStatus.classList.add("ok");
+    document.getElementById("gsi-error").hidden = true;
+  } catch (err) {
+    setupStatus.textContent = `⚠️ ${err.message}`;
+    setupStatus.classList.add("error");
+  } finally {
+    setupSave.disabled = false;
+  }
+});
+
+setupRemove?.addEventListener("click", async () => {
+  await api.google.removeConfig().catch(() => {});
+  resetAuth();
+  await initAuth();
+  renderSetup();
+});

@@ -28,6 +28,17 @@ let provider = null;
 let cachedAccessToken = null; // Stored in-memory ONLY
 let currentUser = null;
 let isSigningIn = false;
+let setup = "unknown"; // "ready", "not-configured" (no Firebase config yet) or "private" (Private mode)
+
+// Whether Google sign-in can work: see Settings → Connected Apps for the setup
+export const getSetup = () => setup;
+
+// Forget what was loaded, e.g. after a Firebase config was saved
+export function resetAuth() {
+  authInstance = null;
+  provider = null;
+  setup = "unknown";
+}
 
 export async function initAuth() {
   if (authInstance) return authInstance;
@@ -35,9 +46,12 @@ export async function initAuth() {
     const res = await fetch("/api/firebase-config");
     const firebaseConfig = await res.json();
     if (!firebaseConfig.apiKey) {
-      console.warn("Firebase config not available yet.");
+      setup = firebaseConfig.private ? "private" : "not-configured";
+      document.dispatchEvent(new CustomEvent("friends:google-setup", { detail: { setup } }));
       return null;
     }
+    setup = "ready";
+    document.dispatchEvent(new CustomEvent("friends:google-setup", { detail: { setup } }));
 
     const { initializeApp, getAuth, GoogleAuthProvider, onAuthStateChanged } = await loadFirebase();
     const app = initializeApp(firebaseConfig);
@@ -67,7 +81,9 @@ export async function initAuth() {
 export async function googleSignIn() {
   if (isSigningIn) return null;
   await initAuth();
-  if (!authInstance || !provider) throw new Error("Authentication is not ready.");
+  if (!authInstance || !provider) {
+    throw Object.assign(new Error("Google sign-in isn't set up."), { code: setup === "private" ? "friends/private" : "friends/not-configured" });
+  }
 
   try {
     isSigningIn = true;

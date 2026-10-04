@@ -19,6 +19,7 @@ const robot = require("./robot");
 const local = require("./local");
 const router = require("./router");
 const voiceLocal = require("./voice");
+const firebase = require("./firebase");
 const { VOICES } = require("./voices");
 
 const PORT = defaultPort;
@@ -557,13 +558,15 @@ const routes = [
   ["GET", /^\/api\/local\/servers$/, async () => ({ servers: await local.detect() })],
 
   ["GET", /^\/api\/firebase-config$/, () => {
-    if (settings.get().privacy.localOnly) return {}; // Private mode: no Google sign-in
-    try {
-      return JSON.parse(fs.readFileSync(path.join(ROOT, "firebase-applet-config.json"), "utf8"));
-    } catch {
-      return {};
-    }
+    if (settings.get().privacy.localOnly) return { private: true }; // Private mode: no Google sign-in
+    return firebase.read() || { notConfigured: true };
   }],
+  // Set up Google sign-in from the page: paste the Firebase web config (Settings → Connected Apps)
+  ["PUT", /^\/api\/firebase-config$/, async (req) => {
+    const config = firebase.save((await readJson(req)).config);
+    return { ok: true, projectId: config.projectId };
+  }],
+  ["DELETE", /^\/api\/firebase-config$/, () => (firebase.remove(), { ok: true })],
 
   ["GET", /^\/api\/news$/, async (req, id, url) => {
     if (settings.get().privacy.localOnly) throw new Error("Private mode is on, so the news is off.");
