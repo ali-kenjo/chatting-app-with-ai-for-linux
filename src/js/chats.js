@@ -20,6 +20,7 @@ const ICONS = {
 let chatList = [];
 let renamingId = null;
 let confirmId = null;
+let loaded = false; // false until the helper has answered once: the list shows placeholders meanwhile
 
 function groupOf(time) {
   const now = new Date();
@@ -33,6 +34,12 @@ function groupOf(time) {
 
 function renderList() {
   historyEl.innerHTML = "";
+  historyEl.removeAttribute("aria-busy");
+  if (!loaded) {
+    historyEl.setAttribute("aria-busy", "true");
+    historyEl.innerHTML = '<div class="skeleton-list" aria-hidden="true"><i></i><i></i><i></i><i></i></div>';
+    return;
+  }
   if (!chatList.length) {
     historyEl.innerHTML = '<p class="chat-empty"><strong></strong><span></span></p>';
     historyEl.querySelector("strong").textContent = t("No chats yet");
@@ -112,6 +119,7 @@ async function refresh() {
   try {
     chatList = await api.chats.list();
   } catch {} // helper unreachable: keep showing what we had
+  loaded = true;
   renderList();
 }
 

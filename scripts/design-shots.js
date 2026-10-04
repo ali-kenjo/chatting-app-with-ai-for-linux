@@ -15,14 +15,34 @@ const LANGS = flag("langs", "en").split(",");
 const WIDTHS = flag("widths", "1440,1024,768,390").split(",").map(Number);
 const THEMES = flag("themes", "dark,light").split(",");
 const ONLY = flag("only", "");
+const POINTER = flag("pointer", "");
 
 const root = path.resolve(__dirname, "..");
 const outDir = path.join(root, "docs", "design", "screenshots", label);
 
 const { launch, sleep } = require("./lib/harness");
 
+// Phones get a finger, everything else a mouse: two runs of this script (they're separate processes,
+// because the helper keeps its scratch data folder per process)
+async function both() {
+  const { spawnSync } = require("node:child_process");
+  const phone = WIDTHS.filter((w) => w < 500);
+  const desk = WIDTHS.filter((w) => w >= 500);
+  let status = 0;
+  for (const [pointer, widths] of [["fine", desk], ["coarse", phone]]) {
+    if (!widths.length) continue;
+    const r = spawnSync(process.execPath, [__filename, label, "--pointer", pointer, "--widths", widths.join(","), "--langs", LANGS.join(","), "--themes", THEMES.join(","), ...(ONLY ? ["--only", ONLY] : [])], { stdio: "inherit" });
+    status ||= r.status;
+  }
+  const lists = [];
+  const walk = (dir) => fs.existsSync(dir) && fs.readdirSync(dir, { withFileTypes: true }).forEach((e) => (e.isDirectory() ? walk(path.join(dir, e.name)) : /\.png$/.test(e.name) && lists.push(path.relative(outDir, path.join(dir, e.name)))));
+  walk(outDir);
+  fs.writeFileSync(path.join(outDir, "index.txt"), lists.sort().join("\n") + "\n");
+  process.exit(status);
+}
+
 async function main() {
-  const h = await launch();
+  const h = await launch({ pointer: POINTER || "fine" });
   const { page, api, behave, tempDir, setLook: look } = h;
   const outDirFor = (lang) => path.join(outDir, lang === "en" ? "" : lang);
 
@@ -182,13 +202,12 @@ async function main() {
     }
   }
 
-  fs.writeFileSync(path.join(outDir, "index.txt"), list.join("\n") + "\n");
   console.log(`${n} screenshots in ${path.relative(root, outDir)}`);
   await h.close();
   process.exit(0);
 }
 
-main().catch((err) => {
+(POINTER ? main() : both()).catch((err) => {
   console.error(err);
   process.exit(1);
 });

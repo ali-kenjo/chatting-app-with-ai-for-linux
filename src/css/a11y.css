@@ -49,20 +49,48 @@
 }
 
 /* ---------- Touch: 44 x 44 px to hit ---------- */
+/* min-width and min-height (not width and height): a component's own fixed size can't shrink it back */
 @media (pointer: coarse) {
-  .icon-btn,
-  .icon-btn.small {
-    width: 44px;
-    height: 44px;
-  }
-
-  :is(.btn, .btn-sm, .chip, .prompt-chip, .ws-pill, .tab, .nav-item, .chat-link, .life-tab, .model-item, .voice-theme-btn, .seg button, .voice-seg button, .msg-action, .choice, .color, .link-btn, .life-item button, .habit-check, .character-chip) {
+  :is(.icon-btn, .btn, .btn-sm, .chip, .prompt-chip, .ws-pill, .ws-status-indicator, .tab, .nav-item, .chat-link, .life-tab, .model-item, .model-picker,
+    .send-btn, .code-copy, .voice-theme-btn, .voice-top-btn, .seg button, .voice-seg button, .msg-action, .choice, .color, .link-btn, .life-item button,
+    .habit-check, .character-chip, .field, select, summary, .mood-pick button, .model-card, .provider, .search-result, .settings-result,
+    .gsi-material-button, .app-link, .back-link) {
     min-height: 44px;
     min-width: 44px;
   }
 
-  .toggle {
-    min-height: 28px;
+  .icon-btn,
+  .send-btn,
+  .msg-action {
+    display: grid;
+    place-items: center;
+  }
+
+  .app-link {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .btn.small,
+  .btn-sm,
+  textarea.field,
+  .composer textarea {
+    min-height: 44px;
+  }
+
+  input[type="range"] {
+    min-height: 44px;
+  }
+
+  /* A switch or a tick box looks as it did; the finger gets 44 px around it */
+  :is(.toggle, .perm-check, .life-check, input[type="checkbox"]:not(.toggle)) {
+    position: relative;
+  }
+
+  :is(.toggle, .perm-check, .life-check)::before {
+    content: "";
+    position: absolute;
+    inset: calc((44px - 100%) / -2);
   }
 }
 

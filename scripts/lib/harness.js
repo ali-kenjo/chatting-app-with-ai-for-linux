@@ -37,8 +37,10 @@ function findChrome() {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// pointer: "fine" (a mouse: hover works) or "coarse" (a finger: no hover, big targets), so
+// @media (pointer: coarse) and (hover: none) behave as they do on a real screen
 // Returns { base, page, api, behave, fakeUrl, tempDir, setLook, addLocalBrain, removeBrains, close }
-async function launch() {
+async function launch({ pointer = "fine" } = {}) {
   const chrome = findChrome();
   if (!chrome) throw new Error("No Chrome found (set CHROME_PATH).");
 
@@ -88,7 +90,7 @@ async function launch() {
   const api = (method, url, body) => fetch(base + url, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined }).then((r) => r.json());
 
   const puppeteer = require("puppeteer-core");
-  const browser = await puppeteer.launch({ executablePath: chrome, headless: true, args: ["--no-sandbox", "--disable-gpu", "--use-gl=swiftshader", "--lang=en-US"] });
+  const browser = await puppeteer.launch({ executablePath: chrome, headless: true, args: ["--no-sandbox", "--disable-gpu", "--use-gl=swiftshader", "--lang=en-US", `--blink-settings=primaryPointerType=${pointer === "coarse" ? 2 : 4},availablePointerTypes=${pointer === "coarse" ? 2 : 4},primaryHoverType=${pointer === "coarse" ? 1 : 2},availableHoverTypes=${pointer === "coarse" ? 1 : 2}`] });
   const page = await browser.newPage();
   await page.setRequestInterception(true);
   page.on("request", (req) => {

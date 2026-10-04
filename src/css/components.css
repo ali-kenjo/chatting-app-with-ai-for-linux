@@ -786,3 +786,73 @@ kbd {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ---------- The way the "who answered" badge gives its reason ---------- */
+.msg-via {
+  position: relative;
+}
+
+.msg-via[data-reason]:not([data-reason=""]):hover::after,
+.msg-via[data-reason]:not([data-reason=""]):focus-visible::after {
+  content: attr(data-reason);
+  position: absolute;
+  inset-block-end: calc(100% + var(--space-1h));
+  inset-inline-start: 0;
+  z-index: var(--z-popover);
+  width: max-content;
+  max-width: min(22rem, 70vw);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  box-shadow: var(--shadow-pop);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+  white-space: normal;
+}
+
+/* ---------- Loading: grey bars where the list will be ---------- */
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.skeleton-list i {
+  display: block;
+  height: 0.875rem;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--bg-hover) 25%, color-mix(in srgb, var(--bg-hover) 60%, var(--text-muted)) 50%, var(--bg-hover) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.skeleton-list i:nth-child(2) { width: 82%; }
+.skeleton-list i:nth-child(3) { width: 91%; }
+.skeleton-list i:nth-child(4) { width: 64%; }
+
+@keyframes shimmer {
+  to { background-position: -200% 0; }
+}
+
+/* ---------- Fields: hover, disabled and invalid ---------- */
+.field:hover:not(:disabled):not(:focus) {
+  border-color: color-mix(in srgb, var(--border) 60%, var(--text-muted));
+}
+
+.field:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.field:user-invalid,
+.field[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

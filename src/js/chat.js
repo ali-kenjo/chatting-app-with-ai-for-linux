@@ -182,6 +182,9 @@ function setVia(msg, via) {
   badge.dataset.kind = via.kind;
   badge.textContent = `${via.kind === "local" ? t("🔒 Local") : t("☁️ Cloud")} · ${via.name}`;
   badge.title = via.reason || "";
+  badge.dataset.reason = via.reason || "";
+  badge.tabIndex = 0; // keyboard users can reach the reason too
+  badge.setAttribute("role", "note");
   badge.setAttribute("aria-label", `${via.kind === "local" ? t("Answered on this computer") : t("Answered by the cloud AI")}: ${via.name}${via.reason ? `. ${via.reason}` : ""}`);
 }
 

@@ -221,7 +221,11 @@ menu.addEventListener("click", (e) => {
   const item = e.target.closest(".model-item");
   if (!item) return;
   setMenu(false, { focusPicker: true });
-  if (item.hasAttribute("data-manage")) return openSettings("ai-control");
+  if (item.hasAttribute("data-manage")) {
+    // With no AI at all the first-run guide is the better place to start
+    if (!brains.some((b) => b.enabled)) return document.dispatchEvent(new CustomEvent("friends:onboarding-open"));
+    return openSettings("ai-control");
+  }
   if (item.dataset.mode) {
     updateSettings((s) => {
       s.routing.mode = item.dataset.mode;
