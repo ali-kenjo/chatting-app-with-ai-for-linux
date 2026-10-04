@@ -592,6 +592,9 @@ function setNativeNotify(fn) {
 backup.onRestore(() => {
   settings.reload();
   brains.reload();
+  episodes.forget();
+  mcp.stopAll();
+  mcp.startAll();
 });
 
 function sendBackup(res, buffer, name) {

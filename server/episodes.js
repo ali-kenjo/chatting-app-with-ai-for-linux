@@ -20,6 +20,8 @@ const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const IDLE_MS = 15 * 60 * 1000; // a chat is written up once it's been quiet this long
 const MIN_NEW = 4; // …and has at least this many new messages
 const FOLLOW_DAYS = 14; // follow-ups nobody got back to are dropped after this
+const FRESH_DAYS = 4; // a conversation older than this gets no follow-ups (they'd be stale)
+const MAX_AGE_DAYS = 30; // older chats aren't written up in the background (recall still finds them)
 const MAX_FOLLOW = 30;
 
 const fileFor = (chatId) => {
@@ -35,7 +37,12 @@ function read(chatId) {
   }
 }
 
+// The episodes, newest first; kept in memory until one is written (or a backup restored)
+let cache = null;
+const forget = () => (cache = null);
+
 function all() {
+  if (cache) return cache;
   let names = [];
   try {
     names = fs.readdirSync(dir).filter((n) => ID.test(n.replace(/\.json$/, "")));
@@ -46,7 +53,8 @@ function all() {
       out.push(JSON.parse(fs.readFileSync(path.join(dir, n), "utf8")));
     } catch {}
   }
-  return out.sort((a, b) => b.at - a.at);
+  cache = out.sort((a, b) => b.at - a.at);
+  return cache;
 }
 
 // ---------- Follow-ups ----------
@@ -143,12 +151,14 @@ async function update(chatId, brain, { character = "" } = {}) {
   };
   if (!episode.summary) return before;
   writeJson(fileFor(chatId), episode);
+  forget();
   for (const id of strings(data.resolved, 10, 20)) {
     try {
       resolve(id);
     } catch {}
   }
-  addFollowUps(strings(data.followUps, 3, 200), { chatId, character: episode.character });
+  // Only from recent conversations: "how did Friday go?" months later would be odd
+  if (Date.now() - episode.at < FRESH_DAYS * 24 * 60 * 60 * 1000) addFollowUps(strings(data.followUps, 3, 200), { chatId, character: episode.character });
   return episode;
 }
 
@@ -157,6 +167,7 @@ function due(now = Date.now()) {
   const out = [];
   for (const { id, updatedAt } of chats.list()) {
     if (now - updatedAt < IDLE_MS) continue;
+    if (now - updatedAt > MAX_AGE_DAYS * 24 * 60 * 60 * 1000) break; // the list is newest first
     let chat;
     try {
       chat = chats.get(id);
@@ -206,6 +217,7 @@ function removeForChat(chatId) {
   try {
     fs.rmSync(fileFor(chatId), { force: true });
   } catch {}
+  forget();
   saveFollowUps(followUps().filter((f) => f.chatId !== chatId));
 }
 
@@ -260,4 +272,4 @@ function search(query, { limit = 6 } = {}) {
   return [...scored, ...extra];
 }
 
-module.exports = { dir, read, all, update, due, sweep, schedule, recent, search, followUps, addFollowUps, resolve, removeForChat, clear, ago, IDLE_MS };
+module.exports = { forget, dir, read, all, update, due, sweep, schedule, recent, search, followUps, addFollowUps, resolve, removeForChat, clear, ago, IDLE_MS };
