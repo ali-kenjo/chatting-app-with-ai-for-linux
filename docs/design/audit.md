@@ -15,10 +15,10 @@ Each finding ends with **Done** (what changed, and where) or **Deferred** (and w
 | Observation from the brief | Verdict |
 |---|---|
 | No right-to-left support | **Confirmed.** `lang="en"` fixed, no `dir` anywhere in `src/js`, 65 physical declarations (`margin-left`, `padding-right`, `left:`, `text-align: left`, `border-left`…) and no logical ones. An Arabic reply rendered with its words in the wrong order and the wrong alignment ([`before/05-chat-dark-1440.png`](screenshots/before/05-chat-dark-1440.png), last paragraph). |
-| UI is English-only | **Confirmed.** About 1,100 texts in the page and its scripts. |
-| Type scale is ad hoc | **Confirmed.** 19 different `font-size` values from 10 px to 36 px, five of them half pixels (10.5, 11.5, 12.5, 13.5, 14.5), 98 declarations at 12 to 13.5 px. |
+| UI is English-only | **Confirmed.** About 1,200 texts in the page and its scripts. |
+| Type scale is ad hoc | **Confirmed.** 19 different `font-size` values from 10 px to 36 px, five of them half pixels (10.5, 11.5, 12.5, 13.5, 14.5), 86 declarations at 12 to 13.5 px. |
 | Tokens are partial | **Confirmed.** Colours were variables; spacing, radius, shadow, motion and z-index were not: 27 `z-index` declarations, breakpoints at 520, 580, 640 and 760 px. |
-| Touch and keyboard targets are small | **Confirmed.** `.icon-btn` was 36 px, the small ones 26 to 30 px. Ten `:focus-visible` rules, and six `outline: none` on inputs that showed no other focus (the message box, find, rename). |
+| Touch and keyboard targets are small | **Confirmed.** `.icon-btn` was 36 px, the small ones 26 to 30 px. Ten `:focus-visible` rules, and several inputs that hid the outline and showed focus only by a border colour, or not at all (the message box, find, rename). |
 | Settings IA looks fragmented | **Partly.** Appearance was split (Chat look, Theme) and the AI pane held nine topics in one 700-line column. But the "personality" pane is already called **Characters** in the UI (only its internal id differs from the README), so no rename was needed there. |
 | index.html and style.css are monolithic | **Confirmed.** 115 KB each; the stylesheet's "Small screens" block (750 lines) held rules for a dozen unrelated components. |
 
@@ -111,7 +111,7 @@ Each finding ends with **Done** (what changed, and where) or **Deferred** (and w
 
 **D4 · Polish · Components lacked states.** Buttons had hover only. **Done.** Hover, pressed, focus-visible, disabled and loading for buttons; hover, disabled and invalid for fields; skeleton rows while the chat list loads.
 
-**D5 · Minor · The sidebar's profile row and Settings button scrolled away** when there were many chats (at 1440×900 with a dozen chats they were off-screen). **Done.** Header and menu stay, the list scrolls, the footer is pinned.
+**D5 · Minor · The sidebar's profile row and Settings button scrolled away** when there were more chats than fit (roughly 15 at 900 px high). **Done.** Header and menu stay, the list scrolls, the footer is pinned.
 
 **D6 · Minor · The start screen's top was cut off on small windows** (content taller than the window, centred). **Done.** It centres when it fits and scrolls from the top when it doesn't.
 
@@ -131,11 +131,11 @@ Baseline axe result: **52 serious or critical violations** across the 26 surface
 
 **A5 · Minor · `prefers-reduced-motion`** was handled per component in five places and missed new ones; **`prefers-contrast` and forced colours** weren't handled. **Done.** A global reduced-motion rule, a `prefers-contrast: more` palette and a forced-colours pass (`a11y.css`).
 
-**A6 · Minor · Zoom.** At 200% (a 640 px window) everything reflowed; one 28 px overflow (the Google sign-in button) was found by the new tests and fixed, also for German and Arabic.
+**A6 · Minor · Zoom.** At 200% (a 640 px window) everything reflowed; the Google sign-in button overflowed (by 9 px in English, 28 px in German); found by the new tests and fixed.
 
-**A7 · Minor · Landmarks and names.** **Done.** A skip link, `aside`/`nav`/`main` labels, one `h1`, names for every icon-only button (an e2e test fails if one lacks a name), `aria-pressed`/`aria-expanded`/`aria-current` where they apply.
+**A7 · Minor · Landmarks and names.** **Done.** A skip link, `aside`/`nav`/`main` labels, one `h1`, names for icon-only buttons (an e2e test checks the main page), `aria-pressed`/`aria-expanded`/`aria-current` where they apply.
 
-Result now: **no violations of any impact** (also minor and moderate) on all surfaces in dark and light, English and Arabic; a manual walk by keyboard of first run, sending, switching character, changing a setting and opening and closing every dialog (see `design.test.js`). A screen reader was not available here (see the summary).
+Result now: **no violations of any impact** (also minor and moderate) on all surfaces in dark and light, in English, German and Arabic (`--all-impacts`), and for all five accent colours on the light theme; a manual walk by keyboard of first run, sending, switching character, changing a setting and opening and closing every dialog (see `design.test.js`). A screen reader was not available here (see the summary).
 
 ## 8. Internationalisation
 
@@ -152,7 +152,7 @@ Measured on a 400-message chat (a seeded file with lists, code and long paragrap
 
 | | 0.3.2 | now |
 |---|---|---|
-| CSS | 115,074 B (21,230 gzip) | 151,569 B (28,663 gzip), 16 files |
+| CSS | 115,074 B (21,230 gzip) | 151,569 B (28,653 gzip), 19 files |
 | index.html | 114,453 B | 130,122 B |
 | scripts in `src/js` | 487,664 B | 748,416 B (of which 235 KB are the two translation catalogs, loaded only when needed) |
 | DOM nodes, long chat | 16,408 | 16,609 |
@@ -161,7 +161,7 @@ Measured on a 400-message chat (a seeded file with lists, code and long paragrap
 
 **P1 · Major (deferred) · A long chat renders all of its messages at once** (16,000 nodes for 400 messages; mermaid, KaTeX and highlight.js dominate). Windowing the list is a change to how messages are kept and found (find in chat, scroll to a search hit, "last" reply logic) and is the next thing to do for people who talk for hours; it is out of proportion for this change and was left alone.
 
-**P2 · Minor · CSS got bigger, not smaller.** The brief asked for flat or smaller. 5 KB of dead and duplicate rules went (about 60 rules: voice cards, wave bars, confirm cards…), but onboarding, the shortcuts list, dialogs, RTL, accessibility, the voice top bar, tokens and touch rules added about 40 KB. Gzipped, +7 KB (+35%). The cost of the new features; no animation was added that isn't `transform`/`opacity`, no asset was added. Merging the 22 selectors that are still defined in two places is the next saving (about 6 KB), left alone because moving rules changes the cascade.
+**P2 · Minor · CSS got bigger, not smaller.** The brief asked for flat or smaller. 5 KB of dead and duplicate rules went (about 45 rules: voice cards, wave bars, confirm cards…), but onboarding, the shortcuts list, dialogs, RTL, accessibility, the voice top bar, tokens and touch rules added about 40 KB. Gzipped, +7 KB (+35%). The cost of the new features; no animation was added that isn't `transform`/`opacity`, no asset was added. Merging the 22 selectors that are still defined in two places is the next saving (about 6 KB), left alone because moving rules changes the cascade.
 
 ## 10. Microcopy
 
