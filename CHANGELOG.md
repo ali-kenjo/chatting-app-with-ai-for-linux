@@ -22,6 +22,17 @@ A product-design pass over the whole interface, in the branch `design-overhaul`.
 - **Wording**: "brain" is "AI", "AI control" is "AI & privacy", no internal terms on the first screen ("Hero Experience", "barge-in intelligence").
 - The stylesheet is 19 small files built on design tokens (type scale in rem, a 4 px space grid, radius, elevation, motion, layers; two breakpoints) with logical properties, instead of one 6,000-line file with 27 `z-index`es and 19 font sizes. About 45 dead rules went. It is larger (115 KB to 152 KB, 21 KB to 29 KB gzipped): the new pieces are bigger than the dead ones.
 
+### Fixed (voice mode: it repeating itself)
+- **Its own voice is no longer taken as you.** On speakers the microphone also hears the AI; the speech-to-text turned that into the AI's own sentences, which it then answered, so it seemed to repeat its words. Both engines now compare what was heard with what the AI said a moment ago (`src/js/echo.mjs`): a near copy is dropped (Studio and Instant listen again; Live silences the answer to it, and it isn't saved to the chat).
+- **Live: the wait after its voice includes the speakers' own delay** (`outputLatency`; Bluetooth speakers add 200 ms or more), so the end of a sentence isn't sent to Gemini as something you said.
+- **Live: a conversation could start behind your back.** Closing voice mode (or picking another engine) while the microphone was still loading left a second Live connection that listened, answered unheard and saved turns into the chat, spending the Gemini quota. It is cancelled now.
+- **Live: after a lost connection, the next answer could stay silent** (an answer you had cut off was still being dropped); the half answer is saved and the state starts clean.
+- The voice instructions say never to say the same thing twice and not to answer its own echo.
+- Closing the desktop window to the tray ends a voice conversation; the microphone stayed open before.
+
+### Removed
+- Unused: `metadata.json` (left from the app's template), `isRtl()`, the briefing's empty `addBriefingSource` hook.
+
 ### Dev dependencies
 - `axe-core` (accessibility checks, `npm run test:a11y`). Nothing new at run time.
 

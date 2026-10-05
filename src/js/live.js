@@ -5,7 +5,8 @@
 // speech-to-text step, and it can be interrupted like a person.
 import { t } from "./i18n.js";
 const HOLD = 10; // mic chunks (~0.4 s) held back while the AI talks
-const ECHO_TAIL = 0.35; // s the mic stays held after the AI stops: the room's echo
+const ECHO_TAIL = 0.35; // s the mic stays held after the AI stops: the room's echo (plus the speakers' own delay, see tail())
+const ECHO_DROP = 6; // s an echo-triggered answer is silenced at most, in case it never ends on its own
 const LEARN = 0.6; // s at the start of the AI's speech spent learning how loud its echo is
 const BARGE = 0.25; // s you need to talk over it before it stops
 const CUSHION = 0.08; // s of audio gathered before a new stretch of speech starts playing
@@ -37,6 +38,7 @@ export class LiveVoice {
     this.turnOpen = false; // an answer is on its way
     this.dropAudio = false; // the rest of an answer you cut off
     this.timer = null;
+    this.dropTimer = null;
     this.queue = []; // its captions, robot moves and turn ends, waiting for its voice (see later())
     this.queueTimer = null;
   }
@@ -44,6 +46,12 @@ export class LiveVoice {
   // Resolves once Gemini is ready to talk; rejects with a readable message
   async start(startMessage) {
     if (this.micSource) await this.startCapture();
+    // Stopped while the microphone was being set up (voice mode closed or another engine picked):
+    // opening the connection now would leave a second conversation listening and answering unseen
+    if (this.closed) {
+      this.stop();
+      throw new Error("closed");
+    }
     this.timer = setInterval(() => this.checkSpeaking(), 80);
     return new Promise((resolve, reject) => {
       let settled = false;
@@ -101,7 +109,7 @@ export class LiveVoice {
   fromMic({ pcm, level }) {
     if (!this.ready || this.muted || this.ws.readyState !== WebSocket.OPEN) return;
     const now = this.ctx.currentTime;
-    if (now >= this.playEnd + ECHO_TAIL) {
+    if (now >= this.playEnd + this.tail()) {
       this.held.length = 0;
       this.ws.send(pcm);
       return;
@@ -134,7 +142,23 @@ export class LiveVoice {
   silence() {
     if (this.turnOpen) this.dropAudio = true;
     this.stopPlayback();
-    this.playEnd = this.ctx.currentTime - ECHO_TAIL; // no echo left to wait for
+    this.playEnd = this.ctx.currentTime - this.tail(); // no echo left to wait for
+  }
+
+  // How long after its voice ends the mic may still hear it: the room's echo, and
+  // the time the sound needs to leave the speakers (Bluetooth can take 200 ms or more)
+  tail() {
+    return ECHO_TAIL + Math.min(0.5, this.ctx.outputLatency || 0);
+  }
+
+  // What you "said" was its own voice coming back: its answer to that isn't played
+  // or saved. Cleared when that answer ends, or after a few seconds if it never comes.
+  dropEcho() {
+    this.dropAudio = true;
+    clearTimeout(this.dropTimer);
+    this.dropTimer = setTimeout(() => (this.dropAudio = false), ECHO_DROP * 1000);
+    this.stopPlayback();
+    this.send({ type: "echo" });
   }
 
   setMuted(muted) {
@@ -199,7 +223,7 @@ export class LiveVoice {
 
   // Its voice, or the room's echo of it, may still be in the mic
   aiAudible() {
-    return this.ctx.currentTime < this.playEnd + ECHO_TAIL;
+    return this.ctx.currentTime < this.playEnd + this.tail();
   }
 
   // Events from the helper → handlers: onTranscript(role, text), onInterrupted(),
@@ -219,13 +243,11 @@ export class LiveVoice {
         break;
       case "interrupted":
         this.stopPlayback();
-        this.dropAudio = false;
-        this.turnOpen = false;
+        this.endTurn();
         this.on.onInterrupted?.();
         break;
       case "turn-complete":
-        this.dropAudio = false;
-        this.turnOpen = false;
+        this.endTurn();
         this.later("turn", () => this.on.onTurnComplete?.());
         break;
       case "chat":
@@ -245,15 +267,23 @@ export class LiveVoice {
         Promise.resolve(this.on.onConfirm?.(event)).then((allow) => this.send({ type: "confirm", id: event.id, allow: allow === true }));
         break;
       case "reconnecting":
+        this.endTurn(); // the answer in progress won't be finished on the new connection
         this.on.onReconnecting?.();
         break;
       case "resumed":
+        this.endTurn();
         this.on.onResumed?.();
         break;
       case "error":
         this.on.onError?.(event.error);
         break;
     }
+  }
+
+  endTurn() {
+    clearTimeout(this.dropTimer);
+    this.dropAudio = false;
+    this.turnOpen = false;
   }
 
   // Gemini sends its voice faster than it's played, so its captions, robot
@@ -282,6 +312,7 @@ export class LiveVoice {
   stop() {
     this.closed = true;
     clearInterval(this.timer);
+    clearTimeout(this.dropTimer);
     this.stopPlayback();
     if (this.ws && this.ws.readyState <= WebSocket.OPEN) this.ws.close();
     try {
