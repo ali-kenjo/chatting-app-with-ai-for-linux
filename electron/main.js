@@ -100,6 +100,8 @@ function createWindow({ show = true } = {}) {
     // With the tray, closing the window keeps Friends running (reminders still come)
     if (!quitting && tray && keepInTray()) {
       e.preventDefault();
+      // A voice conversation ends with the window: nobody can see it, and the microphone stays open otherwise
+      win.webContents.executeJavaScript("document.dispatchEvent(new Event('friends:window-hidden'))").catch(() => {});
       win.hide();
       // Once: say where it went (on some desktops the tray icon isn't shown)
       const state = loadState();

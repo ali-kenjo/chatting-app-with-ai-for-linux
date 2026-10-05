@@ -100,6 +100,13 @@ export function addTranscript(role, text) {
   if (stick) transcriptPane.scrollTop = transcriptPane.scrollHeight;
 }
 
+// What was heard turned out not to be you (the AI's own echo): its line goes
+export function discardLine(role) {
+  lines[role]?.remove();
+  lines[role] = null;
+  if (!transcriptPane.children.length) placeholder(transcriptPane, EMPTY.transcript);
+}
+
 export function endTurn() {
   lines = { user: null, model: null };
 }

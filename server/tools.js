@@ -591,15 +591,10 @@ async function briefing(ctx) {
   if (online && s.life?.briefingNews !== false) {
     extras.push(news.getNews("").then((r) => (out.headlines = r.articles.slice(0, 5).map((a) => a.title))).catch(() => {}));
   }
-  for (const extra of briefingSources) extras.push(Promise.resolve(extra(ctx, out)).catch(() => {}));
   extras.push(connectors.briefing(ctx, out).catch(() => {}));
   await Promise.all(extras);
   return out;
 }
-
-// Other parts of a briefing (weather…), added by their modules
-const briefingSources = [];
-const addBriefingSource = (fn) => briefingSources.push(fn);
 
 async function runLife(name, args, ctx) {
   const say = (line) => ctx.onActivity?.(line);
@@ -900,4 +895,4 @@ async function run(name, args, ctx) {
   }
 }
 
-module.exports = { declarations, forLocal, run, isRobotTool, robotEvent, briefing, addBriefingSource };
+module.exports = { declarations, forLocal, run, isRobotTool, robotEvent, briefing };

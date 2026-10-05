@@ -23,7 +23,8 @@ import { getSelectedBrainId, liveWanted, getLocalBrainId } from "./composer.js";
 import { getAccessToken } from "./auth.js";
 import { LiveVoice } from "./live.js";
 import { VoiceRecorder, videoType, download } from "./recorder.js";
-import { toggleDrawer, resetDrawer, addDraft, addTranscript, endTurn } from "./voice-drawer.js";
+import { toggleDrawer, resetDrawer, addDraft, addTranscript, endTurn, discardLine } from "./voice-drawer.js";
+import { isEcho, createSpoken } from "./echo.mjs";
 import { robot } from "./robot/index.js";
 import { updateVoiceLevels } from "./robot/bands.mjs";
 import { createFilming } from "./filming.js";
@@ -82,6 +83,7 @@ const ENGINES = {
 };
 const ORDER = ["live", "studio", "instant"];
 let engineChoice = ORDER.includes(store.get("friends.voiceEngine")) ? store.get("friends.voiceEngine") : "live";
+const spoken = createSpoken(); // what the AI said lately, to tell its echo from you (echo.mjs)
 let live = null; // the running LiveVoice
 let classicTts = null; // "studio" | "instant" while that engine runs
 
@@ -346,6 +348,10 @@ document.addEventListener("keydown", (e) => {
   e.preventDefault();
   toggleMute();
 });
+
+// The desktop app's window went to the tray: a conversation nobody can see ends,
+// so the microphone isn't left open and Gemini isn't left listening
+document.addEventListener("friends:window-hidden", () => closeVoice());
 
 // Event Listeners
 document.getElementById("voice-open")?.addEventListener("click", (e) => {
@@ -638,6 +644,7 @@ export async function openVoice() {
   if (!voiceMode.hidden) return;
   const session = ++opened;
   voiceMode.hidden = false;
+  spoken.clear();
   updateThemeButtons();
   voiceMode.classList.remove("muted");
   robot.director.openVoice();
@@ -891,6 +898,7 @@ function liveUnavailable(message) {
 
 function liveHandlers() {
   let thinkingTimer = null;
+  let echoTurn = false; // what the mic heard this turn was the AI's own voice
   return {
     onSpeaking(speaking) {
       if (speaking) {
@@ -901,6 +909,20 @@ function liveHandlers() {
       }
     },
     onTranscript(role, text) {
+      if (role === "user") {
+        if (echoTurn) return;
+        // Its own voice, heard through the mic: not you, so it gets no answer
+        if (isEcho(userLine + text, spoken.text(aiLine))) {
+          echoTurn = true;
+          userLine = "";
+          discardLine("user");
+          caption("", "");
+          clearTimeout(thinkingTimer);
+          live?.dropEcho();
+          if (state === "hearing" || state === "thinking") setState("listening");
+          return;
+        }
+      }
       addTranscript(role, text);
       robot.director.caption(role, text);
       if (role === "user") {
@@ -917,9 +939,13 @@ function liveHandlers() {
       }
     },
     onInterrupted() {
+      spoken.add(aiLine); // what it got to say is still what the mic may hear
       aiLine = "";
+      echoTurn = false;
     },
     onTurnComplete() {
+      spoken.add(aiLine);
+      echoTurn = false;
       endTurn();
       robot.director.turnDone();
       userLine = "";
@@ -1139,6 +1165,7 @@ export async function askInVoice(text, { greet = false, note: appNote = "" } = {
     if (error) throw new Error(error);
 
     endTurn();
+    spoken.add(fullReply);
     streamFinished = true;
     speakMore(true);
     if (sentenceQueue.length === 0 && !isDrainingQueue) finishTurn();
@@ -1345,6 +1372,8 @@ async function handleUtterance(chunks) {
     const text = await api.voice.transcribe(toWav(chunks, audioCtx.sampleRate));
     if (mine !== turn) return;
     if (!text || text.trim().length < 2) return listen();
+    // The mic caught the AI's own voice (speakers): answering that would make it repeat itself
+    if (isEcho(text, spoken.text())) return listen();
     askInVoice(text);
   } catch (err) {
     if (mine !== turn) return;
