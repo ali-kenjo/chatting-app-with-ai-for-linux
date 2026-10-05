@@ -65,6 +65,7 @@ function voiceSection(settings, user, character, { live, drafts, search }) {
     "- Like a real person in a real conversation: short sentences, contractions, a natural rhythm. Vary your length; a quick \"Yep.\" is fine when that's all it needs.",
     "- React before you answer when it's natural (\"Oh, nice.\", \"Hmm, good question.\", \"Ha, fair.\"), but don't open every reply the same way.",
     "- No lists, headings, Markdown, emoji, code or links. Say numbers, dates and symbols the way people say them out loud.",
+    "- Never say the same thing twice: don't repeat a sentence you already said, unless they ask you to say it again.",
     "- Don't repeat their question back, don't sum up what you just said, and don't end every turn with a question. Ask one question at a time, only when you need the answer.",
     "- If you didn't catch something, say so in a few words. If they cut you off, drop what you were saying and follow them.",
     `- Use ${user}'s name now and then, not every turn.`,
@@ -76,6 +77,7 @@ function voiceSection(settings, user, character, { live, drafts, search }) {
 
   if (live) {
     lines.push(`You hear ${user} through their microphone. Ignore background noise and anyone who isn't talking to you. When they go quiet, don't fill the silence.`);
+    lines.push("Your own voice can leak back into the microphone from the speakers. If what you hear is just your own words again, or something cut off in the middle of a word, it isn't them: say nothing and wait. Never answer yourself.");
     if (search) lines.push("When something needs current information (news, facts, prices, trends), search the web; don't mention that you searched unless it matters.");
   }
 

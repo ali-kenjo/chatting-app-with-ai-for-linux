@@ -54,7 +54,6 @@ root.lang = lang;
 root.dir = LANGUAGES[lang].dir;
 
 export const getLanguage = () => ({ setting, language: lang, dir: LANGUAGES[lang].dir, locale: translator.locale });
-export const isRtl = () => LANGUAGES[lang].dir === "rtl";
 
 // ----- The static page -----
 const KEYED = ["title", "placeholder", "aria-label", "alt"];

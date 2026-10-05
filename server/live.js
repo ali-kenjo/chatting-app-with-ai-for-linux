@@ -8,7 +8,8 @@
 //   mono PCM (your voice), {type:"text", text}, {type:"audio-end"} (mic
 //   paused), {type:"confirm", id, allow}, {type:"robot", on} (the robot body
 //   appeared or went away: the AI gets or loses its robot tools), {type:"on-air", on}
-//   (co-host mode), {type:"note", text} (the app tells the AI something, e.g. a reminder)
+//   (co-host mode), {type:"note", text} (the app tells the AI something, e.g. a reminder),
+//   {type:"echo"} (what Gemini just "heard" was the AI's own voice coming back: that turn isn't saved)
 // Helper → page: {type:"ready", model, robotTools}; binary 16-bit mono PCM (the AI's voice,
 //   24 kHz unless {type:"audio-format", rate} says otherwise);
 //   {type:"transcript", role:"user"|"model", text} (pieces as they come),
@@ -39,7 +40,7 @@ const NEW_CHAT_TITLE = "Voice conversation";
 const upstreamUrl = () => process.env.FRIENDS_LIVE_UPSTREAM || UPSTREAM;
 
 const toBuffer = (data) => (Array.isArray(data) ? Buffer.concat(data) : Buffer.from(data));
-const newTurn = () => ({ user: "", model: "", activity: [], drafts: [] });
+const newTurn = () => ({ user: "", model: "", activity: [], drafts: [], echo: false });
 
 // Why a Live connection failed, in words a person can act on
 function liveError(reason) {
@@ -110,6 +111,7 @@ class LiveSession {
     else if (msg.type === "confirm") this.confirmations.get(msg.id)?.(msg.allow === true);
     else if (msg.type === "robot") this.setRobot(msg.on === true);
     else if (msg.type === "on-air") this.setOnAir(msg.on === true);
+    else if (msg.type === "echo") this.turn.echo = true;
     // Something the app tells the AI (a reminder went off): it says it, and it isn't saved as yours
     else if (msg.type === "note" && typeof msg.text === "string" && msg.text.trim() && this.ready) {
       this.toGemini({ realtimeInput: { text: prompt.appNote(this.settings || settings.get(), msg.text.trim().slice(0, 1000)) } });
@@ -327,8 +329,9 @@ class LiveSession {
   finishTurn() {
     const turn = this.turn;
     this.turn = newTurn();
-    const user = turn.user.replace(/\s+/g, " ").trim();
-    const model = turn.model.replace(/\s+/g, " ").trim();
+    // An echo of its own voice: neither that nor its answer to it is part of the conversation
+    const user = turn.echo ? "" : turn.user.replace(/\s+/g, " ").trim();
+    const model = turn.echo ? "" : turn.model.replace(/\s+/g, " ").trim();
     if (!user && !model && !turn.activity.length && !turn.drafts.length) return;
 
     let chat = null;
@@ -483,6 +486,9 @@ class LiveSession {
       }
       return this.fail(why);
     }
+    // What was said so far is kept; the new connection starts a new turn instead of
+    // adding the rest of an answer that Gemini will not finish to this one
+    this.finishTurn();
     if (this.reconnects++ >= RECONNECTS) return this.fail(why);
     if (!wasReady && this.handle) {
       // Resuming didn't work: a fresh session that gets the chat so far as text

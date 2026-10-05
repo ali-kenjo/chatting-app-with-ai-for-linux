@@ -183,6 +183,44 @@ describe("Gemini Live bridge", () => {
     page.ws.close();
   });
 
+  test("what the mic heard was its own voice: that turn isn't saved", async () => {
+    const page = openPage(port);
+    await once(page.ws, "open");
+    const upstream = gemini.connection();
+    page.send({ type: "start", chatId: null });
+    const conn = await upstream;
+    await conn.next((m) => m.setup);
+    conn.send({ setupComplete: {} });
+    await page.next("ready");
+    await conn.next((m) => m.realtimeInput?.text);
+    conn.send({ serverContent: { outputTranscription: { text: "Honestly, the first hook is the strongest." } } });
+    conn.send({ serverContent: { turnComplete: true } });
+    await page.next("turn-complete");
+    const chat = await page.next("chat");
+
+    // Gemini "hears" its own sentence, answers it, and the page says it was an echo
+    conn.send({ serverContent: { inputTranscription: { text: "the first hook is the strongest" } } });
+    await page.next("transcript");
+    page.send({ type: "echo" });
+    await new Promise((resolve) => setTimeout(resolve, 50)); // the page's message is on its way (a different connection)
+    conn.send({ serverContent: { outputTranscription: { text: "Right, as I said, the first hook." } } });
+    conn.send({ serverContent: { turnComplete: true } });
+    await page.next("turn-complete");
+    // ...and a real exchange afterwards is saved as usual
+    conn.send({ serverContent: { inputTranscription: { text: "Make it shorter" } } });
+    conn.send({ serverContent: { outputTranscription: { text: "Done." } } });
+    conn.send({ serverContent: { turnComplete: true } });
+    await page.next("turn-complete");
+    await page.next("chat"); // renamed after your first words
+
+    assert.deepStrictEqual(chats.get(chat.id).messages.map((m) => [m.role, m.text]), [
+      ["model", "Honestly, the first hook is the strongest."],
+      ["user", "Make it shorter"],
+      ["model", "Done."],
+    ]);
+    page.ws.close();
+  });
+
   test("when Gemini ends the connection, the same session continues", async () => {
     const page = openPage(port);
     await once(page.ws, "open");
