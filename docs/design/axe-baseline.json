@@ -1,0 +1,1038 @@
+[
+  {
+    "surface": "first-run",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "start-no-ai",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "start",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "chat",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "chat",
+    "lang": "en",
+    "theme": "dark",
+    "id": "page-has-heading-one",
+    "impact": "moderate",
+    "help": "Page should contain a level-one heading",
+    "nodes": [
+      {
+        "target": "html",
+        "summary": "Fix all of the following:   Page must have a level-one heading"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "model-menu",
+    "lang": "en",
+    "theme": "dark",
+    "id": "aria-required-children",
+    "impact": "critical",
+    "help": "Certain ARIA roles must contain particular children",
+    "nodes": [
+      {
+        "target": "#model-menu",
+        "summary": "Fix any of the following:   Element has children which are not allowed: button"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "model-menu",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "model-menu",
+    "lang": "en",
+    "theme": "dark",
+    "id": "page-has-heading-one",
+    "impact": "moderate",
+    "help": "Page should contain a level-one heading",
+    "nodes": [
+      {
+        "target": "html",
+        "summary": "Fix all of the following:   Page must have a level-one heading"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "search",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "search",
+    "lang": "en",
+    "theme": "dark",
+    "id": "scrollable-region-focusable",
+    "impact": "serious",
+    "help": "Scrollable region must have keyboard access",
+    "nodes": [
+      {
+        "target": "#search-results",
+        "summary": "Fix any of the following:   Element should have focusable content   Element should be focusable"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "today-today",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "today-tasks",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "today-reminders",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "today-habits",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "today-journal",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "settings-font",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "settings-theme",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "settings-ai-control",
+    "lang": "en",
+    "theme": "dark",
+    "id": "aria-allowed-attr",
+    "impact": "critical",
+    "help": "Elements must only use supported ARIA attributes",
+    "nodes": [
+      {
+        "target": "button[data-effort=\"fast\"]",
+        "summary": "Fix all of the following:   ARIA attribute is not allowed: aria-checked=\"false\""
+      },
+      {
+        "target": "button[data-effort=\"balanced\"]",
+        "summary": "Fix all of the following:   ARIA attribute is not allowed: aria-checked=\"true\""
+      },
+      {
+        "target": "button[data-effort=\"deep\"]",
+        "summary": "Fix all of the following:   ARIA attribute is not allowed: aria-checked=\"false\""
+      }
+    ],
+    "count": 3
+  },
+  {
+    "surface": "settings-ai-control",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "settings-memory",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "settings-personality",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "settings-life",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "settings-builder",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "settings-robot",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "settings-integrations",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "settings-data",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "voice",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "voice",
+    "lang": "en",
+    "theme": "dark",
+    "id": "region",
+    "impact": "moderate",
+    "help": "All page content should be contained by landmarks",
+    "nodes": [
+      {
+        "target": "#voice-waves",
+        "summary": "Fix any of the following:   Some page content is not contained by landmarks"
+      },
+      {
+        "target": ".voice-status",
+        "summary": "Fix any of the following:   Some page content is not contained by landmarks"
+      },
+      {
+        "target": "#voice-character-switch",
+        "summary": "Fix any of the following:   Some page content is not contained by landmarks"
+      },
+      {
+        "target": ".perm-banner-content",
+        "summary": "Fix any of the following:   Some page content is not contained by landmarks"
+      }
+    ],
+    "count": 4
+  },
+  {
+    "surface": "filming-setup",
+    "lang": "en",
+    "theme": "dark",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "filming-setup",
+    "lang": "en",
+    "theme": "dark",
+    "id": "region",
+    "impact": "moderate",
+    "help": "All page content should be contained by landmarks",
+    "nodes": [
+      {
+        "target": "#voice-waves",
+        "summary": "Fix any of the following:   Some page content is not contained by landmarks"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "first-run",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "start-no-ai",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "start",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "chat",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "chat",
+    "lang": "en",
+    "theme": "light",
+    "id": "page-has-heading-one",
+    "impact": "moderate",
+    "help": "Page should contain a level-one heading",
+    "nodes": [
+      {
+        "target": "html",
+        "summary": "Fix all of the following:   Page must have a level-one heading"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "model-menu",
+    "lang": "en",
+    "theme": "light",
+    "id": "aria-required-children",
+    "impact": "critical",
+    "help": "Certain ARIA roles must contain particular children",
+    "nodes": [
+      {
+        "target": "#model-menu",
+        "summary": "Fix any of the following:   Element has children which are not allowed: button"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "model-menu",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "model-menu",
+    "lang": "en",
+    "theme": "light",
+    "id": "page-has-heading-one",
+    "impact": "moderate",
+    "help": "Page should contain a level-one heading",
+    "nodes": [
+      {
+        "target": "html",
+        "summary": "Fix all of the following:   Page must have a level-one heading"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "search",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "search",
+    "lang": "en",
+    "theme": "light",
+    "id": "scrollable-region-focusable",
+    "impact": "serious",
+    "help": "Scrollable region must have keyboard access",
+    "nodes": [
+      {
+        "target": "#search-results",
+        "summary": "Fix any of the following:   Element should have focusable content   Element should be focusable"
+      }
+    ],
+    "count": 1
+  },
+  {
+    "surface": "today-today",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "today-tasks",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "today-reminders",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "today-habits",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "today-journal",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "settings-font",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "settings-theme",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "settings-ai-control",
+    "lang": "en",
+    "theme": "light",
+    "id": "aria-allowed-attr",
+    "impact": "critical",
+    "help": "Elements must only use supported ARIA attributes",
+    "nodes": [
+      {
+        "target": "button[data-effort=\"fast\"]",
+        "summary": "Fix all of the following:   ARIA attribute is not allowed: aria-checked=\"false\""
+      },
+      {
+        "target": "button[data-effort=\"balanced\"]",
+        "summary": "Fix all of the following:   ARIA attribute is not allowed: aria-checked=\"true\""
+      },
+      {
+        "target": "button[data-effort=\"deep\"]",
+        "summary": "Fix all of the following:   ARIA attribute is not allowed: aria-checked=\"false\""
+      }
+    ],
+    "count": 3
+  },
+  {
+    "surface": "settings-ai-control",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".added",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 3.08 (foreground color: #3fa56b, background color: #ffffff, font size: 9.4pt (12.5px), font weight: normal). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 3
+  },
+  {
+    "surface": "settings-memory",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "settings-personality",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "settings-life",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "settings-builder",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "settings-robot",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "settings-integrations",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "settings-data",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "voice",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "voice",
+    "lang": "en",
+    "theme": "light",
+    "id": "region",
+    "impact": "moderate",
+    "help": "All page content should be contained by landmarks",
+    "nodes": [
+      {
+        "target": "#voice-waves",
+        "summary": "Fix any of the following:   Some page content is not contained by landmarks"
+      },
+      {
+        "target": ".voice-status",
+        "summary": "Fix any of the following:   Some page content is not contained by landmarks"
+      },
+      {
+        "target": "#voice-character-switch",
+        "summary": "Fix any of the following:   Some page content is not contained by landmarks"
+      },
+      {
+        "target": ".perm-banner-content",
+        "summary": "Fix any of the following:   Some page content is not contained by landmarks"
+      }
+    ],
+    "count": 4
+  },
+  {
+    "surface": "filming-setup",
+    "lang": "en",
+    "theme": "light",
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      {
+        "target": "#voice-open > span:nth-child(2)",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.22 (foreground color: #6f9cf5, background color: #e1e9f9, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      },
+      {
+        "target": ".badge-hero",
+        "summary": "Fix any of the following:   Element has insufficient color contrast of 2.7 (foreground color: #ffffff, background color: #6f9cf5, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+      }
+    ],
+    "count": 2
+  },
+  {
+    "surface": "filming-setup",
+    "lang": "en",
+    "theme": "light",
+    "id": "region",
+    "impact": "moderate",
+    "help": "All page content should be contained by landmarks",
+    "nodes": [
+      {
+        "target": "#voice-waves",
+        "summary": "Fix any of the following:   Some page content is not contained by landmarks"
+      }
+    ],
+    "count": 1
+  }
+]

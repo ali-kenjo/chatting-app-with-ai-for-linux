@@ -8,6 +8,8 @@
 import { api } from "./api.js";
 import { getSettings, onSettings, updateSettings } from "./store.js";
 import { playbackRate, voiceErrorText } from "./personality.js";
+import { t } from "./i18n.js";
+import { confirmDialog } from "./dialogs.js";
 
 const switches = [document.getElementById("character-switch"), document.getElementById("voice-character-switch")];
 const grid = document.getElementById("char-grid");
@@ -60,6 +62,7 @@ function renderSwitch(el, s) {
       b.setAttribute("aria-checked", String(c.id === s.characters.active));
       b.dataset.id = c.id;
       b.title = c.tagline ? `${c.name}: ${c.tagline}` : c.name;
+      b.setAttribute("aria-label", c.name);
       b.style.setProperty("--c", c.look?.accent || "var(--accent)");
       b.innerHTML = '<span class="character-dot" aria-hidden="true"></span><span class="character-name"></span>';
       b.querySelector(".character-dot").textContent = initial(c.name);
@@ -97,11 +100,15 @@ function renderGrid(s) {
       card.querySelector("strong").textContent = c.name;
       card.querySelector(".char-tagline").textContent = c.tagline || "";
       const voice = meta?.voices.find((v) => v.name === c.voice);
-      card.querySelector(".char-voice").textContent = `Voice: ${c.voice}${voice ? ` · ${voice.sound}` : ""}`;
+      card.querySelector(".char-voice").textContent = `${t("Voice")}: ${c.voice}${voice ? ` · ${t(voice.sound)}` : ""}`;
       const talk = card.querySelector('[data-act="talk"]');
-      talk.textContent = c.id === s.characters.active ? "Talking" : "Talk to";
+      talk.textContent = c.id === s.characters.active ? t("Talking") : t("Talk to");
+      talk.setAttribute("aria-label", c.id === s.characters.active ? t("Talking to {name}", { name: c.name }) : t("Talk to {name}", { name: c.name }));
       talk.disabled = c.id === s.characters.active;
-      card.querySelector('[data-act="edit"]').textContent = c.id === editing ? "Close" : "Edit";
+      const edit = card.querySelector('[data-act="edit"]');
+      edit.textContent = c.id === editing ? t("Close") : t("Edit");
+      edit.setAttribute("aria-label", c.id === editing ? t("Close the editor for {name}", { name: c.name }) : t("Edit {name}", { name: c.name }));
+      edit.setAttribute("aria-expanded", String(c.id === editing));
       return card;
     })
   );
@@ -146,11 +153,11 @@ function voiceOptions(select, gender, chosen) {
   const groups = gender === "male" ? ["male", "female"] : ["female", "male"];
   for (const g of groups) {
     const group = document.createElement("optgroup");
-    group.label = g === "male" ? "Male voices" : "Female voices";
+    group.label = g === "male" ? t("Male voices") : t("Female voices");
     for (const v of meta.voices.filter((x) => x.gender === g)) {
       const o = document.createElement("option");
       o.value = v.name;
-      o.textContent = `${v.name} · ${v.sound}`;
+      o.textContent = `${v.name} · ${t(v.sound)}`;
       group.append(o);
     }
     select.append(group);
@@ -173,18 +180,20 @@ function renderEditor() {
 
   const head = document.createElement("div");
   head.className = "char-editor-head";
-  head.textContent = `Editing ${c.name}`;
+  head.textContent = t("Editing {name}", { name: c.name });
+  head.setAttribute("role", "heading");
+  head.setAttribute("aria-level", "4");
   editor.append(head);
 
   const name = Object.assign(document.createElement("input"), { className: "field", value: c.name, maxLength: 40, autocomplete: "off" });
   name.addEventListener("input", () => change(c.id, (x) => (x.name = name.value)));
-  editor.append(field("Name", name));
+  editor.append(field(t("Name"), name));
 
   const row = document.createElement("div");
   row.className = "char-voice-row";
   const gender = document.createElement("select");
   gender.className = "field";
-  gender.innerHTML = '<option value="female">Female</option><option value="male">Male</option>';
+  gender.innerHTML = `<option value="female">${t("Female")}</option><option value="male">${t("Male")}</option>`;
   gender.value = c.gender;
   const voice = document.createElement("select");
   voice.className = "field";
@@ -192,7 +201,7 @@ function renderEditor() {
   const play = document.createElement("button");
   play.type = "button";
   play.className = "btn small";
-  play.textContent = "▶ Listen";
+  play.textContent = t("▶ Listen");
   gender.addEventListener("change", () => {
     change(c.id, (x) => (x.gender = gender.value));
     // A voice of the new gender, unless the chosen one already is
@@ -203,7 +212,7 @@ function renderEditor() {
   });
   voice.addEventListener("change", () => change(c.id, (x) => (x.voice = voice.value)));
   play.addEventListener("click", () => playSample(play, voice.value));
-  row.append(field("Gender", gender, "Picks the local voice too"), field("Voice", voice, "Gemini voices, in Live and Studio"), play);
+  row.append(field(t("Gender"), gender, t("Picks the local voice too")), field(t("Voice"), voice, t("Gemini voices, in Live and Studio")), play);
   editor.append(row);
 
   for (const [key, { label, max }] of Object.entries(meta.fields)) {
@@ -214,15 +223,17 @@ function renderEditor() {
     area.value = c[key] || "";
     area.placeholder = meta.builtin.atlas[key] || "";
     area.addEventListener("input", () => change(c.id, (x) => (x[key] = area.value)));
-    editor.append(field(label, area, key === "identity" ? "{user} becomes your name" : key === "onCamera" ? "How they act as your co-host" : ""));
+    area.dir = "auto";
+    editor.append(field(t(label), area, key === "identity" ? t("{user} becomes your name") : key === "onCamera" ? t("How they act as your co-host") : ""));
   }
 
   const actions = document.createElement("div");
   actions.className = "form-test-bar";
   if (c.builtin) {
-    const reset = Object.assign(document.createElement("button"), { type: "button", className: "btn small", textContent: `Reset ${meta.builtin[c.builtin].name} to the original` });
-    reset.addEventListener("click", () => {
-      if (!armed(reset, "Sure? Your changes are lost")) return;
+    const reset = Object.assign(document.createElement("button"), { type: "button", className: "btn small", textContent: t("Reset {name} to the original", { name: meta.builtin[c.builtin].name }) });
+    reset.addEventListener("click", async () => {
+      const ok = await confirmDialog({ title: t("Reset {name}?", { name: c.name }), message: t("Everything you changed about this character is replaced by the original."), confirm: t("Reset"), danger: true });
+      if (!ok) return;
       const original = meta.builtin[c.builtin];
       change(c.id, (x) => Object.assign(x, structuredClone(original)));
       renderedEditor = null;
@@ -230,9 +241,10 @@ function renderEditor() {
     });
     actions.append(reset);
   } else {
-    const remove = Object.assign(document.createElement("button"), { type: "button", className: "btn small btn-danger", textContent: "Delete this character" });
-    remove.addEventListener("click", () => {
-      if (!armed(remove, "Sure?")) return;
+    const remove = Object.assign(document.createElement("button"), { type: "button", className: "btn small btn-danger", textContent: t("Delete this character") });
+    remove.addEventListener("click", async () => {
+      const ok = await confirmDialog({ title: t("Delete {name}?", { name: c.name }), message: t("This character will be gone. Your chats stay."), confirm: t("Delete"), danger: true });
+      if (!ok) return;
       updateSettings((s) => {
         s.characters.list = s.characters.list.filter((x) => x.id !== c.id);
         if (s.characters.active === c.id) s.characters.active = s.characters.list[0]?.id || "atlas";
@@ -245,24 +257,11 @@ function renderEditor() {
   editor.append(actions);
 }
 
-// A risky button needs a second click within a few seconds
-function armed(button, label) {
-  if (button.dataset.armed) return true;
-  const original = button.textContent;
-  button.dataset.armed = "1";
-  button.textContent = label;
-  setTimeout(() => {
-    delete button.dataset.armed;
-    button.textContent = original;
-  }, 4000);
-  return false;
-}
-
 document.getElementById("char-add").addEventListener("click", () => {
   const s = getSettings();
   if (!s || !meta) return;
   if (s.characters.list.length >= meta.max) {
-    status.textContent = `Up to ${meta.max} characters.`;
+    status.textContent = t("Up to {n} characters.", { n: meta.max });
     status.className = "test-feedback error";
     return;
   }
@@ -297,7 +296,7 @@ async function playSample(button, voiceName) {
   const s = getSettings();
   const c = find(editing) || activeCharacter();
   try {
-    const blob = await api.voice.speak(`Hi! I'm ${c?.name || "your friend"}. This is how I sound when we talk.`, voiceName);
+    const blob = await api.voice.speak(t("Hi! I'm {name}. This is how I sound when we talk.", { name: c?.name || t("your friend") }), voiceName);
     if (sample !== mine) return;
     const audio = new Audio(URL.createObjectURL(blob));
     audio.playbackRate = s ? playbackRate(s) : 1;

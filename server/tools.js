@@ -376,7 +376,7 @@ function declarations(settings, { voice = false, robot: onScreen = false, nonBlo
 }
 
 // Small local models do better with fewer tools, and every tool takes room in
-// their context. With "Local AI tools: essential" (Settings → AI control) they
+// their context. With "Local AI tools: essential" (Settings → AI & privacy) they
 // get these, plus file tools and the robot; "all" gives them everything.
 const ESSENTIAL = new Set([
   "edit_file_part", "read_file_lines", "search_code", "project_tree", "create_project", "run_command", "command_output", "stop_command", "preview_site",
@@ -401,7 +401,7 @@ async function planFileAction(name, args, settings) {
   const p = settings.permissions;
   const at = (x) => files.resolve(x, p.folders);
   const deny = (what) => {
-    throw new Error(`You don't have permission to ${what}. The user can allow it in Settings → AI control.`);
+    throw new Error(`You don't have permission to ${what}. The user can allow it in Settings → AI & privacy.`);
   };
 
   switch (name) {
@@ -468,7 +468,7 @@ async function runBuilder(name, args, ctx) {
   if (b.enabled === false) throw new Error("Builder mode is off (Settings → Builder).");
   const at = (x) => files.resolve(x, p.folders);
   const need = (ok, what) => {
-    if (!ok) throw new Error(`You don't have permission to ${what}. The user can allow it in Settings → AI control.`);
+    if (!ok) throw new Error(`You don't have permission to ${what}. The user can allow it in Settings → AI & privacy.`);
   };
   const say = (line) => ctx.onActivity?.(line);
   // Changing a file asks, like the other file tools, when "Ask before acting" is on

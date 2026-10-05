@@ -45,7 +45,7 @@ async function main() {
     await page.reload({ waitUntil: "networkidle2" });
     await page.evaluate(() => {
       document.getElementById("settings-btn")?.click();
-      [...document.querySelectorAll(".modal-nav .tab")].find((t) => /AI control/.test(t.textContent))?.click();
+      document.querySelector('.modal-nav .tab[data-tab="ai-control"]')?.click();
     });
     await page.waitForSelector("#local-card", { visible: true, timeout: 10000 });
     await page.waitForFunction(() => !/Looking for/.test(document.getElementById("local-card-status").textContent), { timeout: 10000 });

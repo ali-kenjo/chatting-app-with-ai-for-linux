@@ -56,7 +56,7 @@ module.exports = {
   tools: [
     {
       decl: fn("web_search", "Search the web for current information: news, facts, prices, events, how-tos, reviews.", { query: str("What to search for") }),
-      // Gemini Live searches by itself; and only when Settings → AI control allows searching
+      // Gemini Live searches by itself; and only when Settings → AI & privacy allows searching
       when: ({ settings, live }) => !live && settings.aiControl?.searchGrounding !== false,
       async run(args, { ctx }) {
         ctx.onActivity?.(`Searching the web for "${args.query}"`);

@@ -1,6 +1,7 @@
 // ---------- Recording voice mode as a video ----------
 // The visualizer (the canvas) plus the voices, straight from the page, so the
 // video has none of the buttons. MP4 where the browser can make it, else WebM.
+import { t } from "./i18n.js";
 const TYPES = [
   "video/mp4;codecs=avc1.640028,mp4a.40.2",
   "video/mp4;codecs=avc1,opus",
@@ -26,7 +27,7 @@ export class VoiceRecorder {
 
   start() {
     this.type = videoType();
-    if (!this.type) throw new Error("This browser can't record video.");
+    if (!this.type) throw new Error(t("This browser can't record video."));
     this.dest = this.ctx.createMediaStreamDestination();
     for (const node of this.sources) node.connect(this.dest);
     this.video = this.canvas.captureStream(this.fps);

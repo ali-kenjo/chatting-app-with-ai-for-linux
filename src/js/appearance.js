@@ -1,10 +1,12 @@
 // ---------- Theme and chat font ----------
-import { onSettings, updateSettings } from "./store.js";
+import { onSettings, updateSettings, flushSettings } from "./store.js";
+import { setLanguage, getLanguage } from "./i18n.js";
 
 const root = document.documentElement;
 const appearance = document.getElementById("appearance");
 const accentColors = document.getElementById("accent-colors");
 const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+const languageSelect = document.getElementById("language-select");
 
 const FONTS = {
   default: "inherit",
@@ -31,8 +33,17 @@ onSettings((s) => {
   root.dataset.chatStyle = s.chat.style;
   root.dataset.chatDensity = s.chat.density;
 
-  appearance.querySelectorAll(".choice").forEach((c) => c.classList.toggle("selected", c.dataset.appearance === current));
-  accentColors.querySelectorAll(".color").forEach((c) => c.classList.toggle("selected", c.dataset.color === s.theme.accent));
+  appearance.querySelectorAll(".choice").forEach((c) => {
+    const on = c.dataset.appearance === current;
+    c.classList.toggle("selected", on);
+    c.setAttribute("aria-checked", String(on));
+  });
+  accentColors.querySelectorAll(".color").forEach((c) => {
+    const on = c.dataset.color === s.theme.accent;
+    c.classList.toggle("selected", on);
+    c.setAttribute("aria-checked", String(on));
+  });
+  languageSelect.value = s.ui?.language || "auto";
 });
 
 // "System" follows your desktop's light/dark setting, live
@@ -46,4 +57,13 @@ appearance.addEventListener("click", (e) => {
 accentColors.addEventListener("click", (e) => {
   const color = e.target.closest("[data-color]");
   if (color) updateSettings((s) => (s.theme.accent = color.dataset.color));
+});
+
+// The interface language: saved, then the page starts again in it
+languageSelect.value = getLanguage().setting;
+languageSelect.addEventListener("change", async () => {
+  const choice = languageSelect.value;
+  updateSettings((s) => ((s.ui ||= {}).language = choice));
+  await flushSettings();
+  setLanguage(choice);
 });

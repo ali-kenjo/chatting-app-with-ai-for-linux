@@ -3,6 +3,8 @@ import { getAccessToken, isConnected, googleSignIn, logout, getCurrentUser, init
 import { api } from "./api.js";
 import { openSettings, closeSettings } from "./settings.js";
 import { getSettings } from "./store.js";
+import { t } from "./i18n.js";
+import { trapModal } from "./a11y.js";
 
 // Custom confirmation dialog for Workspace mutations
 let confirmModal = null;
@@ -13,18 +15,18 @@ function ensureConfirmModal() {
   el.className = "ws-modal-backdrop";
   el.hidden = true;
   el.innerHTML = `
-    <div class="ws-modal" role="dialog" aria-modal="true" aria-labelledby="ws-modal-title">
+    <div class="ws-modal" role="alertdialog" aria-modal="true" aria-labelledby="ws-modal-title" aria-describedby="ws-modal-desc">
       <div class="ws-modal-icon">
         <svg viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
       </div>
       <div class="ws-modal-content">
-        <h3 id="ws-modal-title">Confirm Action</h3>
+        <h3 id="ws-modal-title"></h3>
         <p class="ws-modal-desc" id="ws-modal-desc"></p>
         <div class="ws-modal-details" id="ws-modal-details"></div>
       </div>
       <div class="ws-modal-actions">
-        <button type="button" class="btn" id="ws-modal-cancel">Cancel</button>
-        <button type="button" class="btn btn-primary" id="ws-modal-confirm">Confirm & Proceed</button>
+        <button type="button" class="btn" id="ws-modal-cancel"></button>
+        <button type="button" class="btn btn-primary" id="ws-modal-confirm"></button>
       </div>
     </div>
   `;
@@ -43,10 +45,10 @@ export function promptConfirmation(summary, details = {}) {
 
     const isFile = details.type === "file";
     const isCloud = details.type === "cloud"; // Auto, Dynamic or Fastest wants to use the cloud AI
-    desc.textContent = isFile ? `Allow the AI to ${summary}?` : summary;
-    cancelBtn.textContent = isFile ? "Deny" : isCloud ? "Keep it local" : "Cancel";
-    confirmBtn.textContent = isFile ? "Allow" : isCloud ? "Send to the cloud" : "Confirm & Proceed";
-    modal.querySelector("#ws-modal-title").textContent = isCloud ? "Use the cloud AI?" : "Confirm Action";
+    desc.textContent = isFile ? t("Allow the AI to {action}?", { action: summary }) : summary;
+    cancelBtn.textContent = isFile ? t("Deny") : isCloud ? t("Keep it local") : t("Cancel");
+    confirmBtn.textContent = isFile ? t("Allow") : isCloud ? t("Send to the cloud") : t("Confirm and go ahead");
+    modal.querySelector("#ws-modal-title").textContent = isCloud ? t("Use the cloud AI?") : t("Confirm this action");
     detailsEl.innerHTML = "";
 
     // The details come from the AI, so they're added as text, never as HTML
@@ -62,22 +64,22 @@ export function promptConfirmation(summary, details = {}) {
     };
 
     if (details.type === "cloud") {
-      row("Why:", details.reason);
-      row("Goes to:", details.name, true);
+      row(t("Why:"), details.reason);
+      row(t("Goes to:"), details.name, true);
     } else if (details.type === "gmail") {
-      row("To:", details.to, true);
-      row("Subject:", details.subject, true);
+      row(t("To:"), details.to, true);
+      row(t("Subject:"), details.subject, true);
       const body = document.createElement("div");
       body.className = "ws-detail-body";
       body.textContent = (details.body || "").slice(0, 300);
       detailsEl.append(body);
     } else if (details.type === "calendar") {
-      if (details.summary) row("Event:", details.summary, true);
-      if (details.start || details.end) row("Time:", `${details.start || ""} → ${details.end || ""}`);
-      if (details.location) row("Location:", details.location);
+      if (details.summary) row(t("Event:"), details.summary, true);
+      if (details.start || details.end) row(t("Time:"), `${details.start || ""} → ${details.end || ""}`);
+      if (details.location) row(t("Location:"), details.location);
     } else if (details.type === "app") {
       // A connected app (Settings → Connected Apps), with what the AI wants to send it
-      row("App:", details.app, true);
+      row(t("App:"), details.app, true);
       if (details.args && Object.keys(details.args).length) {
         const body = document.createElement("div");
         body.className = "ws-detail-body";
@@ -86,24 +88,36 @@ export function promptConfirmation(summary, details = {}) {
       }
     } else if (details.type === "command") {
       // A command in builder mode (Settings → Builder)
-      row("In:", details.cwd);
+      row(t("In:"), details.cwd);
       const body = document.createElement("pre");
       body.className = "ws-detail-body ws-detail-command";
       body.textContent = details.command || "";
       detailsEl.append(body);
-      if (details.reason) row("Why:", details.reason);
+      if (details.reason) row(t("Why:"), details.reason);
     }
 
+    let release = null;
     const cleanUp = (allowed) => {
+      release?.();
       modal.hidden = true;
       cancelBtn.onclick = null;
       confirmBtn.onclick = null;
+      document.removeEventListener("keydown", onKey, true);
       resolve(allowed);
     };
+    // Esc is a "no": the safe answer
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      cleanUp(false);
+    };
+    document.addEventListener("keydown", onKey, true);
 
     cancelBtn.onclick = () => cleanUp(false);
     confirmBtn.onclick = () => cleanUp(true);
     modal.hidden = false;
+    // The question has the focus, on the safe answer; the page behind it waits
+    release = trapModal(modal, { initial: "#ws-modal-cancel" });
   });
 }
 
@@ -126,7 +140,7 @@ export async function quickCheckCalendar() {
       return;
     }
   }
-  sendPrompt("What is on my Google Calendar for today and upcoming this week?");
+  sendPrompt(t("What is on my Google Calendar for today and upcoming this week?"));
 }
 
 export async function quickCheckGmail() {
@@ -137,7 +151,7 @@ export async function quickCheckGmail() {
       return;
     }
   }
-  sendPrompt("Check my recent unread Gmail messages and summarize any important updates.");
+  sendPrompt(t("Check my recent unread Gmail messages and summarize any important updates."));
 }
 
 export async function quickSearchDrive(term = "") {
@@ -148,15 +162,15 @@ export async function quickSearchDrive(term = "") {
       return;
     }
   }
-  sendPrompt(term ? `Search my Google Drive for "${term}" and tell me what you find.` : "List my recent Google Drive documents, sheets, and presentations.");
+  sendPrompt(term ? t("Search my Google Drive for “{term}” and tell me what you find.", { term }) : t("List my recent Google Drive documents, sheets, and presentations."));
 }
 
 export function quickSearchNews(topic = "") {
-  sendPrompt(topic ? `What is the latest news regarding ${topic}?` : "Summarize the top breaking news stories today.");
+  sendPrompt(topic ? t("What is the latest news regarding {topic}?", { topic }) : t("Summarize the top breaking news stories today."));
 }
 
 export function quickSearchGitHub(query = "trending") {
-  sendPrompt(`Search GitHub for ${query} repositories and summarize the top results.`);
+  sendPrompt(t("Search GitHub for {query} repositories and summarize the top results.", { query }));
 }
 
 function avatarImage(src, alt) {
@@ -173,7 +187,6 @@ function updateAuthUI(user, hasToken) {
   const sidebarName = document.getElementById("user-name");
   const sidebarEmail = document.getElementById("user-email");
   const sidebarAuthBtn = document.getElementById("sidebar-auth-btn");
-  const statusText = document.getElementById("status-text");
 
   const wsAvatar = document.getElementById("ws-account-avatar");
   const wsName = document.getElementById("ws-account-name");
@@ -196,10 +209,9 @@ function updateAuthUI(user, hasToken) {
     if (sidebarName) sidebarName.textContent = displayName;
     if (sidebarEmail) sidebarEmail.textContent = email;
     if (sidebarAuthBtn) {
-      sidebarAuthBtn.title = "Connected to Google Workspace";
+      sidebarAuthBtn.title = t("Connected to Google");
       sidebarAuthBtn.classList.add("connected");
     }
-    if (statusText) statusText.textContent = "Google Connected";
 
     if (wsAvatar) {
       if (user.photoURL) {
@@ -214,17 +226,16 @@ function updateAuthUI(user, hasToken) {
     if (signoutBtn) signoutBtn.hidden = false;
   } else {
     // Signed out (or the access token is gone after a reload): nothing may look connected
-    if (sidebarEmail) sidebarEmail.textContent = user ? "Google: sign in again" : "Google not connected";
+    if (sidebarEmail) sidebarEmail.textContent = user ? t("Google: sign in again") : t("Not signed in to Google");
     // Firebase's sign-in only lasts until the app closes: point to the lasting one
-    if (wsEmail && user && !getKept().configured) wsEmail.title = "Set up “Stay signed in” below, so you don't have to sign in every time.";
+    if (wsEmail && user && !getKept().configured) wsEmail.title = t("Set up “Stay signed in” below, so you don't have to sign in every time.");
     if (sidebarAuthBtn) {
-      sidebarAuthBtn.title = "Connect Google Account";
+      sidebarAuthBtn.title = t("Connect your Google account");
       sidebarAuthBtn.classList.remove("connected");
     }
-    if (statusText) statusText.textContent = "Cloud Ready";
     if (wsAvatar) wsAvatar.textContent = "?";
-    if (wsName) wsName.textContent = user ? user.displayName || user.email || "Signed out" : "Not connected";
-    if (wsEmail) wsEmail.textContent = user ? "Sign in again to use Gmail, Calendar and Drive" : "Sign in to use Gmail, Calendar and Drive";
+    if (wsName) wsName.textContent = user ? user.displayName || user.email || t("Signed out") : t("Not connected");
+    if (wsEmail) wsEmail.textContent = user ? t("Sign in again to use Gmail, Calendar and Drive") : t("Sign in to use Gmail, Calendar and Drive");
 
     if (signinBtn) signinBtn.hidden = false;
     if (signoutBtn) signoutBtn.hidden = true;
@@ -242,15 +253,15 @@ document.addEventListener("friends:auth-changed", (e) => {
 // Why signing in didn't work, in words a person can act on (null: they closed the popup)
 function signInProblem(err) {
   const code = err?.code || "";
-  if (getSettings()?.privacy?.localOnly || code === "friends/private") return "Private mode is on, so Google sign-in is off. Turn it off in Settings → AI control.";
-  if (code === "friends/not-configured") return "Google sign-in needs a one-time setup with a Firebase project of your own. Open \"Set up Google sign-in\" below.";
+  if (getSettings()?.privacy?.localOnly || code === "friends/private") return t("Private mode is on, so Google sign-in is off. Turn it off in Settings → AI & privacy.");
+  if (code === "friends/not-configured") return t("Google sign-in needs a one-time setup with a Firebase project of your own. Open “Set up Google sign-in” below.");
   if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return null;
   if (code === "auth/unauthorized-domain") {
-    return `Google sign-in isn't allowed from ${location.hostname} yet. In the Firebase console, open Authentication → Settings → Authorized domains and add "${location.hostname}", then try again.`;
+    return t("Google sign-in isn't allowed from {host} yet. In the Firebase console, open Authentication → Settings → Authorized domains and add “{host}”, then try again.", { host: location.hostname });
   }
-  if (code === "auth/popup-blocked") return "The browser blocked the sign-in window. Allow pop-ups for this page and try again.";
-  if (code === "auth/network-request-failed") return "Couldn't reach Google. Check your internet connection.";
-  return `Signing in didn't work: ${err?.message || "unknown error"}`;
+  if (code === "auth/popup-blocked") return t("The browser blocked the sign-in window. Allow pop-ups for this page and try again.");
+  if (code === "auth/network-request-failed") return t("Couldn't reach Google. Check your internet connection.");
+  return t("Signing in didn't work: {message}", { message: err?.message || t("unknown error") });
 }
 
 async function signIn() {
@@ -337,30 +348,30 @@ const keptOrigin = document.getElementById("gsi-kept-origin");
 
 function renderKept(k = getKept()) {
   if (k.private) {
-    keptStatus.textContent = "Private mode is on, so Google sign-in is off.";
+    keptStatus.textContent = t("Private mode is on, so Google sign-in is off.");
     keptStatus.className = "test-feedback";
     return;
   }
   keptRemove.hidden = !k.configured;
   if (document.activeElement !== keptId) keptId.value = k.clientId || "";
-  keptSecret.placeholder = k.configured ? "Saved (type to replace)" : "GOCSPX-…";
+  keptSecret.placeholder = k.configured ? t("Saved (type to replace)") : "GOCSPX-…";
   keptStatus.className = `test-feedback${k.connected ? " ok" : ""}`;
   keptStatus.textContent = k.connected
-    ? `✓ Signed in as ${k.account?.email || "your account"}; it stays that way.`
+    ? `✓ ${t("Signed in as {email}; it stays that way.", { email: k.account?.email || t("your account") })}`
     : k.configured
-      ? "✓ Set up. Click “Sign in with Google” above (once)."
-      : "Not set up: you sign in again each time Friends opens.";
+      ? `✓ ${t("Set up. Click “Sign in with Google” above (once).")}`
+      : t("Not set up: you sign in again each time Friends opens.");
 }
 keptOrigin.textContent = location.origin;
 document.addEventListener("friends:google-kept", (e) => renderKept(e.detail));
 
 document.getElementById("gsi-kept-save").addEventListener("click", async () => {
   keptStatus.className = "test-feedback";
-  keptStatus.textContent = "Saving…";
+  keptStatus.textContent = t("Saving…");
   try {
     const res = await fetch("/api/google/client", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId: keptId.value, clientSecret: keptSecret.value }) });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Couldn't save.");
+    if (!res.ok) throw new Error(data.error || t("Couldn't save."));
     keptSecret.value = "";
     await loadKeptSignIn();
     renderKept(data);
@@ -392,7 +403,7 @@ function renderSetup() {
   setupRemove.hidden = state !== "ready";
   setupStatus.className = "test-feedback";
   setupStatus.textContent =
-    state === "ready" ? "✓ Set up. Click “Sign in with Google” above." : state === "private" ? "Private mode is on, so Google sign-in is off." : "Not set up yet.";
+    state === "ready" ? `✓ ${t("Set up. Click “Sign in with Google” above.")}` : state === "private" ? t("Private mode is on, so Google sign-in is off.") : t("Not set up yet.");
 }
 
 document.addEventListener("friends:google-setup", renderSetup);
@@ -400,14 +411,14 @@ document.addEventListener("friends:google-setup", renderSetup);
 setupSave?.addEventListener("click", async () => {
   setupSave.disabled = true;
   setupStatus.className = "test-feedback";
-  setupStatus.textContent = "Saving…";
+  setupStatus.textContent = t("Saving…");
   try {
     await api.google.saveConfig(setupText.value);
     setupText.value = "";
     resetAuth();
     await initAuth();
     renderSetup();
-    setupStatus.textContent = "✓ Saved. Now click “Sign in with Google”. If Google says the domain isn't allowed, add 127.0.0.1 and localhost under Authorized domains (step 3).";
+    setupStatus.textContent = `✓ ${t("Saved. Now click “Sign in with Google”. If Google says the domain isn't allowed, add 127.0.0.1 and localhost under Authorized domains (step 3).")}`;
     setupStatus.classList.add("ok");
     document.getElementById("gsi-error").hidden = true;
   } catch (err) {

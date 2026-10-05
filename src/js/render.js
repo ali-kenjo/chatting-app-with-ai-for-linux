@@ -5,6 +5,7 @@
 import { marked } from "/vendor/marked/marked.esm.js";
 import DOMPurify from "/vendor/dompurify/purify.es.mjs";
 import katex from "/vendor/katex/katex.mjs";
+import { t } from "./i18n.js";
 
 const tex = (source, displayMode) =>
   katex.renderToString(source.trim(), { displayMode, throwOnError: false, output: "htmlAndMathml" });
@@ -79,8 +80,8 @@ function decorateCode(el) {
     const block = document.createElement("div");
     block.className = "code-block";
     block.dataset.lang = lang;
-    block.innerHTML = `<div class="code-head"><span class="code-lang"></span><button type="button" class="code-copy" data-action="copy-code">${COPY_ICON}<span>Copy</span></button></div>`;
-    block.querySelector(".code-lang").textContent = lang || "code";
+    block.innerHTML = `<div class="code-head"><span class="code-lang"></span><button type="button" class="code-copy" data-action="copy-code">${COPY_ICON}<span>${t("Copy")}</span></button></div>`;
+    block.querySelector(".code-lang").textContent = lang || t("code");
     pre.replaceWith(block);
     block.append(pre);
     colorize(code);
@@ -91,6 +92,15 @@ function decorateCode(el) {
 export function renderMarkdown(el, text) {
   el.innerHTML = DOMPurify.sanitize(marked.parse(text), { FORBID_TAGS: ["img"] });
   decorateCode(el);
+  autoDirection(el);
+}
+
+// Every paragraph, list and table cell takes its direction from its own words, so Arabic and
+// English (or German) in one reply each sit on the right side. Code and formulas stay left-to-right.
+function autoDirection(el) {
+  el.dir = "auto";
+  for (const block of el.querySelectorAll("p, ul, ol, li, h1, h2, h3, h4, h5, h6, blockquote, th, td")) block.dir = "auto";
+  for (const block of el.querySelectorAll(".code-block pre, .math-block")) block.dir = "ltr";
 }
 
 // ----- Diagrams -----
@@ -138,12 +148,12 @@ async function drawDiagram(block) {
       toggle.type = "button";
       toggle.className = "code-copy";
       toggle.dataset.action = "toggle-diagram";
-      toggle.textContent = "Code";
+      toggle.textContent = t("Code");
       block.querySelector(".code-head").insertBefore(toggle, block.querySelector("[data-action=copy-code]"));
     }
     view.innerHTML = svg; // made by Mermaid in strict mode, which sanitizes labels itself
     block.classList.add("has-diagram");
-    block.querySelector(".code-lang").textContent = "diagram";
+    block.querySelector(".code-lang").textContent = t("diagram");
   } catch {
     view?.remove(); // not valid Mermaid: the code stays visible
     document.getElementById(`ddiagram-${diagramCount}`)?.remove(); // Mermaid's leftover error box

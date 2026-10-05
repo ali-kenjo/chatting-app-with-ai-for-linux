@@ -2,6 +2,7 @@
 // Allowed folders and the create/read/edit/delete grid. The helper enforces
 // them; this module only edits the settings.
 import { onSettings, updateSettings } from "./store.js";
+import { t } from "./i18n.js";
 
 const folderList = document.getElementById("folder-list");
 const folderAdd = document.getElementById("folder-add");
@@ -16,12 +17,16 @@ const ROW_KEY = { files: "files", folders: "dirs" };
 function renderFolders(folders) {
   folderList.innerHTML = "";
   if (!folders.length) {
-    folderList.innerHTML = '<li class="folder-empty">No folders yet. The AI can\'t touch any files.</li>';
+    folderList.innerHTML = '<li class="folder-empty"></li>';
+    folderList.querySelector("li").textContent = t("No folders yet. The AI can't touch any files.");
   }
   folders.forEach((path, i) => {
     const li = document.createElement("li");
     li.innerHTML = `${FOLDER_ICON}<span class="folder-path"></span>
-      <button class="icon-btn small" title="Remove folder" data-index="${i}">${REMOVE_ICON}</button>`;
+      <button class="icon-btn small" data-index="${i}">${REMOVE_ICON}</button>`;
+    const remove = li.querySelector("button");
+    remove.title = t("Remove folder {path}", { path });
+    remove.setAttribute("aria-label", remove.title);
     li.querySelector(".folder-path").textContent = path;
     li.querySelector(".folder-path").title = path;
     folderList.append(li);

@@ -1,0 +1,324 @@
+/* ---------- Voice conversation: drafts, transcript, recording ---------- */
+.voice-ctrl {
+  position: relative;
+}
+
+.voice-ctrl.active {
+  background: color-mix(in srgb, var(--accent) 30%, var(--bg-hover));
+}
+
+.voice-ctrl-badge {
+  position: absolute;
+  top: 2px;
+  inset-inline-end: 2px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--space-1h);
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.voice-ctrl-badge[hidden] {
+  display: none;
+}
+
+/* Record: a red dot, a rounded square (stop) while recording */
+.voice-ctrl .rec-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ff5a5f;
+  transition: border-radius var(--dur-base), transform var(--dur-base);
+}
+
+.voice-mode.recording .voice-ctrl.rec {
+  background: rgba(255, 90, 95, 0.18);
+  box-shadow: 0 0 0 2px rgba(255, 90, 95, 0.7);
+}
+
+.voice-mode.recording .voice-ctrl .rec-dot {
+  border-radius: var(--radius-xs);
+  transform: scale(0.85);
+}
+
+.voice-rec-badge {
+  display: none;
+  align-items: center;
+  gap: var(--space-1h);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 90, 95, 0.16);
+  color: #ffb3b5;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.voice-mode.recording .voice-rec-badge {
+  display: flex;
+}
+
+.voice-rec-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff5a5f;
+  animation: voice-pulse 1.2s ease-in-out infinite;
+}
+
+/* While choosing a video format or recording: the picture keeps its shape */
+.voice-mode.framed {
+  background: #070708;
+}
+
+.voice-mode.framed .voice-waves {
+  object-fit: contain;
+}
+
+/* Captions are drawn into the video; don't show them twice */
+.voice-mode.canvas-captions .voice-caption {
+  visibility: hidden;
+}
+
+.voice-record-pop {
+  position: absolute;
+  bottom: 124px;
+  left: 50%;
+  z-index: var(--z-panel);
+  width: min(340px, calc(100% - 32px));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: rgba(24, 24, 26, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-sheet);
+}
+
+.voice-record-pop[hidden] {
+  display: none;
+}
+
+.voice-record-title {
+  font-weight: 600;
+  font-size: var(--fs-md);
+}
+
+.voice-record-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--fs-base);
+  color: var(--text);
+}
+
+.voice-record-hint {
+  margin: 0;
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.voice-seg {
+  display: flex;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.voice-seg button {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.voice-seg button.active {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* The side panel */
+/* Floats under the top bar, so the style and engine buttons stay reachable */
+.voice-drawer {
+  position: absolute;
+  top: 84px;
+  inset-inline-end: 16px;
+  bottom: 16px;
+  z-index: var(--z-panel);
+  width: min(400px, calc(100% - 32px));
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  background: rgba(20, 20, 22, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  animation: drawer-in 0.22s ease;
+}
+
+.voice-drawer[hidden] {
+  display: none;
+}
+
+@keyframes drawer-in {
+  from { transform: translateX(calc(24px * var(--dir))); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+.voice-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-4) var(--space-2h);
+}
+
+.voice-drawer-tabs {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.voice-drawer-tab {
+  padding: var(--space-1h) var(--space-3h);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  font-size: var(--fs-base);
+  font-weight: 500;
+}
+
+.voice-drawer-tab.active {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.voice-drawer-pane {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-1h) var(--space-4) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.voice-drawer-pane[hidden] {
+  display: none;
+}
+
+.voice-drawer-empty {
+  margin: var(--space-6) var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+}
+
+.voice-line-who {
+  display: block;
+  margin-bottom: var(--space-h);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.voice-line.model .voice-line-who {
+  color: #ffb38a;
+}
+
+.voice-line-text {
+  margin: 0;
+  font-size: var(--fs-md);
+  line-height: 1.5;
+}
+
+/* Draft cards, in voice mode and in chats */
+.draft-card {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-hover) 55%, transparent);
+  padding: var(--space-3) var(--space-3h);
+}
+
+.draft-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.draft-kind {
+  flex-shrink: 0;
+  padding: var(--space-h) var(--space-2);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.draft-title {
+  font-weight: 600;
+  font-size: var(--fs-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.draft-body {
+  max-height: 340px;
+  overflow-y: auto;
+  font-size: var(--fs-base);
+  line-height: 1.55;
+}
+
+.draft-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2h);
+}
+
+.msg-drafts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2h);
+  margin-top: var(--space-2h);
+}
+
+#voice-status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* "Hide everything" hides these too */
+.voice-mode.ui-hidden .voice-drawer,
+.voice-mode.ui-hidden .voice-record-pop {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .voice-controls {
+    gap: var(--space-3);
+  }
+
+  .voice-ctrl {
+    width: 54px;
+    height: 54px;
+  }
+
+  .voice-record-pop {
+    bottom: 112px;
+  }
+}

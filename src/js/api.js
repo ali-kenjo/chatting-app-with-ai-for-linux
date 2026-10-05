@@ -1,4 +1,8 @@
 // Talks to the Friends helper (server/server.js) that serves this page.
+import { t } from "./i18n.js";
+
+// The helper's messages are English; the ones with a fixed text have translations (i18n/elsewhere.js)
+const said = (message) => (typeof message === "string" ? t(message) : message);
 const OFFLINE = "Can't reach the Friends helper. Is `npm start` still running?";
 
 async function call(method, url, body) {
@@ -10,10 +14,10 @@ async function call(method, url, body) {
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new Error(OFFLINE);
+    throw new Error(t(OFFLINE));
   }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status}).`);
+  if (!res.ok) throw new Error(said(data.error) || t("Request failed ({status}).", { status: res.status }));
   return data;
 }
 
@@ -29,11 +33,11 @@ async function streamChat(request, signal, handlers) {
     });
   } catch (err) {
     if (err.name === "AbortError") return handlers.onDone({ stopped: true });
-    return handlers.onError(OFFLINE);
+    return handlers.onError(t(OFFLINE));
   }
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    return handlers.onError(data.error || `Request failed (${res.status}).`);
+    return handlers.onError(said(data.error) || t("Request failed ({status}).", { status: res.status }));
   }
 
   const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
@@ -61,7 +65,7 @@ async function streamChat(request, signal, handlers) {
     }
   } catch (err) {
     if (err.name === "AbortError") return handlers.onDone({ stopped: true });
-    return handlers.onError(OFFLINE);
+    return handlers.onError(t(OFFLINE));
   }
   // The stream ended without "done": stopped, or the helper went away
   handlers.onDone({ stopped: true });
@@ -168,10 +172,10 @@ export const api = {
       try {
         res = await fetch(`/api/backups/import?mode=${mode}`, { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: file });
       } catch {
-        throw new Error(OFFLINE);
+        throw new Error(t(OFFLINE));
       }
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Import failed.");
+      if (!res.ok) throw new Error(said(data.error) || t("Import failed."));
       return data;
     },
   },
@@ -187,10 +191,10 @@ export const api = {
           body: file,
         });
       } catch {
-        throw new Error(OFFLINE);
+        throw new Error(t(OFFLINE));
       }
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Upload failed.");
+      if (!res.ok) throw new Error(said(data.error) || t("Upload failed."));
       return data;
     },
     url: (id) => `/api/attachments/${id}`,
@@ -201,10 +205,10 @@ export const api = {
       try {
         res = await fetch("/api/voice/transcribe", { method: "POST", headers: { "Content-Type": "audio/wav" }, body: wav });
       } catch {
-        throw new Error(OFFLINE);
+        throw new Error(t(OFFLINE));
       }
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Couldn't understand the recording.");
+      if (!res.ok) throw new Error(said(data.error) || t("Couldn't understand the recording."));
       return data.text;
     },
     // Returns a WAV Blob
@@ -213,9 +217,9 @@ export const api = {
       try {
         res = await fetch("/api/voice/speak", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, voice }) });
       } catch {
-        throw new Error(OFFLINE);
+        throw new Error(t(OFFLINE));
       }
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Couldn't create speech.");
+      if (!res.ok) throw new Error(said((await res.json().catch(() => ({}))).error) || t("Couldn't create speech."));
       return res.blob();
     },
   },

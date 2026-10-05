@@ -3,6 +3,11 @@
 // the choice buttons, and uploading your own model.
 import { robot } from "./index.js";
 import { getSettings, onSettings, updateSettings } from "../store.js";
+import { t, nf } from "../i18n.js";
+
+// The face tracker's messages are made in robot/facetrack.js (a module that doesn't know the interface
+// language); they're translated here, where they're shown (the text is listed in i18n/elsewhere.js)
+const translateFaceMessage = (message) => (message && message.startsWith("Face tracking") ? message : t(message || ""));
 
 const preview = document.getElementById("robot-preview");
 const note = document.getElementById("robot-preview-note");
@@ -16,7 +21,7 @@ const resetButton = document.getElementById("robot-model-reset");
 const fileInput = document.getElementById("robot-model-file");
 
 const MAX_MODEL = 30 * 1024 * 1024;
-const LEVELS = { low: "Low", medium: "Medium", high: "High" };
+const LEVELS = { low: t("Low"), medium: t("Medium"), high: t("High") };
 
 // ---------- The preview ----------
 robot.host("preview", preview, { priority: 2 });
@@ -28,7 +33,7 @@ document.addEventListener("friends:settings", (e) => {
 });
 
 function showUnavailable(reason) {
-  note.textContent = `The 3D robot can't be shown here: ${reason} Voice mode uses the Sunset style instead.`;
+  note.textContent = t("The 3D robot can't be shown here: {reason} Voice mode uses the Sunset style instead.", { reason: t(reason) });
   note.hidden = false;
   preview.classList.add("unavailable");
 }
@@ -90,8 +95,8 @@ onSettings((s) => {
   const hue = accentHue(accent);
   const clash = (s.robot.background === "green" && hue > 70 && hue < 170) || (s.robot.background === "blue" && hue > 190 && hue < 260);
   bgHint.textContent = clash
-    ? "Your accent color is close to this key color, so keying it out would remove the robot's glow too. Pick another accent or the other chroma color."
-    : "Chroma green and blue are flat, for keying out in a video editor";
+    ? t("Your accent color is close to this key color, so keying it out would remove the robot's glow too. Pick another accent or the other chroma color.")
+    : t("Chroma green and blue are flat, for keying out in a video editor");
   bgHint.classList.toggle("warn", clash);
 });
 
@@ -107,26 +112,27 @@ function accentHue(hex) {
 
 document.addEventListener("friends:robot-quality", (e) => {
   const { setting, level } = e.detail;
-  qualityStatus.textContent = setting === "auto" ? `Auto is using ${LEVELS[level]} now (it steps down if it gets slow)` : `${LEVELS[level]}`;
+  qualityStatus.textContent = setting === "auto" ? t("Auto is using {level} now (it steps down if it gets slow)", { level: LEVELS[level] }) : `${LEVELS[level]}`;
 });
 
 // ---------- "Follow my face" ----------
 const faceStatus = document.getElementById("robot-face-status");
-const FACE_HINT = "Its eyes follow you through the webcam. Everything stays on this computer.";
+const FACE_HINT = t("Its eyes follow you through the webcam. Everything stays on this computer.");
 const indicator = document.getElementById("face-indicator");
 const indicatorText = document.getElementById("face-indicator-text");
 
 document.addEventListener("friends:robot-face", (e) => {
   const { state, message } = e.detail;
-  faceStatus.textContent = state === "off" ? FACE_HINT : message;
+  faceStatus.textContent = state === "off" ? FACE_HINT : translateFaceMessage(message);
   faceStatus.classList.toggle("warn", ["blocked", "busy", "none", "error"].includes(state));
   // In voice mode: a clear sign while the camera is in use (or why it isn't)
   indicator.hidden = state === "off";
   indicator.classList.toggle("problem", ["blocked", "busy", "none", "error"].includes(state));
   indicator.classList.toggle("live", state === "on" || state === "looking");
-  indicatorText.textContent = state === "on" ? "Following your face" : state === "looking" || state === "starting" ? "Camera on" : message;
-  indicator.title = `${message || "Follow my face"} Click to switch it off.`;
-  indicator.setAttribute("aria-label", `Follow my face: ${message || state}. Switch it off.`);
+  const said = translateFaceMessage(message);
+  indicatorText.textContent = state === "on" ? t("Following your face") : state === "looking" || state === "starting" ? t("Camera on") : said;
+  indicator.title = `${said || t("Follow my face")} ${t("Click to switch it off.")}`;
+  indicator.setAttribute("aria-label", t("Follow my face: {state}. Switch it off.", { state: said || state }));
 });
 
 indicator.addEventListener("click", () => updateSettings((s) => (s.robot.followFace = false)));
@@ -135,13 +141,13 @@ indicator.addEventListener("click", () => updateSettings((s) => (s.robot.followF
 function showModel(info, extra = {}) {
   resetButton.hidden = !info?.custom;
   if (!info?.custom) {
-    modelStatus.textContent = extra.error ? `Couldn't use that model: ${extra.error}` : "Built-in robot";
+    modelStatus.textContent = extra.error ? t("Couldn't use that model: {error}", { error: extra.error }) : t("Built-in robot");
     return;
   }
-  const size = `${(info.size / 1024 / 1024).toFixed(1)} MB`;
-  const found = info.nodes?.length ? `Found: ${info.nodes.join(", ")}.` : "It has none of the named parts, so it won't move.";
-  const missing = extra.missing?.length ? ` Missing (those parts stay still): ${extra.missing.join(", ")}.` : "";
-  const uv = extra.faceWithoutUv ? " FaceScreen has no UV map, so the eyes can't be shown on it." : "";
+  const size = `${nf(info.size / 1024 / 1024, { maximumFractionDigits: 1 })} MB`;
+  const found = info.nodes?.length ? t("Found: {parts}.", { parts: info.nodes.join(", ") }) : t("It has none of the named parts, so it won't move.");
+  const missing = extra.missing?.length ? ` ${t("Missing (those parts stay still): {parts}.", { parts: extra.missing.join(", ") })}` : "";
+  const uv = extra.faceWithoutUv ? ` ${t("FaceScreen has no UV map, so the eyes can't be shown on it.")}` : "";
   modelStatus.textContent = `${info.name} · ${size}. ${found}${missing}${uv}`;
 }
 
@@ -158,10 +164,10 @@ fileInput.addEventListener("change", async () => {
   const file = fileInput.files[0];
   fileInput.value = "";
   if (!file) return;
-  if (file.size > MAX_MODEL) return (modelStatus.textContent = "That file is over 30 MB.");
+  if (file.size > MAX_MODEL) return (modelStatus.textContent = t("That file is over 30 MB."));
   const head = new Uint8Array(await file.slice(0, 4).arrayBuffer());
-  if (String.fromCharCode(...head) !== "glTF") return (modelStatus.textContent = "That isn't a .glb file. In Blender, export as glTF Binary (.glb).");
-  modelStatus.textContent = `Uploading ${file.name}…`;
+  if (String.fromCharCode(...head) !== "glTF") return (modelStatus.textContent = t("That isn't a .glb file. In Blender, export as glTF Binary (.glb)."));
+  modelStatus.textContent = t("Uploading {name}…", { name: file.name });
   uploadButton.disabled = true;
   try {
     const res = await fetch("/api/robot/model", {
@@ -170,7 +176,7 @@ fileInput.addEventListener("change", async () => {
       body: file,
     });
     const info = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(info.error || "Upload failed.");
+    if (!res.ok) throw new Error(info.error || t("Upload failed."));
     showModel(info);
     await robot.useModel(info);
   } catch (err) {

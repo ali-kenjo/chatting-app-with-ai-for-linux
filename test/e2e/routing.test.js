@@ -39,6 +39,8 @@ describe("Choosing the AI in the page", { skip: !CHROME && "no Chrome found" }, 
 
     browser = await require("puppeteer-core").launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox", "--disable-gpu", "--use-gl=swiftshader"] });
     page = await browser.newPage();
+    // The interface language follows the browser's; these tests read the English
+    await page.evaluateOnNewDocument(() => Object.defineProperty(navigator, "languages", { get: () => ["en-US", "en"] }));
     await page.setViewport({ width: 1280, height: 900 });
     page.on("pageerror", (err) => problems.push(err.message));
     page.on("console", (msg) => msg.type() === "error" && !/Failed to load resource/.test(msg.text()) && problems.push(msg.text()));
@@ -134,10 +136,10 @@ describe("Choosing the AI in the page", { skip: !CHROME && "no Chrome found" }, 
     assert.match((await lastReply()).via, /Cloud · Gemini/);
   });
 
-  test("Settings → AI control shows the same mode, and what applies to it", async () => {
+  test("Settings → AI & privacy shows the same mode, and what applies to it", async () => {
     await page.evaluate(() => {
       document.getElementById("settings-btn")?.click();
-      [...document.querySelectorAll(".modal-nav .tab")].find((t) => /AI control/.test(t.textContent))?.click();
+      document.querySelector('.modal-nav .tab[data-tab="ai-control"]')?.click();
     });
     await page.waitForSelector("#routing-mode", { visible: true });
     assert.strictEqual(await page.$eval("#routing-mode", (el) => el.value), "auto");

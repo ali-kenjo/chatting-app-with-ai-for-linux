@@ -1,0 +1,136 @@
+/* ---------- Connected apps (src/js/apps.js) ---------- */
+.app-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-2h);
+}
+
+.app-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1h);
+  padding: var(--space-3) var(--space-3h);
+  border-radius: var(--radius-lg);
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  min-width: 0;
+}
+
+.app-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2h);
+}
+
+.app-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1h) var(--space-2);
+}
+
+.app-status {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
+  background: var(--bg-hover);
+  color: var(--text-muted);
+}
+
+.app-status.on {
+  background: color-mix(in srgb, #34d399 20%, transparent);
+  color: var(--success);
+}
+
+.app-status.warn {
+  background: color-mix(in srgb, #f59e0b 20%, transparent);
+  color: var(--warning);
+}
+
+.app-status.error {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.app-setup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.app-setup > summary {
+  cursor: pointer;
+  color: var(--link);
+  font-size: var(--fs-sm);
+}
+
+.app-setup[open] {
+  gap: var(--space-2);
+}
+
+.app-setup .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-1h);
+}
+
+.app-link {
+  color: var(--link);
+  font-size: var(--fs-sm);
+}
+
+.mcp-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mcp-where {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: var(--fs-xs);
+  overflow-wrap: anywhere;
+}
+
+.mcp-tools {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.mcp-tools code {
+  color: var(--text);
+}
+
+.mcp-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.mcp-form .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ws-detail-command {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Builder (src/js/builder.js) ---------- */
+.builder-modes {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+.builder-warning {
+  color: var(--warning);
+}

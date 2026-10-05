@@ -2,6 +2,8 @@
 // "Your memories" live in the settings; the AI's own notes come from the helper.
 import { api } from "./api.js";
 import { onSettings, updateSettings } from "./store.js";
+import { t, tp, nf, formatDate } from "./i18n.js";
+import { confirmDialog } from "./dialogs.js";
 
 // ----- Your memories -----
 const memoryList = document.getElementById("memory-list");
@@ -12,11 +14,14 @@ const REMOVE_ICON = '<svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18
 onSettings((s) => {
   memoryList.innerHTML = "";
   if (!s.memory.items.length) {
-    memoryList.innerHTML = '<li class="memory-empty">Nothing yet. Add things you want the AI to always know.</li>';
+    memoryList.innerHTML = '<li class="memory-empty"></li>';
+    memoryList.querySelector("li").textContent = t("Nothing yet. Add things you want the AI to always know, like “I'm vegetarian” or “I work night shifts”.");
   }
   for (const item of s.memory.items) {
     const li = document.createElement("li");
-    li.innerHTML = `<span></span><button class="icon-btn small" title="Remove" data-id="">${REMOVE_ICON}</button>`;
+    li.innerHTML = `<span dir="auto"></span><button class="icon-btn small" data-id="">${REMOVE_ICON}</button>`;
+    li.querySelector("button").title = t("Remove this memory");
+    li.querySelector("button").setAttribute("aria-label", t("Remove this memory"));
     li.querySelector("span").textContent = item.text;
     li.querySelector("button").dataset.id = item.id;
     memoryList.append(li);
@@ -37,33 +42,25 @@ memoryList.addEventListener("click", (e) => {
   if (btn) updateSettings((s) => (s.memory.items = s.memory.items.filter((m) => m.id !== btn.dataset.id)));
 });
 
-// Clearing needs a second click within a few seconds
-function twoStep(button, action) {
-  let timer = null;
-  button.addEventListener("click", () => {
-    if (!timer) {
-      button.textContent = "Click again to clear";
-      timer = setTimeout(() => {
-        button.textContent = "Clear";
-        timer = null;
-      }, 3000);
-      return;
-    }
-    clearTimeout(timer);
-    timer = null;
-    button.textContent = "Clear";
-    action();
+// Clearing asks first
+function askToClear(button, action, { title, message, confirm }) {
+  button.addEventListener("click", async () => {
+    if (await confirmDialog({ title, message, confirm, danger: true })) action();
   });
 }
 
-twoStep(memoryClear, () => updateSettings((s) => (s.memory.items = [])));
+askToClear(memoryClear, () => updateSettings((s) => (s.memory.items = [])), {
+  title: t("Clear everything you asked it to remember?"),
+  message: t("These memories will be deleted. This can't be undone."),
+  confirm: t("Clear memories"),
+});
 
 // ----- AI memory (its own notes) -----
 const NOTE_TYPES = {
-  user: { label: "About you", color: "#6f9cf5" },
-  feedback: { label: "Feedback", color: "#f5b451" },
-  project: { label: "Projects", color: "#34d399" },
-  reference: { label: "References", color: "#a78bfa" },
+  user: { label: t("About you"), color: "#6f9cf5" },
+  feedback: { label: t("Feedback"), color: "#f5b451" },
+  project: { label: t("Projects"), color: "#34d399" },
+  reference: { label: t("References"), color: "#a78bfa" },
 };
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -80,21 +77,23 @@ const notesClear = document.getElementById("notes-clear");
 
 function timeAgo(ms) {
   const diff = Date.now() - ms;
-  if (diff < 60 * 60 * 1000) return "Just now";
-  if (diff < DAY) return `${Math.floor(diff / 3600000)} h ago`;
+  if (diff < 60 * 60 * 1000) return t("Just now");
+  if (diff < DAY) return t("{n} h ago", { n: nf(Math.floor(diff / 3600000)) });
   const days = Math.floor(diff / DAY);
-  if (days === 1) return "Yesterday";
-  if (days < 30) return `${days} days ago`;
-  return new Date(ms).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  if (days === 1) return t("Yesterday");
+  if (days < 30) return tp("{n} day ago", "{n} days ago", days);
+  return formatDate(new Date(ms), { day: "numeric", month: "short" });
 }
 
 function renderNotes() {
   // Filter chips with counts
   noteFilters.innerHTML = "";
-  [["all", "All"], ...Object.entries(NOTE_TYPES).map(([k, t]) => [k, t.label])].forEach(([key, label]) => {
+  [["all", t("All")], ...Object.entries(NOTE_TYPES).map(([k, type]) => [k, type.label])].forEach(([key, label]) => {
     const count = key === "all" ? aiNotes.length : aiNotes.filter((n) => n.type === key).length;
     const chip = document.createElement("button");
     chip.className = "chip" + (key === noteFilter ? " selected" : "");
+    chip.type = "button";
+    chip.setAttribute("aria-pressed", String(key === noteFilter));
     chip.dataset.filter = key;
     chip.innerHTML = `${label}<span class="count">${count}</span>`;
     noteFilters.append(chip);
@@ -103,7 +102,8 @@ function renderNotes() {
   noteList.innerHTML = "";
   const shown = aiNotes.filter((n) => noteFilter === "all" || n.type === noteFilter);
   if (!shown.length) {
-    noteList.innerHTML = `<li class="note-empty">${aiNotes.length ? "No notes of this type." : "The AI hasn't saved any notes yet."}</li>`;
+    noteList.innerHTML = `<li class="note-empty"></li>`;
+    noteList.querySelector(".note-empty").textContent = aiNotes.length ? t("No notes of this type.") : t("The AI hasn't saved any notes yet. They appear here as it learns about you.");
   }
 
   shown.forEach((note) => {
@@ -112,7 +112,7 @@ function renderNotes() {
     li.className = "note" + (note.id === openNoteId ? " open" : "");
     li.dataset.id = note.id;
     li.innerHTML = `
-      <button class="note-head" data-action="toggle">
+      <button class="note-head" data-action="toggle" aria-expanded="${note.id === openNoteId}">
         <span class="note-type" style="--c: ${type.color}">${type.label}</span>
         <span class="note-text"><span class="note-title"></span><span class="note-desc"></span></span>
         <span class="note-date">${timeAgo(note.updatedAt)}</span>
@@ -127,16 +127,16 @@ function renderNotes() {
       body.innerHTML = `
         <textarea class="field textarea" maxlength="5000"></textarea>
         <div class="note-actions">
-          <button class="btn" data-action="cancel-edit">Cancel</button>
-          <button class="btn btn-primary" data-action="save">Save</button>
+          <button class="btn" data-action="cancel-edit">${t("Cancel")}</button>
+          <button class="btn btn-primary" data-action="save">${t("Save")}</button>
         </div>`;
       body.querySelector("textarea").value = note.content;
     } else {
       body.innerHTML = `
         <p class="note-content"></p>
         <div class="note-actions">
-          <button class="btn" data-action="edit">Edit</button>
-          <button class="btn btn-danger" data-action="delete">Delete</button>
+          <button class="btn" data-action="edit">${t("Edit")}</button>
+          <button class="btn btn-danger" data-action="delete">${t("Delete")}</button>
         </div>`;
       body.querySelector(".note-content").textContent = note.content;
     }
@@ -193,13 +193,17 @@ noteList.addEventListener("click", async (e) => {
   if (btn.dataset.action === "edit") noteList.querySelector("textarea").focus();
 });
 
-twoStep(notesClear, async () => {
-  try {
-    await api.notes.clear();
-  } catch {}
-  openNoteId = editingNoteId = null;
-  loadNotes();
-});
+askToClear(
+  notesClear,
+  async () => {
+    try {
+      await api.notes.clear();
+    } catch {}
+    openNoteId = editingNoteId = null;
+    loadNotes();
+  },
+  { title: t("Clear the AI's notes?"), message: t("Everything the AI wrote down about you and your work will be deleted. This can't be undone."), confirm: t("Clear notes") }
+);
 
 // Refresh when the tab opens, and after chats (the AI may have saved something)
 document.querySelector('.tab[data-tab="memory"]').addEventListener("click", loadNotes);

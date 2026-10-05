@@ -147,10 +147,10 @@ function create({ baseUrl, speechUrl = "", speechModel = "" } = {}) {
     } catch {}
     logger.warn(`Local AI ${where} answered ${res.status}: ${detail || res.statusText}`);
     let err;
-    if (res.status === 401 || res.status === 403) err = new LocalAiError("This AI server wants an API key, or didn't accept yours. Check it in Settings → AI control.");
+    if (res.status === 401 || res.status === 403) err = new LocalAiError("This AI server wants an API key, or didn't accept yours. Check it in Settings → AI & privacy.");
     else if (res.status === 404 || /model .*(not found|does not exist)|not found, try pulling/i.test(detail)) {
-      err = new LocalAiError(`The model "${model || ""}" isn't available on this AI server. ${/ollama|11434/i.test(where + detail) ? `Get it with: ollama pull ${model || "<model>"}` : "Load it in the server, or pick another model in Settings → AI control."}`);
-    } else if (/context|too long|too many tokens|exceeds/i.test(detail)) err = new LocalAiError("The conversation doesn't fit into the model's context window. Start a new chat, lower the context window in Settings → AI control, or raise the context size in your AI server.");
+      err = new LocalAiError(`The model "${model || ""}" isn't available on this AI server. ${/ollama|11434/i.test(where + detail) ? `Get it with: ollama pull ${model || "<model>"}` : "Load it in the server, or pick another model in Settings → AI & privacy."}`);
+    } else if (/context|too long|too many tokens|exceeds/i.test(detail)) err = new LocalAiError("The conversation doesn't fit into the model's context window. Start a new chat, lower the context window in Settings → AI & privacy, or raise the context size in your AI server.");
     else if (res.status >= 500) err = new LocalAiError(`The AI server had a problem: ${detail || res.status}`);
     else err = new LocalAiError(detail || `The AI server returned an error (${res.status}).`);
     err.status = res.status;
@@ -299,7 +299,7 @@ function create({ baseUrl, speechUrl = "", speechModel = "" } = {}) {
     return own ? { base: own, own: true } : null;
   }
 
-  const NO_VOICE = "Listening needs local voice. Set it up in Settings → AI control (Local voice), or fill in a speech server under Voice in this brain's settings. You can also use a Gemini brain for voice.";
+  const NO_VOICE = "Listening needs local voice. Set it up in Settings → AI & privacy (Local voice), or fill in a speech server under Voice in this brain's settings. You can also use a Gemini brain for voice.";
 
   // Speech to text: POST /audio/transcriptions, as OpenAI, LocalAI, speaches and Whisper servers offer it
   async function transcribe({ key, audio }) {

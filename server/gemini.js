@@ -19,17 +19,17 @@ async function toError(res) {
   // What Gemini itself said, for the terminal (the page gets a friendlier message)
   logger.warn(`Gemini ${res.status}: ${detail || res.statusText}`);
 
-  if (res.status === 400 && /api key/i.test(detail)) return new GeminiError("Your Gemini API key isn't valid. Check it in Settings → AI control.");
+  if (res.status === 400 && /api key/i.test(detail)) return new GeminiError("Your Gemini API key isn't valid. Check it in Settings → AI & privacy.");
   if (res.status === 403) return new GeminiError("This API key isn't allowed to use Gemini. Check the key's permissions in Google AI Studio.");
   if (res.status === 404) {
     const err = new GeminiError(/no longer available/i.test(detail)
-      ? "Google retired this model. Edit the brain in Settings → AI control and pick a newer one."
-      : "That model wasn't found. Pick another model in Settings → AI control.");
+      ? "Google retired this model. Edit the AI in Settings → AI & privacy and pick a newer one."
+      : "That model wasn't found. Pick another model in Settings → AI & privacy.");
     err.status = 404;
     return err;
   }
   if (res.status === 429) {
-    const waitMsg = retryDelay ? ` (wait ${retryDelay} or switch models in Settings → AI control)` : "";
+    const waitMsg = retryDelay ? ` (wait ${retryDelay} or switch models in Settings → AI & privacy)` : "";
     const err = new GeminiError(`Gemini free tier quota reached for this model${waitMsg}.`);
     err.status = 429;
     err.retryDelay = retryDelay;
@@ -193,7 +193,7 @@ async function withFallback(key, model, attempt) {
     }
   }
   if (!tried || lastError?.status === 429 || lastError?.overloaded) {
-    throw new GeminiError(`Every Gemini model your key can use is busy or out of free quota right now${backIn(key, candidates)}. Try again in a little while, add a local AI in Settings → AI control, or turn on billing for your key in Google AI Studio for higher limits.`);
+    throw new GeminiError(`Every Gemini model your key can use is busy or out of free quota right now${backIn(key, candidates)}. Try again in a little while, add a local AI in Settings → AI & privacy, or turn on billing for your key in Google AI Studio for higher limits.`);
   }
   throw lastError || new GeminiError("Gemini's rate limit or quota was reached. Wait a moment and try again.");
 }

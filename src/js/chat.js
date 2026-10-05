@@ -13,6 +13,10 @@ import { renderMarkdown, finishRender } from "./render.js";
 import { openFind, closeFind } from "./find.js";
 import { robot } from "./robot/index.js";
 import { dockShowing } from "./robot/dock.js";
+import { t, tp, formatDate, formatTime, formatDateTime } from "./i18n.js";
+import { announce, trapModal } from "./a11y.js";
+import { characterName } from "./characters.js";
+import { openOnboarding, onboardingShowing } from "./onboarding.js";
 
 const main = document.getElementById("main");
 const messagesEl = document.getElementById("messages");
@@ -25,6 +29,7 @@ let currentChatId = null; // null until the first message of a new chat is saved
 let session = {}; // replaced whenever another chat opens; late events from the old one are ignored
 let active = null; // { requestId } while a reply is streaming
 let lastDay = null; // the day of the last message shown, for "Today" / "Yesterday" dividers
+let lastKind = "local"; // which kind of AI answered last ("local" or "cloud")
 
 const ICONS = {
   // The robot's face screen: its eyes in the accent color (style.css .face-mini)
@@ -78,6 +83,14 @@ function scrollToBottom() {
   updateJump();
 }
 
+// While you're at the bottom the conversation stays there as it grows (a streaming reply, a diagram
+// drawn afterwards, follow-up chips); once you scroll up to read, it leaves you alone.
+let followBottom = true;
+for (const type of ["wheel", "touchmove"]) messagesEl.addEventListener(type, () => (followBottom = false), { passive: true });
+messagesEl.addEventListener("keydown", (e) => ["PageUp", "ArrowUp", "Home"].includes(e.key) && (followBottom = false));
+messagesEl.addEventListener("scroll", () => isNearBottom() && (followBottom = true), { passive: true });
+new MutationObserver(() => followBottom && requestAnimationFrame(scrollToBottom)).observe(messagesEl, { childList: true, subtree: true });
+
 // ----- Times and day dividers -----
 const dayKey = (at) => new Date(at).toDateString();
 
@@ -85,10 +98,10 @@ function dayLabel(at) {
   const date = new Date(at);
   const today = new Date();
   const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
-  if (date.toDateString() === today.toDateString()) return "Today";
-  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+  if (date.toDateString() === today.toDateString()) return t("Today");
+  if (date.toDateString() === yesterday.toDateString()) return t("Yesterday");
   const sameYear = date.getFullYear() === today.getFullYear();
-  return date.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", ...(sameYear ? {} : { year: "numeric" }) });
+  return formatDate(date, { weekday: "long", day: "numeric", month: "long", ...(sameYear ? {} : { year: "numeric" }) });
 }
 
 function addDayDivider(at) {
@@ -105,8 +118,8 @@ function timeEl(at) {
   const time = document.createElement("time");
   time.className = "msg-time";
   time.dateTime = new Date(at).toISOString();
-  time.textContent = new Date(at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-  time.title = new Date(at).toLocaleString();
+  time.textContent = formatTime(new Date(at));
+  time.title = formatDateTime(new Date(at));
   return time;
 }
 
@@ -130,20 +143,24 @@ function addMessage(role, { id = null, at = Date.now(), isNew = false } = {}) {
   if (id) msg.dataset.id = id;
   msg.innerHTML =
     role === "user"
-      ? '<div class="msg-files"></div><div class="bubble"></div><div class="msg-actions"></div>'
+      ? '<div class="msg-files"></div><div class="bubble" dir="auto"></div><div class="msg-actions" role="group"></div>'
       : `<div class="msg-avatar" aria-hidden="true">${ICONS.face}</div>
-         <div class="msg-main"><div class="activity"></div><div class="msg-body markdown"></div><div class="msg-actions"></div></div>`;
+         <div class="msg-main"><div class="activity"></div><div class="msg-body markdown" dir="auto"></div><div class="msg-actions" role="group"></div></div>`;
   const actions = msg.querySelector(".msg-actions");
+  // Screen readers: who said it (the words are the message itself)
+  msg.setAttribute("role", "article");
+  msg.setAttribute("aria-label", role === "user" ? t("You") : characterName());
+  actions.setAttribute("aria-label", t("Message actions"));
   if (role === "user") {
-    actions.append(timeEl(at), actionBtn("copy", "copy", "Copy"), actionBtn("edit", "edit", "Edit"));
+    actions.append(timeEl(at), actionBtn("copy", "copy", t("Copy")), actionBtn("edit", "edit", t("Edit")));
   } else {
     actions.append(
-      actionBtn("copy", "copy", "Copy"),
-      actionBtn("regenerate", "regenerate", "Answer again"),
-      actionBtn("swap", "swap", "Answer again with the other AI (local ↔ cloud)"),
-      actionBtn("speak", "speak", "Read aloud"),
-      actionBtn("like", "heart", "Like (or double-click the reply)"),
-      actionBtn("pin", "pin", "Pin to the AI's memory"),
+      actionBtn("copy", "copy", t("Copy")),
+      actionBtn("regenerate", "regenerate", t("Answer again")),
+      actionBtn("swap", "swap", t("Answer again with the other AI (local ↔ cloud)")),
+      actionBtn("speak", "speak", t("Read aloud")),
+      actionBtn("like", "heart", t("Like (or double-click the reply)")),
+      actionBtn("pin", "pin", t("Pin to the AI's memory")),
       timeEl(at)
     );
   }
@@ -163,8 +180,12 @@ function setVia(msg, via) {
     actions.prepend(badge);
   }
   badge.dataset.kind = via.kind;
-  badge.textContent = `${via.kind === "local" ? "🔒 Local" : "☁️ Cloud"} · ${via.name}`;
+  badge.textContent = `${via.kind === "local" ? t("🔒 Local") : t("☁️ Cloud")} · ${via.name}`;
   badge.title = via.reason || "";
+  badge.dataset.reason = via.reason || "";
+  badge.tabIndex = 0; // keyboard users can reach the reason too
+  badge.setAttribute("role", "note");
+  badge.setAttribute("aria-label", `${via.kind === "local" ? t("Answered on this computer") : t("Answered by the cloud AI")}: ${via.name}${via.reason ? `. ${via.reason}` : ""}`);
 }
 
 function addUserMessage(text, files = [], meta = {}) {
@@ -181,7 +202,9 @@ function addUserMessage(text, files = [], meta = {}) {
       const img = document.createElement("img");
       img.className = "msg-image";
       img.alt = file.name;
-      img.title = "Click to enlarge";
+      img.title = t("Click to enlarge");
+      img.tabIndex = 0;
+      img.setAttribute("role", "button");
       img.src = api.attachments.url(file.id);
       list.append(img);
     } else {
@@ -220,7 +243,7 @@ function foldActivity(msg) {
   fold.className = "activity-fold";
   fold.innerHTML = '<summary><span class="activity-icons"></span><span></span></summary><div class="activity-steps"></div>';
   fold.querySelector(".activity-icons").textContent = [...new Set(items.map((i) => i.firstChild.textContent))].join(" ");
-  fold.querySelector("summary span:last-child").textContent = `${items.length} steps`;
+  fold.querySelector("summary span:last-child").textContent = tp("{n} step", "{n} steps", items.length);
   fold.querySelector(".activity-steps").append(...items);
   list.append(fold);
 }
@@ -241,7 +264,10 @@ function setMarks(msg, { liked = false, pinned = false } = {}) {
   msg.querySelector('[data-action="like"]').classList.toggle("on", liked);
   const pin = msg.querySelector('[data-action="pin"]');
   pin.classList.toggle("on", pinned);
-  pin.title = pinned ? "Pinned to the AI's memory (click to unpin)" : "Pin to the AI's memory";
+  pin.title = pinned ? t("Pinned to the AI's memory (click to unpin)") : t("Pin to the AI's memory");
+  pin.setAttribute("aria-label", pin.title);
+  pin.setAttribute("aria-pressed", String(pinned));
+  msg.querySelector('[data-action="like"]').setAttribute("aria-pressed", String(liked));
 }
 
 function addModelMessage(m) {
@@ -266,7 +292,8 @@ function markLast() {
 function updateSendButton() {
   const streaming = !!active;
   main.classList.toggle("streaming", streaming);
-  sendBtn.title = streaming ? "Stop" : "Send";
+  sendBtn.title = streaming ? t("Stop the reply") : t("Send (Enter)");
+  sendBtn.setAttribute("aria-label", streaming ? t("Stop the reply") : t("Send"));
   sendBtn.disabled = !streaming && (attachmentsBusy() || (!input.value.trim() && !hasAttachments()));
 }
 
@@ -275,30 +302,57 @@ function stopActive() {
   active = null;
 }
 
-// Error block in place of a reply, with a way forward
+// Error block in place of a reply, with a way forward: what happened, and what to do about it
 function showError(msg, message, retry) {
   msg.classList.remove("pending", "streaming");
   msg.classList.add("failed");
   const noBrain = message === "NO_BRAIN";
   const block = document.createElement("div");
   block.className = "msg-error";
+  block.setAttribute("role", "alert");
   block.innerHTML = `
-    <span></span>
-    <div class="msg-error-actions">
-      ${noBrain ? '<button class="btn" data-action="settings">Open settings</button>' : ""}
-      <button class="btn" data-action="retry">Try again</button>
-    </div>`;
-  block.querySelector("span").textContent = noBrain ? "Add an AI brain first to start chatting." : message;
-  block.querySelector(".msg-error-actions").addEventListener("click", (e) => {
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7.5" x2="12" y2="13"/><line x1="12" y1="16.5" x2="12" y2="16.5"/></svg>
+    <div class="msg-error-text"><strong></strong><span></span></div>
+    <div class="msg-error-actions"></div>`;
+  block.querySelector("strong").textContent = noBrain ? t("No AI is set up yet") : t("That didn't go through");
+  block.querySelector("span").textContent = noBrain ? t("Friends needs an AI to answer you. Set one up, then try again.") : message;
+  const actions = block.querySelector(".msg-error-actions");
+  const add = (action, label, primary = false) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = primary ? "btn btn-primary" : "btn";
+    b.dataset.action = action;
+    b.textContent = label;
+    actions.append(b);
+  };
+  if (noBrain) add("setup", t("Set up an AI"), true);
+  else {
+    add("retry", t("Try again"), true);
+    // Both a local and a cloud AI are set up: the other one may work
+    if (document.documentElement.dataset.bothKinds === "true") add("other", t("Try the other AI"));
+    add("settings", t("Check AI settings"));
+  }
+  if (noBrain) add("retry", t("Try again"));
+  actions.addEventListener("click", (e) => {
     e.stopPropagation();
     const action = e.target.closest("[data-action]")?.dataset.action;
+    if (action === "setup") {
+      if (onboardingShowing()) openOnboarding();
+      else if (!main.classList.contains("has-chat")) openOnboarding();
+      else openSettings("ai-control");
+    }
     if (action === "settings") openSettings("ai-control");
     if (action === "retry" && !active) {
       msg.remove();
       retry();
     }
+    if (action === "other" && !active) {
+      msg.remove();
+      retry({ force: lastKind === "local" ? "cloud" : "local" });
+    }
   });
   msg.querySelector(".msg-body").replaceChildren(block);
+  announce(noBrain ? t("No AI is set up yet.") : `${t("That didn't go through")}: ${message}`, { urgent: true });
 }
 
 // ----- Follow-up suggestions -----
@@ -328,9 +382,7 @@ async function showSuggestions(msg) {
     chip.textContent = text;
     box.append(chip);
   }
-  const stick = isNearBottom();
   msg.querySelector(".msg-main").append(box);
-  if (stick) scrollToBottom();
 }
 
 // Send a request and stream the answer into a new reply bubble. Resolves with
@@ -339,10 +391,13 @@ async function showSuggestions(msg) {
 // plus from: <message id> to replace that message and everything after it.
 function ask(request, userMsg = null) {
   clearSuggestions();
+  followBottom = true;
   const msg = addMessage("model", { isNew: true });
   const body = msg.querySelector(".msg-body");
   msg.classList.add("pending");
-  body.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
+  body.innerHTML = "<span class=\"typing\"><i></i><i></i><i></i></span>";
+  body.setAttribute("aria-busy", "true");
+  if (!request.voice) announce(t("{name} is replying…", { name: characterName() }));
   markLast();
   scrollToBottom();
   // The robot next to the chat thinks (voice mode has its own robot states)
@@ -364,11 +419,9 @@ function ask(request, userMsg = null) {
 
   const draw = () => {
     frame = null;
-    const stick = isNearBottom();
     setReplyText(msg, pace ? reply.slice(0, shown) : reply);
     msg._text = reply;
-    if (stick) scrollToBottom();
-    else updateJump();
+    updateJump();
   };
   // Reveal a few characters at a time, with a short pause after each sentence
   const typeMore = () => {
@@ -383,8 +436,10 @@ function ask(request, userMsg = null) {
   const finishTyping = () => {
     if (!streamDone || (pace && shown < reply.length)) return;
     msg.classList.remove("streaming");
+    body.removeAttribute("aria-busy");
     finishRender(msg);
     foldActivity(msg);
+    if (!request.voice) announce(`${characterName()}: ${reply.replace(/\s+/g, " ").slice(0, 600)}`);
     if (!request.voice && msg.dataset.id) showSuggestions(msg);
   };
   const finish = () => {
@@ -395,12 +450,12 @@ function ask(request, userMsg = null) {
   };
   // Answer again: the saved message if it reached the helper, otherwise send it again.
   // Whatever part of the reply arrived before the error was saved too; it's replaced.
-  const retry = () => {
+  const retry = (extra = {}) => {
     const partial = reply || msg.querySelector(".activity-item, .draft-card");
     return ask(
       saved
-        ? { chatId: currentChatId, retry: true, from: partial ? msg.dataset.id : null, brainId: getSelectedBrainId() }
-        : { ...request, chatId: currentChatId, from: null },
+        ? { chatId: currentChatId, retry: true, from: partial ? msg.dataset.id : null, brainId: getSelectedBrainId(), ...extra }
+        : { ...request, chatId: currentChatId, from: null, ...extra },
       userMsg
     );
   };
@@ -429,7 +484,9 @@ function ask(request, userMsg = null) {
       } else if (!frame) frame = requestAnimationFrame(draw);
     },
     onRoute(route) {
-      if (!stale()) setVia(msg, route);
+      if (stale()) return;
+      lastKind = route.kind || lastKind;
+      setVia(msg, route);
     },
     onActivity(text) {
       if (stale()) return;
@@ -500,6 +557,7 @@ function send() {
   if (active || attachmentsBusy() || (!text && !hasAttachments())) return;
   const files = takeAttachments();
   input.value = "";
+  fitInput();
   sendText(text, files);
 }
 
@@ -524,13 +582,17 @@ function startEdit(msg) {
   const form = document.createElement("form");
   form.className = "msg-edit";
   form.innerHTML = `
-    <textarea class="field" rows="1" aria-label="Edit your message"></textarea>
+    <textarea class="field" rows="1" dir="auto"></textarea>
     <div class="msg-edit-actions">
-      <span class="msg-edit-hint">Later messages will be replaced</span>
-      <button type="button" class="btn" data-edit="cancel">Cancel</button>
-      <button type="submit" class="btn btn-primary">Send</button>
+      <span class="msg-edit-hint"></span>
+      <button type="button" class="btn" data-edit="cancel"></button>
+      <button type="submit" class="btn btn-primary"></button>
     </div>`;
   const area = form.querySelector("textarea");
+  area.setAttribute("aria-label", t("Edit your message"));
+  form.querySelector(".msg-edit-hint").textContent = t("Later messages will be replaced");
+  form.querySelector('[data-edit="cancel"]').textContent = t("Cancel");
+  form.querySelector('[type="submit"]').textContent = t("Send");
   area.value = msg._text || "";
   const fit = () => {
     area.style.height = "auto";
@@ -641,7 +703,7 @@ async function speak(msg) {
     await audio.play();
   } catch (err) {
     if (speaking === mine) stopSpeaking();
-    toast(err.message === "NO_BRAIN" ? "Add an AI brain first." : err.message);
+    toast(err.message === "NO_BRAIN" ? t("Set up an AI first.") : err.message);
   }
 }
 
@@ -661,7 +723,7 @@ async function toggleMark(msg, key) {
     const saved = await api.chats.mark(currentChatId, id, { [key]: on });
     setMarks(msg, saved);
     if (key === "pinned") {
-      toast(on ? "Pinned. The AI will remember this in every chat." : "Unpinned and removed from the AI's memory.");
+      toast(on ? t("Pinned. The AI will remember this in every chat.") : t("Unpinned and removed from the AI's memory."));
       notify("chats-changed");
     }
   } catch (err) {
@@ -699,11 +761,11 @@ async function copyText(button, text) {
   try {
     await navigator.clipboard.writeText(text);
   } catch {
-    return toast("Couldn't copy.");
+    return toast(t("Couldn't copy."));
   }
   const label = button.querySelector("span");
   const before = label ? label.textContent : button.innerHTML;
-  if (label) label.textContent = "Copied";
+  if (label) label.textContent = t("Copied");
   else button.innerHTML = ICONS.check;
   button.classList.add("done");
   setTimeout(() => {
@@ -718,11 +780,17 @@ function openLightbox(src, alt) {
   const box = document.createElement("div");
   box.className = "lightbox";
   box.setAttribute("role", "dialog");
-  box.setAttribute("aria-label", alt || "Picture");
-  box.innerHTML = '<img alt=""><button type="button" class="icon-btn lightbox-close" title="Close"><svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>';
+  box.setAttribute("aria-label", alt || t("Picture"));
+  box.setAttribute("aria-modal", "true");
+  box.innerHTML = '<img alt=""><button type="button" class="icon-btn lightbox-close"><svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>';
+  const closeBtn = box.querySelector(".lightbox-close");
+  closeBtn.title = t("Close");
+  closeBtn.setAttribute("aria-label", t("Close"));
   box.querySelector("img").src = src;
   box.querySelector("img").alt = alt || "";
+  let release = null;
   const close = () => {
+    release?.();
     box.remove();
     document.removeEventListener("keydown", onKey, true);
   };
@@ -735,6 +803,7 @@ function openLightbox(src, alt) {
   box.addEventListener("click", close);
   document.addEventListener("keydown", onKey, true);
   document.body.append(box);
+  release = trapModal(box, { initial: ".lightbox-close" });
 }
 
 // ----- Jump to the latest message -----
@@ -746,6 +815,14 @@ messagesEl.addEventListener("scroll", updateJump, { passive: true });
 jumpBtn.addEventListener("click", () => messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: "smooth" }));
 
 // ----- Clicks on anything in the conversation -----
+messagesEl.addEventListener("keydown", (e) => {
+  const image = e.target.closest?.(".msg-image");
+  if (image && (e.key === "Enter" || e.key === " ")) {
+    e.preventDefault();
+    openLightbox(image.src, image.alt);
+  }
+});
+
 messagesEl.addEventListener("click", (e) => {
   const image = e.target.closest(".msg-image");
   if (image) return openLightbox(image.src, image.alt);
@@ -759,7 +836,7 @@ messagesEl.addEventListener("click", (e) => {
     case "toggle-diagram": {
       const block = button.closest(".code-block");
       block.classList.toggle("show-code");
-      button.textContent = block.classList.contains("show-code") ? "Diagram" : "Code";
+      button.textContent = block.classList.contains("show-code") ? t("Diagram") : t("Code");
       return;
     }
     case "copy":
@@ -886,7 +963,7 @@ export async function openChat(id, { force = false, find = "" } = {}) {
   // The last message never got an answer (an error, or the page closed)
   if (chat.messages.at(-1)?.role === "user") {
     const msg = addMessage("model");
-    showError(msg, "This message didn't get a reply.", () => ask({ chatId: chat.id, retry: true, brainId: getSelectedBrainId() }));
+    showError(msg, t("This message didn't get a reply."), () => ask({ chatId: chat.id, retry: true, brainId: getSelectedBrainId() }));
   }
   markLast();
   scrollToBottom();
@@ -900,9 +977,23 @@ composer.addEventListener("submit", (e) => {
   else send();
 });
 
+// The box grows with what you write
+function fitInput() {
+  input.style.height = "auto";
+  input.style.height = `${Math.min(input.scrollHeight, 176)}px`;
+}
+
 input.addEventListener("input", () => {
+  fitInput();
   updateSendButton();
   if (input.value.trim()) robot.director.typing();
+});
+
+// Enter sends; Shift+Enter starts a new line (not while an input method is composing a character)
+input.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" || e.shiftKey || e.isComposing || e.keyCode === 229) return;
+  e.preventDefault();
+  composer.requestSubmit();
 });
 document.addEventListener("friends:attachments-changed", updateSendButton);
 

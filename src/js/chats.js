@@ -1,6 +1,8 @@
 // ---------- Saved chats: sidebar list and search ----------
 import { api } from "./api.js";
 import { openChat, newChat, getCurrentChatId } from "./chat.js";
+import { t, tp } from "./i18n.js";
+import { announce } from "./a11y.js";
 
 const historyEl = document.getElementById("chat-history");
 const searchModal = document.getElementById("search-modal");
@@ -18,21 +20,30 @@ const ICONS = {
 let chatList = [];
 let renamingId = null;
 let confirmId = null;
+let loaded = false; // false until the helper has answered once: the list shows placeholders meanwhile
 
 function groupOf(time) {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  if (time >= today) return "Today";
-  if (time >= today - DAY) return "Yesterday";
-  if (time >= today - 7 * DAY) return "Previous 7 days";
-  if (time >= today - 30 * DAY) return "Previous 30 days";
-  return "Older";
+  if (time >= today) return t("Today");
+  if (time >= today - DAY) return t("Yesterday");
+  if (time >= today - 7 * DAY) return t("Previous 7 days");
+  if (time >= today - 30 * DAY) return t("Previous 30 days");
+  return t("Older");
 }
 
 function renderList() {
   historyEl.innerHTML = "";
+  historyEl.removeAttribute("aria-busy");
+  if (!loaded) {
+    historyEl.setAttribute("aria-busy", "true");
+    historyEl.innerHTML = '<div class="skeleton-list" aria-hidden="true"><i></i><i></i><i></i><i></i></div>';
+    return;
+  }
   if (!chatList.length) {
-    historyEl.innerHTML = '<p class="chat-empty">Your chats will show up here.</p>';
+    historyEl.innerHTML = '<p class="chat-empty"><strong></strong><span></span></p>';
+    historyEl.querySelector("strong").textContent = t("No chats yet");
+    historyEl.querySelector("span").textContent = t("Say hello in the box below. Your conversations are kept here.");
     return;
   }
 
@@ -41,11 +52,13 @@ function renderList() {
   for (const chat of chatList) {
     if (groupOf(chat.updatedAt) !== group) {
       group = groupOf(chat.updatedAt);
-      const title = document.createElement("div");
+      const title = document.createElement("h3");
       title.className = "section-title";
+      title.id = `chat-group-${historyEl.querySelectorAll(".section-title").length}`;
       title.textContent = group;
       ul = document.createElement("ul");
       ul.className = "chat-list";
+      ul.setAttribute("aria-labelledby", title.id);
       historyEl.append(title, ul);
     }
 
@@ -56,25 +69,39 @@ function renderList() {
 
     if (renamingId === chat.id) {
       li.classList.add("renaming");
-      li.innerHTML = '<input class="chat-rename" maxlength="120" aria-label="Chat name">';
+      li.innerHTML = '<input class="chat-rename" maxlength="120" dir="auto">';
+      li.querySelector("input").setAttribute("aria-label", t("Chat name"));
       li.querySelector("input").value = chat.title;
     } else if (confirmId === chat.id) {
       li.classList.add("confirm");
       li.innerHTML = `
-        <span class="chat-title">Delete this chat?</span>
+        <span class="chat-title" role="alert"></span>
         <div class="chat-actions">
-          <button class="icon-btn small danger" data-action="confirm-delete" title="Delete">${ICONS.check}</button>
-          <button class="icon-btn small" data-action="cancel" title="Cancel">${ICONS.close}</button>
+          <button class="icon-btn small danger" data-action="confirm-delete">${ICONS.check}</button>
+          <button class="icon-btn small" data-action="cancel">${ICONS.close}</button>
         </div>`;
+      li.querySelector(".chat-title").textContent = t("Delete this chat?");
+      for (const [action, label] of [["confirm-delete", t("Yes, delete it")], ["cancel", t("Keep it")]]) {
+        const b = li.querySelector(`[data-action="${action}"]`);
+        b.title = label;
+        b.setAttribute("aria-label", label);
+      }
     } else {
       li.innerHTML = `
-        <a class="chat-link" href="#chat/${chat.id}"><span class="chat-title"></span></a>
+        <a class="chat-link" href="#chat/${chat.id}"><span class="chat-title" dir="auto"></span></a>
         <div class="chat-actions">
-          <button class="icon-btn small" data-action="rename" title="Rename">${ICONS.edit}</button>
-          <button class="icon-btn small danger" data-action="delete" title="Delete">${ICONS.trash}</button>
+          <button class="icon-btn small" data-action="rename">${ICONS.edit}</button>
+          <button class="icon-btn small danger" data-action="delete">${ICONS.trash}</button>
         </div>`;
       li.querySelector(".chat-title").textContent = chat.title;
-      li.querySelector(".chat-link").title = chat.title;
+      const link = li.querySelector(".chat-link");
+      link.title = chat.title;
+      if (chat.id === getCurrentChatId()) link.setAttribute("aria-current", "page");
+      for (const [action, label] of [["rename", t("Rename this chat")], ["delete", t("Delete this chat")]]) {
+        const b = li.querySelector(`[data-action="${action}"]`);
+        b.title = label;
+        b.setAttribute("aria-label", label);
+      }
     }
     ul.append(li);
   }
@@ -84,12 +111,15 @@ function renderList() {
     renameInput.focus();
     renameInput.select();
   }
+  // Asked to delete: the safe answer has the focus
+  else if (confirmId) historyEl.querySelector('.confirm [data-action="cancel"]')?.focus();
 }
 
 async function refresh() {
   try {
     chatList = await api.chats.list();
   } catch {} // helper unreachable: keep showing what we had
+  loaded = true;
   renderList();
 }
 
@@ -137,6 +167,30 @@ historyEl.addEventListener("click", async (e) => {
       return;
   }
   renderList();
+});
+
+// Up and Down move between chats, F2 renames, Delete asks to delete
+historyEl.addEventListener("keydown", (e) => {
+  const link = e.target.closest?.(".chat-link");
+  if (!link || e.ctrlKey || e.altKey || e.metaKey) return;
+  const id = link.closest(".chat-item").dataset.id;
+  if (e.key === "F2") {
+    e.preventDefault();
+    renamingId = id;
+    confirmId = null;
+    renderList();
+  } else if (e.key === "Delete") {
+    e.preventDefault();
+    confirmId = id;
+    renamingId = null;
+    renderList();
+  } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
+    e.preventDefault();
+    const links = [...historyEl.querySelectorAll(".chat-link")];
+    const at = links.indexOf(link);
+    const next = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: links.length - 1 }[e.key];
+    links[Math.min(links.length - 1, Math.max(0, next))]?.focus();
+  }
 });
 
 historyEl.addEventListener("keydown", (e) => {
@@ -190,7 +244,8 @@ function renderResults(query) {
   if (!results.length) {
     const empty = document.createElement("li");
     empty.className = "search-empty";
-    empty.textContent = query.trim() ? "No chats found." : "No chats yet.";
+    empty.setAttribute("role", "presentation");
+    empty.textContent = query.trim() ? t("No chat matches “{query}”.", { query: query.trim() }) : t("No chats yet. Start one, and it will show up here.");
     searchResults.append(empty);
     return;
   }
@@ -198,12 +253,16 @@ function renderResults(query) {
     const li = document.createElement("li");
     li.className = "search-result" + (i === selected ? " selected" : "");
     li.dataset.id = r.id;
+    li.id = `search-result-${i}`;
+    li.setAttribute("role", "option");
+    li.setAttribute("aria-selected", String(i === selected));
     li.innerHTML = '<div class="search-title"></div><div class="search-snippet"></div>';
     highlight(li.querySelector(".search-title"), r.title, query);
     if (r.snippet) highlight(li.querySelector(".search-snippet"), r.snippet, query);
     else li.querySelector(".search-snippet").textContent = groupOf(r.updatedAt);
     searchResults.append(li);
   });
+  searchInput.setAttribute("aria-activedescendant", `search-result-${selected}`);
 }
 
 async function runSearch(query) {
@@ -216,6 +275,7 @@ async function runSearch(query) {
   results = found;
   selected = 0;
   renderResults(query);
+  announce(found.length ? tp("{n} chat found", "{n} chats found", found.length) : t("No chats found"));
 }
 
 function openSearch() {

@@ -39,7 +39,7 @@ describe("Local voice", { skip: Boolean(process.env.FRIENDS_TEST_VOICE) }, () =>
     assert.deepStrictEqual([status.installed, status.running, status.installing], [false, false, false]);
     assert.strictEqual(await voice.ensure(), null);
     const api = openai.create({ baseUrl: "http://127.0.0.1:1/v1" });
-    await assert.rejects(api.transcribe({ key: "", audio: "AAAA" }), /Settings → AI control/);
+    await assert.rejects(api.transcribe({ key: "", audio: "AAAA" }), /Settings → AI & privacy/);
     await assert.rejects(api.speak({ text: "hi" }), /NO_TTS/);
     await assert.rejects(ollama.create({ baseUrl: "http://127.0.0.1:1" }).transcribe({ key: "", audio: "AAAA" }), /local voice/);
   });

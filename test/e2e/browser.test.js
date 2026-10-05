@@ -53,6 +53,8 @@ describe("The page in Chrome", { skip: !CHROME && "no Chrome found" }, () => {
     browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox", "--disable-gpu", "--use-gl=swiftshader"] });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 900 });
+    // The interface language follows the browser's; these tests read the English
+    await page.evaluateOnNewDocument(() => Object.defineProperty(navigator, "languages", { get: () => ["en-US", "en"] }));
     await page.setRequestInterception(true);
     page.on("request", (req) => {
       const url = new URL(req.url());
@@ -77,7 +79,7 @@ describe("The page in Chrome", { skip: !CHROME && "no Chrome found" }, () => {
   const openAiControl = async () => {
     await page.evaluate(() => {
       document.getElementById("settings-btn")?.click();
-      [...document.querySelectorAll(".modal-nav .tab")].find((t) => /AI control/.test(t.textContent))?.click();
+      document.querySelector('.modal-nav .tab[data-tab="ai-control"]')?.click();
     });
     await page.waitForSelector("#local-card", { visible: true });
   };
@@ -87,7 +89,7 @@ describe("The page in Chrome", { skip: !CHROME && "no Chrome found" }, () => {
     assert.deepStrictEqual(problems, []);
   });
 
-  test("Settings → AI control shows Private mode and finds the local AI", async () => {
+  test("Settings → AI & privacy shows Private mode and finds the local AI", async () => {
     await openAiControl();
     await page.waitForFunction(() => document.querySelectorAll(".local-server .local-model").length > 0);
     const text = await page.$eval("#local-card", (el) => el.innerText);
@@ -128,7 +130,7 @@ describe("The page in Chrome", { skip: !CHROME && "no Chrome found" }, () => {
   test("Google sign-in says it needs a one-time setup, and the form saves a pasted Firebase config", async () => {
     await page.evaluate(() => {
       document.getElementById("settings-btn")?.click();
-      [...document.querySelectorAll(".modal-nav .tab")].find((t) => /Connected Apps/.test(t.textContent))?.click();
+      document.querySelector('.modal-nav .tab[data-tab="integrations"]')?.click();
     });
     await page.waitForSelector("#gsi-setup", { visible: true });
     await page.waitForFunction(() => document.getElementById("gsi-setup").dataset.state === "not-configured");

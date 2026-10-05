@@ -1,3 +1,5 @@
+import "./i18n.js";
+import "./a11y.js";
 import { closeSettings } from "./settings.js";
 import { openVoice, closeVoice, isVoiceOpen } from "./voice.js";
 import { closeSearch } from "./chats.js";
@@ -15,7 +17,9 @@ import "./life.js";
 import "./apps.js";
 import "./builder.js";
 import "./composer.js";
+import "./onboarding.js";
 import "./chat.js";
+import "./shortcuts.js";
 import "./auth.js";
 import "./workspace.js";
 import "./data.js";

@@ -1,0 +1,270 @@
+/* ---------- Filming mode ---------- */
+/* Nothing but the picture: every control hides, and the mouse after 2 s */
+.voice-mode.filming .voice-top,
+.voice-mode.filming .voice-controls,
+.voice-mode.filming .voice-type-bar,
+.voice-mode.filming .voice-hide-btn,
+.voice-mode.filming .voice-drawer,
+.voice-mode.filming .voice-record-pop,
+.voice-mode.filming .voice-scene-pop,
+.voice-mode.filming .voice-perm-banner,
+.voice-mode.filming .face-indicator {
+  display: none;
+}
+
+.voice-mode.filming.hide-cursor,
+.voice-mode.filming.hide-cursor * {
+  cursor: none;
+}
+
+.voice-mode.filming.captions-off .voice-caption {
+  visibility: hidden;
+}
+
+/* Large captions: readable across a room, inside the phone's 9:16 frame */
+.voice-mode.filming.big-captions .voice-middle {
+  max-width: calc(min(100vh, 100vw * 16 / 9) * 9 / 16 * 0.88);
+  padding-bottom: 7vh;
+}
+
+.voice-mode.filming.big-captions .voice-caption {
+  font-size: clamp(22px, 3.6vh, 48px);
+  font-weight: 600;
+  line-height: 1.3;
+  -webkit-line-clamp: 3;
+  padding: 0.35em 0.7em;
+  border-radius: 0.5em;
+  background: rgba(8, 8, 10, 0.62);
+}
+
+.voice-mode.filming.big-captions .caption-tag {
+  font-size: 0.5em;
+  vertical-align: 0.25em;
+}
+
+.filming-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.filming-overlay[hidden] {
+  display: none;
+}
+
+/* Where 16:9 and 9:16 pictures would cut the screen (with their title-safe areas) */
+.filming-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  display: none;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  border-radius: var(--radius-xs);
+}
+
+.filming-overlay.guide .filming-frame {
+  display: block;
+}
+
+.filming-frame::after {
+  content: "";
+  position: absolute;
+  inset: 5%;
+  border: 1.5px dashed rgba(255, 255, 255, 0.28);
+}
+
+.filming-frame span {
+  position: absolute;
+  top: 8px;
+  inset-inline-start: 10px;
+  padding: var(--space-h) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+
+.f169 {
+  width: min(100vw, 100vh * 16 / 9);
+  aspect-ratio: 16 / 9;
+}
+
+.f916 {
+  height: min(100vh, 100vw * 16 / 9);
+  aspect-ratio: 9 / 16;
+  border-color: color-mix(in srgb, var(--accent) 80%, white);
+}
+
+.f916 span {
+  inset-inline-start: auto;
+  inset-inline-end: 10px;
+}
+
+.filming-setup {
+  position: relative;
+  pointer-events: auto;
+  width: min(420px, calc(100% - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2h);
+  padding: var(--space-5) var(--space-6);
+  border-radius: var(--radius-xl);
+  background: rgba(20, 20, 22, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  color: var(--text);
+  font-size: var(--fs-base);
+  line-height: 1.45;
+}
+
+.filming-setup[hidden] {
+  display: none;
+}
+
+.filming-title {
+  font-size: var(--fs-xl);
+  font-weight: 600;
+}
+
+.filming-note {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.filming-note:empty {
+  display: none;
+}
+
+.filming-keys {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-1) 0;
+  font-size: var(--fs-sm);
+}
+
+.filming-keys div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.filming-keys dt {
+  color: var(--text-muted);
+}
+
+.filming-keys dd {
+  font-weight: 600;
+}
+
+.filming-actions {
+  display: flex;
+  gap: var(--space-2h);
+  margin-top: var(--space-1h);
+}
+
+/* The countdown: big enough to read from across the room */
+.filming-countdown {
+  font-size: min(34vh, 40vw);
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 40px color-mix(in srgb, var(--accent) 70%, transparent), 0 6px 30px rgba(0, 0, 0, 0.6);
+  font-variant-numeric: tabular-nums;
+}
+
+.filming-countdown[hidden] {
+  display: none;
+}
+
+.filming-countdown.tick {
+  animation: count-tick 1s ease-out both;
+}
+
+@keyframes count-tick {
+  0% { opacity: 0; transform: scale(1.25); }
+  18% { opacity: 1; transform: scale(1); }
+  82% { opacity: 1; }
+  100% { opacity: 0.15; transform: scale(0.92); }
+}
+
+/* A small, quiet confirmation for each key press */
+.filming-toast {
+  position: absolute;
+  inset-inline-start: 18px;
+  bottom: 18px;
+  z-index: var(--z-bar);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: rgba(10, 10, 12, 0.55);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: var(--fs-sm);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.filming-toast.show {
+  animation: toast-fade 1.3s ease-out both;
+}
+
+@keyframes toast-fade {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filming-countdown.tick {
+    animation: none;
+  }
+}
+
+/* "Follow my face": the camera is in use */
+.face-indicator {
+  position: absolute;
+  inset-inline-start: 20px;
+  bottom: 24px;
+  z-index: var(--z-raised);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: min(360px, calc(100% - 120px));
+  padding: var(--space-1h) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: rgba(30, 31, 32, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  text-align: start;
+}
+
+.face-indicator[hidden] {
+  display: none;
+}
+
+.face-indicator-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.face-indicator.live .face-indicator-dot {
+  background: #34d399;
+  box-shadow: 0 0 8px #34d399;
+}
+
+.face-indicator.problem .face-indicator-dot {
+  background: #f5b35a;
+}
+
+.voice-mode.ui-hidden .face-indicator {
+  opacity: 0.4;
+}

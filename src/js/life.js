@@ -8,6 +8,8 @@ import { api } from "./api.js";
 import { getSettings, onSettings } from "./store.js";
 import { openChat } from "./chat.js";
 import { getAccessToken } from "./auth.js";
+import { t, tp, nf, formatDate, formatTime } from "./i18n.js";
+import { announce } from "./a11y.js";
 
 const modal = document.getElementById("life-modal");
 const badge = document.getElementById("today-badge");
@@ -32,15 +34,15 @@ const say = (text, kind = "") => {
 };
 // "YYYY-MM-DD" in this computer's time zone
 const localDay = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const time = (ms) => new Date(ms).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-const when = (ms) => new Date(ms).toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const time = (ms) => formatTime(new Date(ms));
+const when = (ms) => formatDate(new Date(ms), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const dueLabel = (due) => {
   if (!due) return "";
   const today = localDay();
   const day = due.slice(0, 10);
   const date = new Date(`${day}T00:00`);
   const thisYear = date.getFullYear() === new Date().getFullYear();
-  const label = day === today ? "Today" : date.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", ...(thisYear ? {} : { year: "numeric" }) });
+  const label = day === today ? t("Today") : formatDate(date, { weekday: "short", day: "numeric", month: "short", ...(thisYear ? {} : { year: "numeric" }) });
   return due.includes("T") ? `${label} ${due.slice(11)}` : label;
 };
 
@@ -69,7 +71,12 @@ function closeToday() {
 
 function showTab(name) {
   tab = name;
-  modal.querySelectorAll(".life-tab").forEach((t) => t.classList.toggle("active", t.dataset.lifeTab === name));
+  modal.querySelectorAll(".life-tab").forEach((b) => {
+    const on = b.dataset.lifeTab === name;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-selected", String(on));
+    b.tabIndex = on ? 0 : -1;
+  });
   modal.querySelectorAll(".life-pane").forEach((p) => p.classList.toggle("active", p.dataset.lifePane === name));
   refresh();
 }
@@ -82,36 +89,52 @@ document.getElementById("life-close").addEventListener("click", closeToday);
 modal.addEventListener("click", (e) => e.target === modal && closeToday());
 document.addEventListener("keydown", (e) => e.key === "Escape" && !modal.hidden && closeToday());
 modal.querySelector(".life-tabs").addEventListener("click", (e) => {
-  const t = e.target.closest(".life-tab");
-  if (t) showTab(t.dataset.lifeTab);
+  const b = e.target.closest(".life-tab");
+  if (b) showTab(b.dataset.lifeTab);
+});
+// Arrow keys move between the tabs
+modal.querySelector(".life-tabs").addEventListener("keydown", (e) => {
+  const tabs = [...modal.querySelectorAll(".life-tab")];
+  const at = tabs.indexOf(document.activeElement);
+  const sign = document.documentElement.dir === "rtl" ? -1 : 1;
+  const step = { ArrowRight: sign, ArrowLeft: -sign, ArrowDown: 1, ArrowUp: -1 }[e.key] ?? 0;
+  if (at < 0 || (!step && e.key !== "Home" && e.key !== "End")) return;
+  e.preventDefault();
+  const next = e.key === "Home" ? 0 : e.key === "End" ? tabs.length - 1 : (at + step + tabs.length) % tabs.length;
+  showTab(tabs[next].dataset.lifeTab);
+  tabs[next].focus();
 });
 
 // ----- Drawing -----
-function taskItem(t) {
-  const li = el("li", `life-item task${t.done ? " done" : ""}${t.priority === "high" ? " high" : ""}`);
-  const check = Object.assign(document.createElement("input"), { type: "checkbox", checked: t.done, className: "life-check" });
-  check.setAttribute("aria-label", `Done: ${t.title}`);
-  check.addEventListener("change", () => act(() => api.life.updateTask(t.id, { done: check.checked })));
+function taskItem(task) {
+  const li = el("li", `life-item task${task.done ? " done" : ""}${task.priority === "high" ? " high" : ""}`);
+  const check = Object.assign(document.createElement("input"), { type: "checkbox", checked: task.done, className: "life-check" });
+  check.setAttribute("aria-label", t("Done: {title}", { title: task.title }));
+  check.addEventListener("change", () => act(() => api.life.updateTask(task.id, { done: check.checked })));
   const text = el("span", "life-text");
-  text.append(el("span", "life-title", t.title));
-  const meta = [dueLabel(t.due), t.list !== "inbox" ? t.list : "", t.priority === "high" ? "high priority" : ""].filter(Boolean).join(" · ");
-  if (meta) text.append(el("span", `life-meta${t.due && t.due.slice(0, 10) < localDay() && !t.done ? " overdue" : ""}`, meta));
+  text.append(el("span", "life-title", task.title));
+  const meta = [dueLabel(task.due), task.list !== "inbox" ? task.list : "", task.priority === "high" ? t("high priority") : ""].filter(Boolean).join(" · ");
+  if (meta) text.append(el("span", `life-meta${task.due && task.due.slice(0, 10) < localDay() && !task.done ? " overdue" : ""}`, meta));
   const remove = el("button", "icon-btn small");
   remove.type = "button";
-  remove.title = "Delete";
+  remove.title = t("Delete task: {title}", { title: task.title });
+  remove.setAttribute("aria-label", remove.title);
   remove.innerHTML = REMOVE;
-  remove.addEventListener("click", () => act(() => api.life.removeTask(t.id)));
+  remove.addEventListener("click", () => act(() => api.life.removeTask(task.id)));
   li.append(check, text, remove);
   return li;
 }
 
+const REPEAT = { daily: t("every day"), weekdays: t("weekdays"), weekly: t("every week"), monthly: t("every month"), yearly: t("every year") };
+
 function reminderItem(r) {
   const li = el("li", "life-item");
   const text = el("span", "life-text");
-  text.append(el("span", "life-title", r.text), el("span", "life-meta", `${when(r.at)}${r.repeat !== "none" ? ` · ${r.repeat}` : ""}`));
+  text.append(el("span", "life-title", r.text), el("span", "life-meta", `${when(r.at)}${r.repeat !== "none" ? ` · ${REPEAT[r.repeat] || r.repeat}` : ""}`));
   const remove = el("button", "icon-btn small");
   remove.type = "button";
-  remove.title = "Cancel";
+  remove.title = t("Cancel reminder: {text}", { text: r.text });
+  remove.setAttribute("aria-label", remove.title);
   remove.innerHTML = REMOVE;
   remove.addEventListener("click", () => act(() => api.life.removeReminder(r.id)));
   li.append(el("span", "life-icon", "⏰"), text, remove);
@@ -122,8 +145,8 @@ function habitCheck(h) {
   const b = el("button", `habit-check${h.today ? " done" : ""}`);
   b.type = "button";
   b.setAttribute("aria-pressed", String(h.today));
-  b.title = h.today ? "Done today (click to undo)" : "Mark as done today";
-  b.append(el("span", "habit-emoji", h.emoji), el("span", "habit-name", h.name), el("span", "habit-streak", h.streak ? `🔥 ${h.streak}` : ""));
+  b.title = h.today ? t("Done today (click to undo)") : t("Mark as done today");
+  b.append(el("span", "habit-emoji", h.emoji), el("span", "habit-name", h.name), el("span", "habit-streak", h.streak ? `🔥 ${nf(h.streak)}` : ""));
   b.addEventListener("click", () => act(() => api.life.logHabit(h.id, { done: !h.today })));
   return b;
 }
@@ -131,18 +154,21 @@ function habitCheck(h) {
 function habitItem(h) {
   const li = el("li", "life-item habit");
   const text = el("span", "life-text");
-  text.append(el("span", "life-title", `${h.emoji} ${h.name}`), el("span", "life-meta", h.streak ? `${h.streak}-day streak` : "No streak yet"));
+  text.append(el("span", "life-title", `${h.emoji} ${h.name}`), el("span", "life-meta", h.streak ? tp("{n}-day streak", "{n}-day streak", h.streak) : t("No streak yet")));
   const week = el("span", "habit-week");
-  week.title = "The last 7 days";
+  week.title = t("The last 7 days");
   h.last7.forEach((d) => week.append(el("i", d ? "on" : "")));
   const remove = el("button", "icon-btn small");
   remove.type = "button";
-  remove.title = "Stop tracking";
+  remove.title = t("Stop tracking {name}", { name: h.name });
+  remove.setAttribute("aria-label", remove.title);
   remove.innerHTML = REMOVE;
   remove.addEventListener("click", () => {
     if (!remove.dataset.armed) {
       remove.dataset.armed = "1";
-      remove.title = "Click again to stop tracking it";
+      remove.title = t("Click again to stop tracking it");
+      remove.setAttribute("aria-label", remove.title);
+      announce(remove.title);
       remove.classList.add("armed");
       return setTimeout(() => {
         delete remove.dataset.armed;
@@ -155,17 +181,24 @@ function habitItem(h) {
   return li;
 }
 
+const MOOD = { awful: t("Awful"), bad: t("Bad"), okay: t("Okay"), good: t("Good"), great: t("Great") };
+
 function journalItem(e) {
   const li = el("li", "life-item journal");
   const text = el("span", "life-text");
-  text.append(el("span", "life-meta", `${when(e.at)}${e.mood ? ` · ${MOOD_EMOJI[e.mood]} ${e.mood}` : ""}`), el("span", "life-entry", e.text));
+  text.append(el("span", "life-meta", `${when(e.at)}${e.mood ? ` · ${MOOD_EMOJI[e.mood]} ${MOOD[e.mood] || e.mood}` : ""}`), el("span", "life-entry", e.text));
+  text.lastChild.dir = "auto";
   const remove = el("button", "icon-btn small");
   remove.type = "button";
-  remove.title = "Delete";
+  remove.title = t("Delete this entry");
+  remove.setAttribute("aria-label", remove.title);
   remove.innerHTML = REMOVE;
   remove.addEventListener("click", () => {
     if (!remove.dataset.armed) {
       remove.dataset.armed = "1";
+      remove.title = t("Click again to delete it");
+      remove.setAttribute("aria-label", remove.title);
+      announce(remove.title);
       remove.classList.add("armed");
       return setTimeout(() => (delete remove.dataset.armed, remove.classList.remove("armed")), 4000);
     }
@@ -178,24 +211,24 @@ function journalItem(e) {
 async function refresh() {
   try {
     if (tab === "today" || modal.hidden) {
-      const t = await api.life.today();
-      updateBadge(t);
+      const day = await api.life.today();
+      updateBadge(day);
       if (modal.hidden) return;
-      document.getElementById("life-date").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
-      const tasks = [...t.overdue, ...t.dueToday];
-      document.getElementById("life-today-tasks").replaceChildren(...(tasks.length ? tasks.map(taskItem) : [empty(t.open.length ? `Nothing due today. ${t.open.length} open task${t.open.length === 1 ? "" : "s"} without a date.` : "Nothing due today.")]));
-      document.getElementById("life-today-reminders").replaceChildren(...(t.reminders.length ? t.reminders.map(reminderItem) : [empty("No more reminders today.")]));
+      document.getElementById("life-date").textContent = formatDate(new Date(), { weekday: "long", day: "numeric", month: "long" });
+      const tasks = [...day.overdue, ...day.dueToday];
+      document.getElementById("life-today-tasks").replaceChildren(...(tasks.length ? tasks.map(taskItem) : [empty(day.open.length ? t("Nothing due today.") + " " + tp("{n} open task without a date.", "{n} open tasks without a date.", day.open.length) : t("Nothing due today. Enjoy it, or add a task under Tasks."))]));
+      document.getElementById("life-today-reminders").replaceChildren(...(day.reminders.length ? day.reminders.map(reminderItem) : [empty(t("No more reminders today."))]));
       const habits = document.getElementById("life-today-habits");
-      habits.replaceChildren(...(t.habits.length ? t.habits.map(habitCheck) : [el("span", "row-desc", "No habits yet. Add one under Habits, or tell your AI.")]));
+      habits.replaceChildren(...(day.habits.length ? day.habits.map(habitCheck) : [el("span", "row-desc", t("No habits yet. Add one under Habits, or tell your AI."))]));
     } else if (tab === "tasks") {
       const all = await api.life.tasks(document.getElementById("tasks-show-done").checked);
       const groups = new Map();
-      for (const t of all) groups.set(t.list, [...(groups.get(t.list) || []), t]);
+      for (const task of all) groups.set(task.list, [...(groups.get(task.list) || []), task]);
       const box = document.getElementById("task-groups");
       box.replaceChildren();
-      if (!all.length) box.append(el("p", "row-desc", "No tasks. Add one above, or just tell your AI what you need to do."));
+      if (!all.length) box.append(el("p", "row-desc", t("No tasks yet. Add one above, or just tell your AI what you need to do.")));
       for (const [name, tasks] of groups) {
-        box.append(el("div", "life-section-title", name === "inbox" ? "Inbox" : name));
+        box.append(el("div", "life-section-title", name === "inbox" ? t("Inbox") : name));
         const ul = el("ul", "life-list");
         ul.append(...tasks.map(taskItem));
         box.append(ul);
@@ -203,24 +236,25 @@ async function refresh() {
       document.getElementById("task-lists").replaceChildren(...[...groups.keys()].map((n) => Object.assign(document.createElement("option"), { value: n })));
     } else if (tab === "reminders") {
       const list = await api.life.reminders();
-      document.getElementById("reminder-list").replaceChildren(...(list.length ? list.map(reminderItem) : [empty("No reminders. Add one above, or say \"remind me in 20 minutes to…\".")]));
+      document.getElementById("reminder-list").replaceChildren(...(list.length ? list.map(reminderItem) : [empty(t("No reminders. Add one above, or say “remind me in 20 minutes to…”."))]));
     } else if (tab === "habits") {
       const list = await api.life.habits();
-      document.getElementById("habit-list").replaceChildren(...(list.length ? list.map(habitItem) : [empty("No habits yet.")]));
+      document.getElementById("habit-list").replaceChildren(...(list.length ? list.map(habitItem) : [empty(t("No habits yet. Add one above, for example “Gym” or “Read 20 minutes”."))]));
     } else if (tab === "journal") {
       const list = await api.life.journal(90);
-      document.getElementById("journal-list").replaceChildren(...(list.length ? list.map(journalItem) : [empty("No entries in the last 90 days.")]));
+      document.getElementById("journal-list").replaceChildren(...(list.length ? list.map(journalItem) : [empty(t("No journal entries in the last 90 days. Write what's on your mind above."))]));
     }
   } catch (err) {
     say(err.message, "error");
   }
 }
 
-function updateBadge(t) {
-  const count = t.overdue.length + t.dueToday.length;
+function updateBadge(day) {
+  const count = day.overdue.length + day.dueToday.length;
   badge.hidden = !count;
-  badge.textContent = count;
-  badge.classList.toggle("overdue", t.overdue.length > 0);
+  badge.textContent = nf(count);
+  badge.title = tp("{n} task due today or overdue", "{n} tasks due today or overdue", count);
+  badge.classList.toggle("overdue", day.overdue.length > 0);
 }
 
 async function act(fn) {
@@ -279,29 +313,35 @@ quick.querySelector(".mood-pick").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-mood]");
   if (!b) return;
   quickMood = quickMood === b.dataset.mood ? "" : b.dataset.mood;
-  quick.querySelectorAll(".mood-pick button").forEach((x) => x.classList.toggle("selected", x.dataset.mood === quickMood));
+  quick.querySelectorAll(".mood-pick button").forEach((x) => {
+    x.classList.toggle("selected", x.dataset.mood === quickMood);
+    x.setAttribute("aria-pressed", String(x.dataset.mood === quickMood));
+  });
 });
 quick.addEventListener("submit", (e) => {
   e.preventDefault();
-  const text = quick.text.value.trim() || (quickMood ? `Feeling ${quickMood}.` : "");
+  const text = quick.text.value.trim() || (quickMood ? t("Feeling {mood}.", { mood: MOOD[quickMood].toLowerCase() }) : "");
   if (!text) return;
   act(() => api.life.addEntry({ text, mood: quickMood })).then(() => {
     quick.text.value = "";
     quickMood = "";
-    quick.querySelectorAll(".mood-pick button").forEach((x) => x.classList.remove("selected"));
-    say("Saved in your journal.", "ok");
+    quick.querySelectorAll(".mood-pick button").forEach((x) => {
+      x.classList.remove("selected");
+      x.setAttribute("aria-pressed", "false");
+    });
+    say(t("Saved in your journal."), "ok");
   });
 });
 
 document.getElementById("life-briefing").addEventListener("click", async () => {
-  say("Putting your briefing together…");
+  say(t("Putting your briefing together…"));
   try {
     const made = await api.life.briefing(getAccessToken());
     closeToday();
     openChat(made.chatId, { force: true });
     document.dispatchEvent(new CustomEvent("friends:chats-changed"));
   } catch (err) {
-    say(err.message === "NO_BRAIN" ? "Add an AI brain first (Settings → AI control)." : err.message, "error");
+    say(err.message === "NO_BRAIN" ? t("Set up an AI first (Settings → AI & privacy).") : err.message, "error");
   }
 });
 
@@ -320,6 +360,7 @@ allowButton.addEventListener("click", askForNotifications);
 
 function toast({ icon, title, body, actions = [] }) {
   const box = el("div", "life-toast");
+  box.setAttribute("role", "alert");
   box.append(el("span", "life-toast-icon", icon));
   const text = el("div", "life-toast-text");
   text.append(el("strong", "", title));
@@ -337,7 +378,8 @@ function toast({ icon, title, body, actions = [] }) {
   }
   const x = el("button", "icon-btn small");
   x.type = "button";
-  x.title = "Dismiss";
+  x.title = t("Dismiss");
+  x.setAttribute("aria-label", t("Dismiss"));
   x.innerHTML = REMOVE;
   x.addEventListener("click", close);
   box.append(x);
@@ -362,21 +404,21 @@ function onReminder(r) {
   toast({
     icon: "⏰",
     title: r.text,
-    body: `Reminder · ${time(r.at)}`,
+    body: `${t("Reminder")} · ${time(r.at)}`,
     actions: [
-      ["Snooze 10 min", () => api.life.snooze(r.id, 10).catch(() => {})],
-      ["Open Today", () => openToday()],
+      [t("Snooze 10 min"), () => api.life.snooze(r.id, 10).catch(() => {})],
+      [t("Open Today"), () => openToday()],
     ],
   });
-  systemNotification(`⏰ ${r.text}`, "Friends reminder", () => openToday());
+  systemNotification(`⏰ ${r.text}`, t("Friends reminder"), () => openToday());
   // In voice mode the character says it
-  if (s?.life?.speak !== false && handlers.voiceOpen() && handlers.speak) handlers.speak(`A reminder ${r.repeat !== "none" ? `(${r.repeat}) ` : ""}just went off: "${r.text}".`);
+  if (s?.life?.speak !== false && handlers.voiceOpen() && handlers.speak) handlers.speak(`A reminder ${r.repeat !== "none" ? `(${r.repeat}) ` : ""}just went off: "${r.text}".`); // (said to the AI, in English: it answers in your language)
   refresh();
 }
 
 function onBriefing(made) {
-  toast({ icon: "☀️", title: "Your briefing is ready", body: made.title, actions: [["Read it", () => openChat(made.chatId, { force: true })]] });
-  systemNotification("☀️ Your briefing is ready", made.title, () => openChat(made.chatId, { force: true }));
+  toast({ icon: "☀️", title: t("Your briefing is ready"), body: made.title, actions: [[t("Read it"), () => openChat(made.chatId, { force: true })]] });
+  systemNotification(`☀️ ${t("Your briefing is ready")}`, made.title, () => openChat(made.chatId, { force: true }));
   document.dispatchEvent(new CustomEvent("friends:chats-changed"));
 }
 

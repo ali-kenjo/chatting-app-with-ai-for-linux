@@ -108,7 +108,7 @@ function getKey(id) {
   }
 
   if (!key) {
-    throw new Error("This brain's API key is missing from your keyring. Enter it again in Settings → AI control.");
+    throw new Error("This AI's API key is missing from your keyring. Enter it again in Settings → AI & privacy.");
   }
   return key;
 }

@@ -6,13 +6,14 @@
 // Esc (or leaving fullscreen) ends it and puts everything back.
 import { keyAction, isFilmingKey } from "./robot/keys.mjs";
 import { getSettings } from "./store.js";
+import { t, tp } from "./i18n.js";
 
 const CONFIRM = {
-  mute: (muted) => (muted ? "Mic off" : "Mic on"),
-  interrupt: () => "Cut in",
-  start: () => "Starting",
-  pause: () => "Paused",
-  captions: (on) => (on ? "Captions on" : "Captions off"),
+  mute: (muted) => (muted ? t("Mic off") : t("Mic on")),
+  interrupt: () => t("Cut in"),
+  start: () => t("Starting"),
+  pause: () => t("Paused"),
+  captions: (on) => (on ? t("Captions on") : t("Captions off")),
 };
 
 // controls: pause(), resume(), mute() → muted, interrupt(), running() → bool,
@@ -47,16 +48,16 @@ export function createFilming({ root, controls }) {
   // ----- The screen stays on -----
   async function keepAwake() {
     if (!("wakeLock" in navigator)) {
-      wakeNote.textContent = "This browser can't keep the screen on; check your power settings.";
+      wakeNote.textContent = t("This browser can't keep the screen on; check your power settings.");
       return;
     }
     try {
       wakeLock = await navigator.wakeLock.request("screen");
       wakeLock.addEventListener("release", () => (wakeLock = null));
-      wakeNote.textContent = "The screen stays on.";
+      wakeNote.textContent = t("The screen stays on.");
     } catch {
       wakeLock = null;
-      wakeNote.textContent = "The screen may dim: keeping it on isn't allowed here.";
+      wakeNote.textContent = t("The screen may dim: keeping it on isn't allowed here.");
     }
   }
 
@@ -154,7 +155,7 @@ export function createFilming({ root, controls }) {
     overlay.classList.add("guide");
     setup.hidden = false;
     countdown.hidden = true;
-    delayNote.textContent = f.delay ? `It starts ${f.delay} seconds after you press start.` : "It starts as soon as you press start.";
+    delayNote.textContent = f.delay ? tp("It starts {n} second after you press start.", "It starts {n} seconds after you press start.", f.delay) : t("It starts as soon as you press start.");
     root.requestFullscreen?.().catch(() => {});
     keepAwake();
     showCursor();

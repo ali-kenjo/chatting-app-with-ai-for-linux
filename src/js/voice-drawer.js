@@ -2,6 +2,7 @@
 // "Drafts": what the AI wrote in this conversation (scripts, posts, ideas…).
 // "Transcript": what you both said, as it's said.
 import { draftCard } from "./drafts.js";
+import { t } from "./i18n.js";
 import { characterName } from "./characters.js";
 
 const drawer = document.getElementById("voice-drawer");
@@ -11,8 +12,8 @@ const draftsButton = document.getElementById("voice-drafts-btn");
 const badge = document.getElementById("voice-drafts-badge");
 
 const EMPTY = {
-  drafts: 'Scripts, posts and ideas the AI writes land here, ready to copy. Try: "Write me three hooks for a video about…"',
-  transcript: "What you both say shows up here.",
+  drafts: t("Scripts, posts and ideas the AI writes land here, ready to copy. Try: “Write me three hooks for a video about…”"),
+  transcript: t("What you both say shows up here."),
 };
 
 let tab = "drafts";
@@ -49,6 +50,7 @@ function showTab(next) {
 export function toggleDrawer(show = drawer.hidden) {
   drawer.hidden = !show;
   draftsButton.classList.toggle("active", show);
+  draftsButton.setAttribute("aria-expanded", String(show));
   if (show) showTab(tab);
 }
 
