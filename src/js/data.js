@@ -4,6 +4,7 @@
 import { api } from "./api.js";
 import { t, tp, nf, formatDateTime } from "./i18n.js";
 import { confirmDialog } from "./dialogs.js";
+import { skeleton } from "./ui.js";
 
 const list = document.getElementById("backup-list");
 const status = document.getElementById("backup-status");
@@ -11,6 +12,8 @@ const dirLabel = document.getElementById("backup-dir");
 const withFiles = document.getElementById("backup-with-files");
 const fileInput = document.getElementById("backup-file");
 const importMode = document.getElementById("backup-import-mode");
+
+list.append(skeleton("li"));
 
 const KINDS = { auto: t("Automatic"), manual: t("Made by you"), "before-restore": t("Before a restore"), import: t("Imported") };
 
@@ -44,6 +47,7 @@ async function refresh() {
     list.replaceChildren(...backups.slice(0, 30).map(row));
     if (!backups.length) list.innerHTML = `<li class="memory-empty">${t("No backups yet. Press “Back up now”, or wait: the first automatic one comes within a day.")}</li>`;
   } catch (err) {
+    list.replaceChildren();
     say(err.message, "error");
   }
 }

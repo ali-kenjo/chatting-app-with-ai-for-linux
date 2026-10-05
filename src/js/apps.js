@@ -4,6 +4,7 @@
 import { api } from "./api.js";
 import { t, tp } from "./i18n.js";
 import { confirmDialog } from "./dialogs.js";
+import { skeleton } from "./ui.js";
 
 const grid = document.getElementById("app-grid");
 const mcpList = document.getElementById("mcp-list");
@@ -259,6 +260,9 @@ form.addEventListener("submit", async (e) => {
     mcpStatus.className = "test-feedback error";
   }
 });
+
+grid.append(skeleton());
+mcpList.append(skeleton("li"));
 
 // ----- Drawing it all -----
 async function refresh() {

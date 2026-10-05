@@ -3,6 +3,7 @@ import { api as helper } from "./api.js";
 import { getSettings, onSettings, updateSettings } from "./store.js";
 import { t, tp, nf } from "./i18n.js";
 import { announce } from "./a11y.js";
+import { skeleton } from "./ui.js";
 
 // Brains are stored by the helper; this module handles model management & AI control.
 const PROVIDERS = {
@@ -36,6 +37,7 @@ const CURATED_MODELS = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"
 const api = helper.brains;
 
 let brains = [];
+let loadedBrains = false; // the helper hasn't told us yet: the list shows grey bars, not "No AI yet"
 let defaultBrainId = null;
 let editingId = null; // null while adding a new brain
 let confirmDeleteId = null;
@@ -112,6 +114,7 @@ function showError(el, message) {
 
 // Take the latest state from the helper and redraw
 function apply(state) {
+  loadedBrains = true;
   brains = state.brains || [];
   defaultBrainId = state.defaultBrainId;
   renderBrains();
@@ -135,6 +138,10 @@ function updateDiagnosticBanner() {
 
 function renderBrains() {
   brainList.innerHTML = "";
+  if (!loadedBrains) {
+    brainList.append(skeleton("li"));
+    return;
+  }
 
   if (!brains.length) {
     brainList.innerHTML = '<li class="brain-empty"></li>';
@@ -814,6 +821,10 @@ renderBrains();
 api.list().then((state) => {
   apply(state);
   renderPrivate();
-}, (err) => showError(listError, err.message));
+}, (err) => {
+  loadedBrains = true;
+  renderBrains();
+  showError(listError, err.message);
+});
 detectLocal();
 refreshVoice();

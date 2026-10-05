@@ -22,6 +22,16 @@ describe("Settings Management", () => {
     assert.strictEqual(current.personality.creativity, 5);
   });
 
+  test("the first-run guide and the language start unset, and are kept", () => {
+    const current = settings.get();
+    assert.strictEqual(current.onboarding.done, false);
+    assert.strictEqual(current.ui.language, "auto");
+    const saved = settings.set({ ...current, onboarding: { done: true }, ui: { language: "ar" } });
+    assert.strictEqual(saved.onboarding.done, true);
+    assert.strictEqual(saved.ui.language, "ar");
+    settings.set({ ...saved, onboarding: { done: false }, ui: { language: "auto" } });
+  });
+
   test("set sanitizes and clamps out-of-range values", () => {
     const updated = settings.set({
       font: { size: 999 }, // should clamp to 22

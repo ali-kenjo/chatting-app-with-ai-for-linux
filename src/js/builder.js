@@ -3,6 +3,7 @@
 import { api } from "./api.js";
 import { getSettings, onSettings, updateSettings } from "./store.js";
 import { t } from "./i18n.js";
+import { skeleton } from "./ui.js";
 
 const modes = document.getElementById("builder-modes");
 const allow = document.getElementById("builder-allow");
@@ -10,6 +11,8 @@ const block = document.getElementById("builder-block");
 const warning = document.getElementById("builder-auto-warning");
 const foldersNote = document.getElementById("builder-folders-note");
 const runningList = document.getElementById("builder-running");
+
+runningList.append(skeleton("li"));
 
 const lines = (text) => text.split("\n").map((l) => l.trim()).filter(Boolean);
 

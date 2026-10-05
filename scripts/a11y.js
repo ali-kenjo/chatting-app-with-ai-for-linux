@@ -114,10 +114,10 @@ async function main() {
     for (const [id, e] of byRule) console.log(`  ${e.impact.padEnd(8)} ${id}: ${e.help} — ${[...e.where].slice(0, 6).join(", ")}${e.where.size > 6 ? "…" : ""}  e.g. ${e.example}`);
   }
   if (bad.length) {
-    console.error(`\n✗ ${bad.length} serious or critical violation${bad.length > 1 ? "s" : ""}`);
+    console.error(`\n✗ ${bad.length} ${FAIL_ON.length > 2 ? "" : "serious or critical "}violation${bad.length > 1 ? "s" : ""}`);
     process.exit(1);
   }
-  console.log("\n✓ No serious or critical accessibility violations");
+  console.log(`\n✓ No ${FAIL_ON.length > 2 ? "" : "serious or critical "}accessibility violations`);
   process.exit(0);
 }
 
