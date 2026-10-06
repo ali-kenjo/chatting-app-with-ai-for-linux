@@ -41,7 +41,7 @@ describe("Voice conversation", { skip: !CHROME && "no Chrome found" }, () => {
     browser = await require("puppeteer-core").launch({
       executablePath: CHROME,
       headless: true,
-      args: ["--no-sandbox", "--disable-gpu", "--use-gl=swiftshader", "--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", "--autoplay-policy=no-user-gesture-required"],
+      args: ["--no-sandbox", "--disable-gpu", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", "--autoplay-policy=no-user-gesture-required"],
     });
     page = await browser.newPage();
     await page.evaluateOnNewDocument(() => Object.defineProperty(navigator, "languages", { get: () => ["en-US", "en"] }));

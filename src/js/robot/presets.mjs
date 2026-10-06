@@ -439,6 +439,20 @@ export const EYE_STYLES = {
   classic: { w: 0.13, h: 0.22, round: 1, gap: 0.37, y: 0.07 }, // tall capsules
   round: { w: 0.18, h: 0.18, round: 1, gap: 0.39, y: 0.06 }, // big round eyes
   wide: { w: 0.22, h: 0.13, round: 0.5, gap: 0.39, y: 0.07 }, // wide, soft ovals
+  big: { w: 0.21, h: 0.24, round: 1, gap: 0.42, y: 0.04 }, // large, close to a cartoon's
+  dots: { w: 0.085, h: 0.085, round: 1, gap: 0.3, y: 0.05 }, // small and beady
+  tall: { w: 0.1, h: 0.27, round: 1, gap: 0.34, y: 0.06 }, // thin and tall
+  square: { w: 0.14, h: 0.16, round: 0.22, gap: 0.38, y: 0.06 }, // pixels
+  visor: { w: 0.27, h: 0.075, round: 0.6, gap: 0.285, y: 0.06 }, // two bars that almost meet
+};
+
+// Mouth styles: how wide, and how heavy the line is, compared with the default
+export const MOUTH_STYLES = {
+  line: { width: 1, weight: 1, show: 1 },
+  small: { width: 0.6, weight: 1, show: 1 },
+  wide: { width: 1.35, weight: 1, show: 1 },
+  bold: { width: 1, weight: 1.9, show: 1 },
+  none: { width: 1, weight: 1, show: 0 },
 };
 
 // Shell colors: all a little off pure white, which glares on camera

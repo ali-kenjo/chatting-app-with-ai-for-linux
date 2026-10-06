@@ -2,8 +2,8 @@
 // Who the AI is: Atlas, Mira or your own (server/characters.js has the
 // built-ins and what each part means). One is active; the names at the top of
 // the chat and in voice mode switch between them, and Settings → Characters
-// edits them. Each can have its own look: switching keeps the robot's shell,
-// eyes and the accent color with the character you leave, and brings back the
+// edits them. Each can have its own look: switching keeps the robot's design and
+// room and the accent color with the character you leave, and brings back the
 // new one's.
 import { api } from "./api.js";
 import { getSettings, onSettings, updateSettings } from "./store.js";
@@ -37,10 +37,11 @@ export function activate(id) {
     const next = chars.list.find((c) => c.id === id);
     if (!next) return;
     if (chars.switchLook) {
-      if (prev) prev.look = { shell: s.robot.shell, eyes: s.robot.eyes, accent: s.theme.accent };
+      const copy = (v) => JSON.parse(JSON.stringify(v));
+      if (prev) prev.look = { design: copy(s.robot.design), room: copy(s.robot.room), accent: s.theme.accent };
       if (next.look) {
-        s.robot.shell = next.look.shell;
-        s.robot.eyes = next.look.eyes;
+        s.robot.design = copy(next.look.design);
+        s.robot.room = copy(next.look.room);
         s.theme.accent = next.look.accent;
       }
     }

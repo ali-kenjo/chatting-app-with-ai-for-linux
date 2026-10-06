@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="css/robot.css">
   <link rel="stylesheet" href="css/filming.css">
   <link rel="stylesheet" href="css/robot-dock.css">
+  <link rel="stylesheet" href="css/robot-studio.css">
   <link rel="stylesheet" href="css/characters.css">
   <link rel="stylesheet" href="css/voice-ui.css">
   <link rel="stylesheet" href="css/life.css">
@@ -1100,42 +1101,20 @@
 
           <div class="subhead"><div>
             <div class="subhead-title">Looks</div>
-            <p class="hint">Its glow is your accent color (Settings → Appearance).</p>
+            <p class="hint">Colors, shape, face, clothes and the room around it. Each character keeps its own look.</p>
           </div></div>
-          <div class="row">
-            <div class="row-label" id="robot-shell-label">Shell color</div>
-            <div class="colors robot-shells" role="radiogroup" aria-labelledby="robot-shell-label" data-choice="robot.shell">
-              <button type="button" class="color" role="radio" data-value="warm" style="background:#ede4d6" aria-label="Warm white" title="Warm white"></button>
-              <button type="button" class="color" role="radio" data-value="cloud" style="background:#e2e7ee" aria-label="Cloud" title="Cloud"></button>
-              <button type="button" class="color" role="radio" data-value="graphite" style="background:#50555f" aria-label="Graphite" title="Graphite"></button>
-              <button type="button" class="color" role="radio" data-value="peach" style="background:#f0ccb6" aria-label="Peach" title="Peach"></button>
-              <button type="button" class="color" role="radio" data-value="mint" style="background:#c9e5d6" aria-label="Mint" title="Mint"></button>
-            </div>
+          <div class="robot-look-card">
+            <div class="robot-look-summary" id="robot-look-summary" aria-live="polite"></div>
+            <button type="button" class="btn btn-primary" id="robot-studio-open" data-open-studio="">Open Robot Studio…</button>
           </div>
-          <div class="row-label" id="robot-eyes-label">Eyes</div>
-          <div class="choice-grid robot-eye-choices" role="radiogroup" aria-labelledby="robot-eyes-label" data-choice="robot.eyes">
-            <button type="button" class="choice" role="radio" data-value="classic"><span class="face-icon-big" data-eyes="classic"><i></i><i></i></span>Classic</button>
-            <button type="button" class="choice" role="radio" data-value="round"><span class="face-icon-big" data-eyes="round"><i></i><i></i></span>Round</button>
-            <button type="button" class="choice" role="radio" data-value="wide"><span class="face-icon-big" data-eyes="wide"><i></i><i></i></span>Wide</button>
-          </div>
-          <label class="row">
-            <div><div class="row-label">Mouth</div><div class="row-desc">Shows when it's talking; off for just the eyes</div></div>
-            <input type="checkbox" class="toggle" data-setting="robot.mouth">
-          </label>
 
           <div class="subhead"><div>
             <div class="subhead-title">Scene and camera</div>
             <p class="hint">How voice mode shows it, on screen and in recordings.</p>
           </div></div>
           <div class="row">
-            <div><div class="row-label">Background</div><div class="row-desc" id="robot-bg-hint">Chroma green and blue are flat, for keying out in a video editor</div></div>
-            <select class="field" data-setting="robot.background" aria-label="Background">
-              <option value="studio">Studio (dark)</option>
-              <option value="accent">Accent glow</option>
-              <option value="desk">Desk</option>
-              <option value="green">Chroma green</option>
-              <option value="blue">Chroma blue</option>
-            </select>
+            <div><div class="row-label">Place</div><div class="row-desc" id="robot-bg-hint">Where the robot is. More in the Robot Studio: colors, lights, props and your own picture.</div></div>
+            <select class="field" id="robot-place" aria-label="Place"></select>
           </div>
           <div class="row">
             <div class="row-label" id="robot-shot-label">Camera shot</div>
@@ -1158,7 +1137,7 @@
             <input type="checkbox" class="toggle" data-setting="robot.roam">
           </label>
           <label class="row">
-            <div><div class="row-label">Room effects</div><div class="row-desc">A glossy floor with its reflection, drifting light, and rings that follow the voice (studio and glow backgrounds)</div></div>
+            <div><div class="row-label">Room effects</div><div class="row-desc">The floor's reflection, things drifting in the air, and rings that follow the voice</div></div>
             <input type="checkbox" class="toggle" data-setting="robot.world">
           </label>
           <label class="row">
@@ -1767,6 +1746,58 @@
   </div>
 
   <!-- Keyboard shortcuts (src/js/shortcuts.js): press ? anywhere -->
+  <!-- The Robot Studio (src/js/robot/studio/): the robot's colors, shape, face, clothes and room -->
+  <div class="modal-backdrop robot-studio-backdrop" id="robot-studio" data-modal data-modal-focus="#rs-tab-looks" hidden>
+    <div class="robot-studio" role="dialog" aria-modal="true" aria-labelledby="rs-title">
+      <header class="rs-head">
+        <h2 id="rs-title">Robot Studio</h2>
+        <div class="rs-head-actions">
+          <button type="button" class="icon-btn" id="rs-undo" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>
+            <svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
+          </button>
+          <button type="button" class="icon-btn" id="rs-redo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled>
+            <svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg>
+          </button>
+          <button type="button" class="btn small" id="rs-reset">Start over</button>
+          <button type="button" class="btn btn-primary" id="rs-done">Done</button>
+          <button type="button" class="icon-btn rs-close" id="rs-close" title="Close" aria-label="Close">
+            <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+          </button>
+        </div>
+      </header>
+      <div class="rs-body">
+        <div class="rs-stage-col">
+          <div class="rs-stage" id="rs-stage" role="img" aria-label="Live preview of the robot"></div>
+          <p class="rs-stage-note" id="rs-stage-note" hidden></p>
+          <div class="rs-stage-bar">
+            <div class="seg" id="rs-shot" role="radiogroup" aria-label="Camera shot">
+              <button type="button" role="radio" data-value="close" aria-checked="false">Close</button>
+              <button type="button" role="radio" data-value="medium" aria-checked="true">Medium</button>
+              <button type="button" role="radio" data-value="wide" aria-checked="false">Wide</button>
+            </div>
+            <div class="seg" id="rs-view" role="radiogroup" aria-label="View from">
+              <button type="button" role="radio" data-value="front" aria-checked="true">Front</button>
+              <button type="button" role="radio" data-value="three" aria-checked="false">Angle</button>
+              <button type="button" role="radio" data-value="side" aria-checked="false">Side</button>
+              <button type="button" role="radio" data-value="back" aria-checked="false">Back</button>
+              <button type="button" role="radio" data-value="turn" aria-checked="false">Turn</button>
+            </div>
+            <label class="robot-try-field"><span class="sr-only">Try a mood</span>
+              <select class="field" id="rs-mood" aria-label="Try a mood"></select>
+            </label>
+            <label class="robot-try-field"><span class="sr-only">Try a move</span>
+              <select class="field" id="rs-gesture" aria-label="Try a move"></select>
+            </label>
+          </div>
+        </div>
+        <div class="rs-panel-col">
+          <div class="rs-tabs" id="rs-tabs" role="tablist" aria-label="What to change"></div>
+          <div class="rs-panels" id="rs-panels"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="shortcuts-modal" data-modal hidden>
     <div class="modal shortcuts-modal" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title">
       <div class="shortcuts-body">
@@ -1866,14 +1897,12 @@
     <div class="voice-scene-pop" id="voice-scene-pop" role="dialog" aria-label="Robot scene" hidden>
       <div class="voice-record-title">Robot scene</div>
       <div class="voice-record-row">
-        <span id="voice-scene-bg">Background</span>
-        <div class="voice-seg" role="radiogroup" aria-labelledby="voice-scene-bg" data-choice="robot.background">
-          <button type="button" role="radio" data-value="studio">Studio</button>
-          <button type="button" role="radio" data-value="accent">Glow</button>
-          <button type="button" role="radio" data-value="desk">Desk</button>
-          <button type="button" role="radio" data-value="green" title="Chroma green">Green</button>
-          <button type="button" role="radio" data-value="blue" title="Chroma blue">Blue</button>
-        </div>
+        <label for="voice-scene-place-select">Place</label>
+        <select class="field" id="voice-scene-place-select"></select>
+      </div>
+      <div class="voice-record-row">
+        <span>Look and room</span>
+        <button type="button" class="btn small" data-open-studio="">Customize…</button>
       </div>
       <div class="voice-record-row">
         <span id="voice-scene-shot">Shot</span>

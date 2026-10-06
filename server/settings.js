@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const { dataDir, writeJson } = require("./config");
 const characters = require("./characters");
+const look = require("./robot-look");
 
 const file = path.join(dataDir, "settings.json");
 
@@ -118,10 +119,9 @@ const DEFAULTS = {
   // and the little one next to text chats. See src/js/robot/.
   robot: {
     chatDock: true, // the robot next to text chats
-    shell: "warm", // ROBOT.shells
-    mouth: true,
-    eyes: "classic", // ROBOT.eyes
-    background: "studio", // ROBOT.backgrounds
+    design: look.design.defaultDesign(), // what it looks like: colors, shape, face, clothes (src/js/robot/design.mjs)
+    room: look.room.defaultRoom(), // what's around it: place, colors, light, air (src/js/robot/room.mjs)
+    looks: [], // looks you saved: { id, name, design, room }
     shot: "medium", // ROBOT.shots
     position: "center", // ROBOT.positions: where the robot stands in the picture
     seat: "front", // ROBOT.seats: where you sit, so it can turn to you
@@ -150,9 +150,6 @@ const ON_AIR = {
 const ROUTING = { modes: ["fixed", "auto", "dynamic", "fastest", "local", "cloud"], ask: ["always", "chat", "never"] };
 
 const ROBOT = {
-  shells: ["warm", "cloud", "graphite", "peach", "mint"],
-  eyes: ["classic", "round", "wide"],
-  backgrounds: ["studio", "accent", "desk", "green", "blue"],
   shots: ["close", "medium", "wide"],
   positions: ["center", "left", "right"],
   seats: ["front", "left", "right"],
@@ -176,6 +173,8 @@ function clean(value, fallback) {
 }
 
 function sanitize(input) {
+  // Settings from before the robot had a design and a room: its shell, eyes, mouth and background become them
+  const raw = input && typeof input === "object" && input.robot && typeof input.robot === "object" ? look.upgradeRobot(input.robot) : {};
   const s = clean(input, DEFAULTS);
   s.permissions.folders = [...new Set(s.permissions.folders.filter((f) => typeof f === "string" && f.trim()).map((f) => f.trim()))];
   s.memory.items = s.memory.items
@@ -223,9 +222,10 @@ function sanitize(input) {
 
   const r = s.robot;
   const oneOf = (value, allowed, fallback) => (allowed.includes(value) ? value : fallback);
-  r.shell = oneOf(r.shell, ROBOT.shells, DEFAULTS.robot.shell);
-  r.eyes = oneOf(r.eyes, ROBOT.eyes, DEFAULTS.robot.eyes);
-  r.background = oneOf(r.background, ROBOT.backgrounds, DEFAULTS.robot.background);
+  // (their parts differ by place and slot, so they're cleaned by their own modules, not by clean() above)
+  r.design = look.design.sanitizeDesign(raw.design);
+  r.room = look.room.sanitizeRoom(raw.room);
+  r.looks = look.cleanLooks(raw.looks);
   r.shot = oneOf(r.shot, ROBOT.shots, DEFAULTS.robot.shot);
   r.position = oneOf(r.position, ROBOT.positions, DEFAULTS.robot.position);
   r.seat = oneOf(r.seat, ROBOT.seats, DEFAULTS.robot.seat);

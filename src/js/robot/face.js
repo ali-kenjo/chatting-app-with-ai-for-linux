@@ -5,7 +5,7 @@
 // texture has mipmaps, so they stay crisp in a close-up and don't shimmer
 // (which a camera would turn into moiré) when the robot is small.
 import * as THREE from "three";
-import { EYE_STYLES } from "./presets.mjs";
+import { EYE_STYLES, MOUTH_STYLES } from "./presets.mjs";
 
 const VERTEX = /* glsl */ `
 varying vec2 vUv;
@@ -170,30 +170,35 @@ export class Face {
     return true;
   }
 
-  // pose: the animator's output; look: { eyes, largerFace, color }
-  render(pose, { eyes = "classic", largerFace = false, color }) {
-    const s = EYE_STYLES[eyes] || EYE_STYLES.classic;
+  // pose: the animator's output; look: { face (the design's: eyes, eyeSize, eyeGap, mouth, blush), largerFace, color }
+  render(pose, { face = {}, largerFace = false, color }) {
+    const s = EYE_STYLES[face.eyes] || EYE_STYLES.classic;
+    const mouth = MOUTH_STYLES[face.mouth] || MOUTH_STYLES.line;
     const k = largerFace ? 1.15 : 1;
+    const size = face.eyeSize ?? 1;
+    const gapScale = face.eyeGap ?? 1;
     const u = this.uniforms;
     const lookX = pose.lookX * 0.13;
     const lookY = pose.lookY * 0.09;
     const y = s.y + pose.eyeY * 0.1 + lookY;
-    const w = s.w * k * pose.eyeW;
-    const h = s.h * k * pose.eyeH;
+    const w = s.w * k * size * pose.eyeW;
+    const h = s.h * k * size * pose.eyeH;
+    const gap = s.gap * k * gapScale;
     // The robot's left eye is on the viewer's right
-    u.uEyeL.value.set(s.gap * k + lookX, y, w * pose.eyeScaleL, h * pose.eyeScaleL);
-    u.uEyeR.value.set(-s.gap * k + lookX, y, w * pose.eyeScaleR, h * pose.eyeScaleR);
+    u.uEyeL.value.set(gap + lookX, y, w * pose.eyeScaleL, h * pose.eyeScaleL);
+    u.uEyeR.value.set(-gap + lookX, y, w * pose.eyeScaleR, h * pose.eyeScaleR);
     u.uLidL.value.set(clamp01(pose.lidTopL), clamp01(pose.lidBotL), pose.lidAngleL, clamp01(pose.smile));
     u.uLidR.value.set(clamp01(pose.lidTopR), clamp01(pose.lidBotR), pose.lidAngleR, clamp01(pose.smile));
     u.uEye.value.set(clamp01(s.round + (1 - s.round) * pose.eyeRound), clamp01(pose.blink));
 
     const round = clamp01(pose.mouthRound);
     const open = clamp01(pose.mouthOpen);
-    const halfWidth = 0.15 * k * (0.55 + 0.9 * clamp01(pose.mouthWide)) * (1 - 0.45 * round);
+    const halfWidth = 0.15 * k * mouth.width * (0.55 + 0.9 * clamp01(pose.mouthWide)) * (1 - 0.45 * round);
     u.uMouth.value.set(pose.mouthSkew * 0.03 + lookX * 0.4, -0.3 * k + lookY * 0.4 - open * 0.05, halfWidth, open * 0.3 * k * (1 + 0.35 * round));
-    u.uMouth2.value.set(pose.mouthCurve, pose.mouthSkew, round, 0.05 * k);
-    u.uMisc.value.set(1, clamp01(pose.blush), pose.mouthVisible, this.aspect);
+    u.uMouth2.value.set(pose.mouthCurve, pose.mouthSkew, round, 0.05 * k * mouth.weight);
+    u.uMisc.value.set(1, clamp01(pose.blush), pose.mouthVisible * mouth.show, this.aspect);
     if (color) u.uColor.value.copy(color);
+    if (face.blush) u.uBlush.value.set(face.blush);
 
     const r = this.renderer;
     const before = r.getRenderTarget();

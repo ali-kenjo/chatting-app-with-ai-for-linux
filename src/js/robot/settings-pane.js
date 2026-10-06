@@ -4,6 +4,9 @@
 import { robot } from "./index.js";
 import { getSettings, onSettings, updateSettings } from "../store.js";
 import { t, nf } from "../i18n.js";
+import * as D from "./design.mjs";
+import * as R from "./room.mjs";
+import "./studio/studio.js";
 
 // The face tracker's messages are made in robot/facetrack.js (a module that doesn't know the interface
 // language); they're translated here, where they're shown (the text is listed in i18n/elsewhere.js)
@@ -88,15 +91,40 @@ document.addEventListener("keydown", (e) => {
   next.focus();
 });
 
+// ---------- The place, and a summary of the look ----------
+const placeSelects = [document.getElementById("robot-place"), document.getElementById("voice-scene-place-select")];
+for (const select of placeSelects) {
+  select.replaceChildren(...R.PLACES.map((p) => Object.assign(document.createElement("option"), { value: p.id, textContent: `${p.icon} ${t(p.label)}` })));
+  select.addEventListener("change", () => updateSettings((s) => (s.robot.room = R.changePlace(s.robot.room, select.value))));
+}
+const lookSummary = document.getElementById("robot-look-summary");
+
+function showLook(s) {
+  for (const select of placeSelects) select.value = s.robot.room.place;
+  const d = s.robot.design;
+  const worn = D.SLOTS.filter((slot) => d.outfit[slot.id].item !== "none").map((slot) => D.ITEMS[slot.id][d.outfit[slot.id].item].icon);
+  const place = R.PLACE_BY_ID[s.robot.room.place];
+  const dots = [d.colors.head, d.colors.body, d.colors.light || s.theme.accent].map((c) => `<i style="background:${c}"></i>`).join("");
+  lookSummary.innerHTML = `<span class="robot-look-dots" aria-hidden="true">${dots}</span>`;
+  const text = document.createElement("span");
+  text.textContent = [t(place.label), worn.length ? worn.join(" ") : t("no clothes yet")].join(" · ");
+  lookSummary.append(text);
+}
+
 onSettings((s) => {
+  showLook(s);
   syncChoices();
   // Keying out green takes a green accent with it
   const accent = s.theme.accent.toLowerCase();
   const hue = accentHue(accent);
-  const clash = (s.robot.background === "green" && hue > 70 && hue < 170) || (s.robot.background === "blue" && hue > 190 && hue < 260);
+  const place = s.robot.room.place;
+  const light = (s.robot.design.colors.light || accent).toLowerCase();
+  const lightHue = accentHue(light);
+  const clash = (place === "green" && lightHue > 70 && lightHue < 170) || (place === "blue" && lightHue > 190 && lightHue < 260);
+  void hue;
   bgHint.textContent = clash
-    ? t("Your accent color is close to this key color, so keying it out would remove the robot's glow too. Pick another accent or the other chroma color.")
-    : t("Chroma green and blue are flat, for keying out in a video editor");
+    ? t("Its light color is close to this key color, so keying it out would remove the robot's glow too. Pick another light color or the other chroma color.")
+    : t("Where the robot is. More in the Robot Studio: colors, lights, props and your own picture.");
   bgHint.classList.toggle("warn", clash);
 });
 

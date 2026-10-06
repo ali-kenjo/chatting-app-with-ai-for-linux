@@ -1,8 +1,9 @@
 // ---------- The robot's body ----------
-// Built from three.js geometry: a rounded head (a superellipsoid) with a
-// glossy face screen that follows its curve, a short neck, a bean-shaped
-// body, two paddle arms with ball joints, two glowing fins and a hover ring.
-// The named parts are the contract a custom model from Blender follows:
+// Built from three.js geometry (parts.js), shaped and colored by its design
+// (design.mjs): a rounded head with a glossy face screen that follows its
+// curve, a short neck, a body, two arms, glowing fins (or ears or antennae)
+// and a hover ring; outfit/*.js dresses it. The named parts are the contract a
+// custom model from Blender follows:
 //
 //   Root → Hover → Body → Neck → Head → FaceScreen
 //                                Head → Fin_L, Fin_R
@@ -13,101 +14,54 @@
 // Fin_L) is on the viewer's right.
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { dimsOf, superellipsoid, faceScreen, lathe, bodyGeometry, buildTop, buildArm, buildHover } from "./parts.js";
+import { dress } from "./outfit/index.js";
 
 export const NODE_NAMES = ["Root", "Hover", "Body", "Neck", "Head", "FaceScreen", "Fin_L", "Fin_R", "Arm_L", "Arm_R", "HoverRing"];
 
-const HOVER_HEIGHT = 0.15;
-const HEAD = { a: 0.36, b: 0.25, c: 0.3, p: 3.1, y: 0.24 };
-const SCREEN = { w: 0.58, h: 0.36, n: 4.2, y: 0.005 };
-export const SCREEN_ASPECT = SCREEN.h / SCREEN.w;
-
-// ---------- Shapes ----------
-// A sphere pushed out into a rounded box: |x/a|^p + |y/b|^p + |z/c|^p = 1
-function superellipsoid(a, b, c, p, widthSegments = 96, heightSegments = 64) {
-  const geo = new THREE.SphereGeometry(1, widthSegments, heightSegments);
-  const pos = geo.attributes.position;
-  const v = new THREE.Vector3();
-  for (let i = 0; i < pos.count; i++) {
-    v.fromBufferAttribute(pos, i);
-    const k = Math.pow(Math.abs(v.x) ** p + Math.abs(v.y) ** p + Math.abs(v.z) ** p, -1 / p);
-    pos.setXYZ(i, v.x * k * a, v.y * k * b, v.z * k * c);
-  }
-  geo.computeVertexNormals();
-  return geo;
-}
-
-// The face screen: a squircle-shaped patch lying on the head's front surface,
-// with texture coordinates running evenly across it
-function faceScreen() {
-  const { a, b, c, p } = HEAD;
-  const { w, h, n, y: dy } = SCREEN;
-  const segX = 72;
-  const segY = 48;
-  const positions = [];
-  const uvs = [];
-  for (let j = 0; j <= segY; j++) {
-    for (let i = 0; i <= segX; i++) {
-      const s = (i / segX) * 2 - 1;
-      const t = (j / segY) * 2 - 1;
-      const r = Math.max(Math.abs(s), Math.abs(t));
-      let x = 0;
-      let y = 0;
-      if (r > 0) {
-        const dx = s / r;
-        const dyy = t / r;
-        const k = Math.pow(Math.abs(dx) ** n + Math.abs(dyy) ** n, -1 / n);
-        x = r * dx * k * (w / 2);
-        y = r * dyy * k * (h / 2);
-      }
-      const inner = 1 - Math.abs(x / a) ** p - Math.abs((y + dy) / b) ** p;
-      const z = c * Math.pow(Math.max(inner, 0), 1 / p) + 0.004;
-      positions.push(x, y + dy, z);
-      uvs.push(x / w + 0.5, y / h + 0.5);
-    }
-  }
-  const index = [];
-  for (let j = 0; j < segY; j++) {
-    for (let i = 0; i < segX; i++) {
-      const a0 = j * (segX + 1) + i;
-      const b0 = a0 + 1;
-      const c0 = a0 + segX + 1;
-      const d0 = c0 + 1;
-      index.push(a0, b0, d0, a0, d0, c0);
-    }
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-  geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
-  geo.setIndex(index);
-  geo.computeVertexNormals();
-  return geo;
-}
-
-// A smooth profile turned around the y axis. points: [radius, height] from bottom to top
-function lathe(points, segments = 64) {
-  return new THREE.LatheGeometry(points.map(([r, y]) => new THREE.Vector2(r, y)), segments);
-}
-
-// A profile through a few control points, smoothed into many
-function smoothProfile(controls, count = 48) {
-  const curve = new THREE.SplineCurve(controls.map(([r, y]) => new THREE.Vector2(r, y)));
-  return curve.getPoints(count).map((v) => [Math.max(0, v.x), v.y]);
-}
+// The screen's height / width (the same for every design: it scales with the head)
+export const SCREEN_ASPECT = 0.36 / 0.58;
 
 // ---------- Materials ----------
-export function makeMaterials({ shell, accent }) {
-  return {
-    shell: new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(shell),
-      roughness: 0.42,
-      metalness: 0,
-      clearcoat: 0.35,
-      clearcoatRoughness: 0.35,
-      sheen: 0.3,
-      sheenRoughness: 0.6,
-      sheenColor: new THREE.Color("#fff3e6"),
-    }),
-    joint: new THREE.MeshPhysicalMaterial({ color: new THREE.Color("#2b2e35"), roughness: 0.5, metalness: 0.15, clearcoat: 0.2 }),
+// How the shell feels: [roughness, metalness, clearcoat, sheen, iridescence, envMapIntensity]
+const FINISH = {
+  matte: [0.82, 0, 0, 0.12, 0, 1],
+  satin: [0.55, 0, 0.12, 0.2, 0, 1],
+  glossy: [0.42, 0, 0.35, 0.3, 0, 1],
+  metal: [0.3, 0.85, 0.15, 0, 0, 2.6],
+  pearl: [0.3, 0, 0.8, 0.6, 0.7, 1.3],
+};
+
+const SHELL_KEYS = ["head", "body", "arms"];
+const lightness = (color) => color.getHSL({}).l;
+
+// Sets a shell material's color and finish (dark colors get a little less shine and sheen)
+function setShell(mat, hex, finish) {
+  const [roughness, metalness, clearcoat, sheen, iridescence, env] = FINISH[finish] || FINISH.glossy;
+  mat.color.set(hex);
+  const dark = lightness(mat.color) < 0.4;
+  mat.roughness = dark && finish !== "metal" ? roughness + 0.08 : roughness;
+  mat.metalness = metalness;
+  mat.envMapIntensity = env;
+  mat.sheenColor.set("#fff3e6");
+  mat.sheenRoughness = 0.6;
+  mat.clearcoatRoughness = 0.35;
+  mat.iridescenceIOR = 1.35;
+  mat.userData.rich = { clearcoat, sheen: dark ? sheen * 0.5 : sheen, iridescence };
+  const rich = mat.userData.simple !== true;
+  mat.clearcoat = rich ? clearcoat : 0;
+  mat.sheen = rich ? mat.userData.rich.sheen : 0;
+  mat.iridescence = rich ? iridescence : 0;
+  mat.needsUpdate = true;
+}
+
+export function makeMaterials(design, light) {
+  const shell = () => new THREE.MeshPhysicalMaterial({ color: "#ffffff" });
+  const m = {
+    head: shell(),
+    body: shell(),
+    arms: shell(),
+    joint: new THREE.MeshPhysicalMaterial({ color: new THREE.Color(design.colors.joint), roughness: 0.5, metalness: 0.15, clearcoat: 0.2 }),
     // Glossy, but its reflections stay soft so they never compete with the eyes
     screen: new THREE.MeshPhysicalMaterial({
       color: new THREE.Color("#06080c"),
@@ -119,15 +73,19 @@ export function makeMaterials({ shell, accent }) {
       emissive: new THREE.Color("#ffffff"),
       emissiveIntensity: 1.1,
     }),
-    finGlowL: new THREE.MeshStandardMaterial({ color: new THREE.Color("#101216"), roughness: 0.3, emissive: new THREE.Color(accent), emissiveIntensity: 1 }),
-    finGlowR: new THREE.MeshStandardMaterial({ color: new THREE.Color("#101216"), roughness: 0.3, emissive: new THREE.Color(accent), emissiveIntensity: 1 }),
-    ring: new THREE.MeshStandardMaterial({ color: new THREE.Color("#101216"), roughness: 0.3, emissive: new THREE.Color(accent), emissiveIntensity: 1 }),
+    finGlowL: new THREE.MeshStandardMaterial({ color: new THREE.Color("#101216"), roughness: 0.3, emissive: new THREE.Color(light), emissiveIntensity: 1 }),
+    finGlowR: new THREE.MeshStandardMaterial({ color: new THREE.Color("#101216"), roughness: 0.3, emissive: new THREE.Color(light), emissiveIntensity: 1 }),
+    ring: new THREE.MeshStandardMaterial({ color: new THREE.Color("#101216"), roughness: 0.3, emissive: new THREE.Color(light), emissiveIntensity: 1 }),
   };
+  for (const key of SHELL_KEYS) setShell(m[key], design.colors[key], design.finish);
+  return m;
 }
 
 // ---------- The built-in robot ----------
-export function buildRobot({ shell, accent, faceTexture }) {
-  const m = makeMaterials({ shell, accent });
+// design: see design.mjs; light: the color of its fins, ring and eyes (the design's own, or the app's accent)
+export function buildRobot({ design, light, faceTexture }) {
+  const dims = dimsOf(design.build);
+  const m = makeMaterials(design, light);
   m.screen.emissiveMap = faceTexture;
   const group = (name, x = 0, y = 0, z = 0) => {
     const g = new THREE.Group();
@@ -135,106 +93,73 @@ export function buildRobot({ shell, accent, faceTexture }) {
     g.position.set(x, y, z);
     return g;
   };
-  const mesh = (geometry, material, { shadow = true } = {}) => {
+  const make = (geometry, material, { shadow = true } = {}) => {
     const o = new THREE.Mesh(geometry, material);
     o.castShadow = shadow;
     o.receiveShadow = shadow;
     return o;
   };
+  const { head, body: bodyDims, neck: neckDims } = dims;
 
   const root = group("Root");
-  const hover = group("Hover", 0, HOVER_HEIGHT, 0);
+  root.scale.setScalar(dims.size);
+  const hover = group("Hover", 0, dims.hover, 0);
   root.add(hover);
 
-  // Body: a soft bean, widest at the belly, narrower at the shoulders
-  const body = group("Body", 0, 0.27, 0);
+  // Body
+  const body = group("Body", 0, bodyDims.h / 2, 0);
   hover.add(body);
-  const bodyProfile = smoothProfile([
-    [0.0, 0.0],
-    [0.13, 0.012],
-    [0.225, 0.07],
-    [0.262, 0.19],
-    [0.245, 0.33],
-    [0.195, 0.45],
-    [0.1, 0.515],
-    [0.0, 0.53],
-  ]);
-  const bodyGeo = lathe(bodyProfile, 72);
-  bodyGeo.scale(1, 1, 0.9);
-  const bodyMesh = mesh(bodyGeo, m.shell);
-  bodyMesh.position.y = -0.27;
+  const bodyMesh = make(bodyGeometry(dims), m.body);
+  bodyMesh.position.y = -bodyDims.h / 2;
   body.add(bodyMesh);
 
   // Neck
-  const neck = group("Neck", 0, 0.235, 0);
+  const neck = group("Neck", 0, neckDims.y, 0);
   body.add(neck);
-  const neckMesh = mesh(new THREE.CylinderGeometry(0.085, 0.1, 0.09, 40), m.joint);
+  const neckMesh = make(new THREE.CylinderGeometry(neckDims.r, neckDims.r * 1.18, neckDims.h, 40), m.joint);
   neckMesh.position.y = 0.03;
   neck.add(neckMesh);
 
   // Head with its face screen
-  const head = group("Head", 0, 0.06, 0);
-  neck.add(head);
-  const headMesh = mesh(superellipsoid(HEAD.a, HEAD.b, HEAD.c, HEAD.p), m.shell);
-  headMesh.position.y = HEAD.y;
-  head.add(headMesh);
-  const screen = mesh(faceScreen(), m.screen, { shadow: false });
+  const headNode = group("Head", 0, 0.06, 0);
+  neck.add(headNode);
+  const headMesh = make(superellipsoid(head.a, head.b, head.c, head.p), m.head);
+  headMesh.position.y = head.y;
+  headNode.add(headMesh);
+  const screen = make(faceScreen(head), m.screen, { shadow: false });
   screen.name = "FaceScreen";
-  screen.position.y = HEAD.y;
+  screen.position.y = head.y;
   screen.receiveShadow = true;
-  head.add(screen);
+  headNode.add(screen);
 
-  // Fins: little rounded blades on top, glowing at their tips
-  const finProfile = smoothProfile([
-    [0.0, 0.0],
-    [0.04, 0.004],
-    [0.042, 0.05],
-    [0.052, 0.1],
-    [0.045, 0.14],
-    [0.022, 0.168],
-    [0.0, 0.172],
-  ], 40);
-  const finBaseGeo = lathe(finProfile.filter(([, y]) => y <= 0.092).concat([[0.05, 0.092]]), 40);
-  const finTipGeo = lathe([[0.0495, 0.088], ...finProfile.filter(([, y]) => y > 0.092)], 40);
-  for (const g of [finBaseGeo, finTipGeo]) g.scale(1, 1, 0.55);
-  const fin = (name, side, glow) => {
-    const f = group(name, side * 0.25, HEAD.y + 0.2, -0.03);
-    f.rotation.z = -side * 0.35;
-    f.add(mesh(finBaseGeo, m.shell));
-    const tip = mesh(finTipGeo, glow, { shadow: false });
-    tip.name = `${name}_Light`;
-    f.add(tip);
-    return f;
-  };
-  head.add(fin("Fin_L", 1, m.finGlowL), fin("Fin_R", -1, m.finGlowR));
+  // The top (fins, antennae, ears…)
+  const tops = buildTop(design.build.topStyle, design.build.top, dims, m, make);
+  for (const t of tops) headNode.add(t);
 
-  // Arms: a ball joint at the shoulder, a short arm and a paddle hand
-  const upperGeo = new THREE.CapsuleGeometry(0.043, 0.13, 8, 24);
-  const handGeo = new THREE.SphereGeometry(0.066, 40, 28);
-  handGeo.scale(0.82, 1.12, 0.56);
-  const jointGeo = new THREE.SphereGeometry(0.052, 32, 20);
-  const arm = (name, side) => {
-    const a = group(name, side * 0.25, 0.13, 0.0);
-    a.add(mesh(jointGeo, m.joint));
-    const upper = mesh(upperGeo, m.shell);
-    upper.position.y = -0.1;
-    a.add(upper);
-    const hand = mesh(handGeo, m.shell);
-    hand.position.y = -0.225;
-    hand.name = `${name}_Hand`;
-    a.add(hand);
-    return a;
-  };
-  body.add(arm("Arm_L", 1), arm("Arm_R", -1));
+  // Arms
+  body.add(buildArm("Arm_L", 1, dims, m, make), buildArm("Arm_R", -1, dims, m, make));
 
-  // Hover ring under the body
-  const ring = mesh(new THREE.TorusGeometry(0.16, 0.019, 20, 80), m.ring, { shadow: false });
-  ring.name = "HoverRing";
-  ring.rotation.x = Math.PI / 2;
-  ring.position.y = -0.03;
-  hover.add(ring);
+  // Hover ring (or jets)
+  const ring = buildHover(design.build.hover, dims, m, make);
+  if (ring) hover.add(ring);
 
-  return finish(root, m, { builtIn: true, screenAspect: SCREEN_ASPECT });
+  const robot = finish(root, m, { builtIn: true, screenAspect: SCREEN_ASPECT, dims, light: new THREE.Color(light), simple: false });
+  robot.design = design;
+  dress(robot, design, { make, group });
+  robot.bounds = measure(root);
+  return robot;
+}
+
+// How tall and wide the robot stands (its hover ring and mirror excluded), for framing it
+function measure(root) {
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3();
+  root.traverse((o) => {
+    if (!o.isMesh || o.name.includes("HoverRing") || o.parent?.name === "HoverRing") return;
+    box.expandByObject(o, true);
+  });
+  const size = box.getSize(new THREE.Vector3());
+  return { height: box.max.y, width: size.x, depth: size.z };
 }
 
 // Collects the named parts and remembers how each one rests
@@ -251,6 +176,20 @@ function finish(root, materials, extra) {
   return { root, nodes, rest, materials, ...extra };
 }
 
+// ---------- Changing the looks of a robot that's there ----------
+// Colors, finish and glow need no new shapes; the outfit's colors follow too
+export function applyLook(robot, design, light) {
+  if (!robot.builtIn) return;
+  const m = robot.materials;
+  robot.design = design;
+  for (const key of SHELL_KEYS) setShell(m[key], design.colors[key], design.finish);
+  m.joint.color.set(design.colors.joint);
+  robot.light.set(light);
+  for (const key of ["finGlowL", "finGlowR", "ring"]) m[key]?.emissive.set(light);
+  robot.glow = design.glow;
+  robot.outfit?.recolor(design, robot.light);
+}
+
 // ---------- Moving it ----------
 const euler = new THREE.Euler();
 const quat = new THREE.Quaternion();
@@ -264,7 +203,7 @@ function turn(node, rest, x, y, z, order = "YXZ") {
 
 // pose: the animator's output; accent, user: THREE.Color; cameraFriendly: the
 // filming look; glowBoost: a little more light when there's no bloom (Low)
-export function applyPose(robot, pose, { accent, user, cameraFriendly = false, glowBoost = 1 }) {
+export function applyPose(robot, pose, { accent, user, cameraFriendly = false, glowBoost = 1, time = 0 }) {
   const { nodes: n, rest: r, materials: m } = robot;
   if (n.Hover) {
     n.Hover.position.set(r.Hover.position.x + pose.posX, r.Hover.position.y + pose.hoverY, r.Hover.position.z + pose.hoverZ + pose.posZ);
@@ -283,12 +222,13 @@ export function applyPose(robot, pose, { accent, user, cameraFriendly = false, g
 
   // Light: the fins follow the voice (in your color while you talk), and a
   // light runs from fin to fin while it thinks; slower and softer on camera
+  const strength = robot.glow ?? 1;
   const chase = pose.chase * (cameraFriendly ? 0.35 : 0.5);
   const glowL = Math.max(0, pose.finGlowL * (1 + chase * Math.sin(pose.chasePhase)));
   const glowR = Math.max(0, pose.finGlowR * (1 + chase * Math.sin(pose.chasePhase + Math.PI)));
   const mix = Math.min(1, Math.max(0, pose.finUser));
   white.copy(accent).lerp(user, mix);
-  const finBoost = (cameraFriendly ? 2.6 : 3.2) * glowBoost;
+  const finBoost = (cameraFriendly ? 2.6 : 3.2) * glowBoost * strength;
   if (m.finGlowL) {
     m.finGlowL.emissive.copy(white);
     m.finGlowL.emissiveIntensity = 0.25 + glowL * finBoost;
@@ -299,31 +239,29 @@ export function applyPose(robot, pose, { accent, user, cameraFriendly = false, g
   }
   if (m.ring) {
     m.ring.emissive.copy(accent).lerp(user, mix * 0.5);
-    m.ring.emissiveIntensity = Math.max(0, pose.ringGlow) * (cameraFriendly ? 1.3 : 1.6);
+    m.ring.emissiveIntensity = Math.max(0, pose.ringGlow) * (cameraFriendly ? 1.3 : 1.6) * strength;
   }
-  if (m.screen) m.screen.emissiveIntensity = Math.max(0, pose.glow) * (cameraFriendly ? 0.95 : 1.1) * glowBoost;
+  if (m.screen) m.screen.emissiveIntensity = Math.max(0, pose.glow) * (cameraFriendly ? 0.95 : 1.1) * glowBoost * Math.min(1.25, 0.6 + 0.4 * strength);
+  // Things that move by themselves (a propeller, a cape's sway, a glowing chest)
+  robot.outfit?.update(pose, time, { accent, user, mix, cameraFriendly });
 }
 
 // Low quality: the same colors with simpler shaders (no clearcoat, no sheen)
 export function setMaterialDetail(robot, rich) {
   if (!robot.builtIn) return;
-  for (const mat of [robot.materials.shell, robot.materials.joint, robot.materials.screen]) {
+  for (const key of [...SHELL_KEYS, "joint", "screen"]) {
+    const mat = robot.materials[key];
     if (!mat) continue;
-    mat.userData.rich ||= { clearcoat: mat.clearcoat, sheen: mat.sheen };
+    if (key === "joint" || key === "screen") {
+      mat.userData.rich ||= { clearcoat: mat.clearcoat, sheen: mat.sheen, iridescence: 0 };
+    }
+    mat.userData.simple = !rich;
     mat.clearcoat = rich ? mat.userData.rich.clearcoat : 0;
     mat.sheen = rich ? mat.userData.rich.sheen : 0;
+    mat.iridescence = rich ? mat.userData.rich.iridescence : 0;
+    mat.needsUpdate = true;
   }
-}
-
-export function setShellColor(robot, color) {
-  robot.materials.shell?.color.set(color);
-  const graphite = new THREE.Color(color).getHSL({}).l < 0.4;
-  const shell = robot.materials.shell;
-  if (shell) {
-    shell.roughness = graphite ? 0.5 : 0.42;
-    shell.userData.rich = { clearcoat: 0.35, sheen: graphite ? 0.15 : 0.3 };
-    if (shell.sheen > 0) shell.sheen = shell.userData.rich.sheen;
-  }
+  robot.outfit?.setDetail?.(rich);
 }
 
 export function disposeRobot(robot) {

@@ -50,7 +50,7 @@ describe("The page in Chrome", { skip: !CHROME && "no Chrome found" }, () => {
     base = `http://127.0.0.1:${server.address().port}`;
 
     const puppeteer = require("puppeteer-core");
-    browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox", "--disable-gpu", "--use-gl=swiftshader"] });
+    browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox", "--disable-gpu", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 900 });
     // The interface language follows the browser's; these tests read the English

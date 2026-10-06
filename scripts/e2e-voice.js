@@ -49,7 +49,7 @@ async function main() {
   const browser = await puppeteer.launch({
     executablePath: CHROME,
     headless: true,
-    args: ["--no-sandbox", "--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", `--use-file-for-fake-audio-capture=${path.join(work, "mic.wav")}%noloop`, "--autoplay-policy=no-user-gesture-required", "--disable-gpu", "--use-gl=swiftshader"],
+    args: ["--no-sandbox", "--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", `--use-file-for-fake-audio-capture=${path.join(work, "mic.wav")}%noloop`, "--autoplay-policy=no-user-gesture-required", "--disable-gpu", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
   });
   const calls = [];
   try {
