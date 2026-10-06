@@ -213,16 +213,16 @@ export function buildTop(style, k, dims, m, make) {
         break;
       }
       case "cat": {
-        at(0.62, 0.03);
-        g.rotation.z = -s * 0.32;
-        const ear = new THREE.ConeGeometry(0.075 * k, 0.13 * k, 4, 1);
+        at(0.6, 0.04);
+        g.rotation.z = -s * 0.3;
+        const ear = new THREE.ConeGeometry(0.105 * k, 0.19 * k, 4, 1);
         ear.rotateY(Math.PI / 4);
-        ear.scale(1, 1, 0.45);
-        g.add(make(ear, m.head).translateY(0.05 * k));
-        const inner = new THREE.ConeGeometry(0.048 * k, 0.085 * k, 4, 1);
+        ear.scale(1, 1, 0.42);
+        g.add(make(ear, m.head).translateY(0.075 * k));
+        const inner = new THREE.ConeGeometry(0.066 * k, 0.12 * k, 4, 1);
         inner.rotateY(Math.PI / 4);
         inner.scale(1, 1, 0.4);
-        g.add(light(inner, 0, 0.04 * k, 0.017 * k));
+        g.add(light(inner, 0, 0.058 * k, 0.022 * k));
         break;
       }
       case "bear": {
@@ -260,11 +260,11 @@ export function buildTop(style, k, dims, m, make) {
         break;
       }
       case "horns": {
-        at(0.55, 0.035);
-        g.rotation.z = -s * 0.4;
-        const horn = new THREE.ConeGeometry(0.042 * k, 0.12 * k, 24, 1);
-        g.add(make(horn, m.joint).translateY(0.055 * k));
-        g.add(light(new THREE.SphereGeometry(0.012 * k, 14, 10), 0, 0.12 * k, 0));
+        at(0.55, 0.04);
+        g.rotation.z = -s * 0.42;
+        const horn = new THREE.ConeGeometry(0.058 * k, 0.2 * k, 24, 1);
+        g.add(make(horn, m.joint).translateY(0.095 * k));
+        g.add(light(new THREE.SphereGeometry(0.02 * k, 14, 10), 0, 0.2 * k, 0));
         break;
       }
       default:

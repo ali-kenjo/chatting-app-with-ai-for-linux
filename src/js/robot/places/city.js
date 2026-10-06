@@ -113,8 +113,8 @@ export function city({ colors, glow, props, sign, keep, group: room }) {
       glowColor: glow,
       blobs: [{ x: 0.5, y: 0.36, r: 0.42, strength: 0.14, color: glow }, ...(props.moon ? [{ x: 0.74, y: 0.78, r: 0.26, strength: 0.14, color: new THREE.Color("#9fb4ff") }] : [])],
     },
-    update(dt, time) {
-      if (signMaterial) signMaterial.emissiveIntensity = 1.8 + Math.sin(time * 37) * 0.03 + (Math.sin(time * 0.5 + 2) > 0.99 ? -0.6 : 0);
+    update(dt, time, pose, fx) {
+      if (signMaterial) signMaterial.emissiveIntensity = fx.friendly || fx.reduced ? 1.8 : 1.8 + Math.sin(time * 37) * 0.03 + (Math.sin(time * 0.5 + 2) > 0.99 ? -0.6 : 0);
       void rand;
     },
   };

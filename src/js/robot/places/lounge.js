@@ -326,8 +326,9 @@ export function lounge({ colors, glow, props, mood, keep, group: room }) {
     roam: 0.7,
     glow: glowing,
     backdrop: { mode: "vignette", bg: colors.wall, edge: colors.wall.clone().multiplyScalar(0.3), glow: 0, glowColor: glow, blobs: [] },
-    update(dt, time) {
-      bulbs.forEach((b, i) => (b.material.opacity = 0.42 + 0.1 * Math.sin(time * 1.6 + i * 0.9)));
+    update(dt, time, pose, fx) {
+      const calm = fx.friendly || fx.reduced;
+      bulbs.forEach((b, i) => (b.material.opacity = calm ? 0.42 : 0.42 + 0.1 * Math.sin(time * 1.6 + i * 0.9)));
     },
   };
 }

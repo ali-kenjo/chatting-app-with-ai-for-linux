@@ -7,8 +7,9 @@ const shoulderY = (c) => c.dims.body.h * 0.86 - c.dims.body.h / 2;
 
 const cape = (c) => {
   const { body } = c.dims;
-  const outer = c.paint(1, { roughness: 0.75, side: THREE.FrontSide });
-  const lining = c.paint(2, { roughness: 0.75, side: THREE.BackSide });
+  // The cloth's faces point in, toward the robot: the outside is the back side
+  const outer = c.paint(1, { roughness: 0.75, side: THREE.BackSide });
+  const lining = c.paint(2, { roughness: 0.75, side: THREE.FrontSide });
   const clasp = c.paint(2, { roughness: 0.25, metalness: 0.85 });
   const length = body.h * 1.05;
   const top = body.h * 0.9;
@@ -205,15 +206,18 @@ const tail = (c) => {
   root.position.set(0, y - body.h / 2, -(s.z - 0.01));
   const sway = new THREE.Group();
   root.add(sway);
-  const path = [[0, 0, 0, 0.055], [0.05, -0.01, -0.08, 0.07], [0.13, 0.02, -0.14, 0.08], [0.22, 0.09, -0.17, 0.082], [0.3, 0.18, -0.17, 0.07], [0.34, 0.28, -0.15, 0.058]];
-  path.forEach(([x, yy, z, r], i) => {
-    const m = c.make(new THREE.SphereGeometry(r, 20, 14), i === path.length - 1 ? tip : fur);
-    m.position.set(x, yy, z);
+  // A fluffy tail: a smooth run of puffs along a curve, thickest in the middle, white at the tip
+  const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.05, -0.01, -0.08), new THREE.Vector3(0.13, 0.02, -0.14), new THREE.Vector3(0.22, 0.09, -0.17), new THREE.Vector3(0.3, 0.18, -0.17), new THREE.Vector3(0.34, 0.29, -0.14)]);
+  const puff = c.keep(new THREE.SphereGeometry(1, 18, 12));
+  const count = 22;
+  for (let i = 0; i < count; i++) {
+    const t = i / (count - 1);
+    const r = 0.05 + 0.04 * Math.sin(Math.min(1, t * 1.15) * Math.PI * 0.85) - (t > 0.9 ? 0.012 : 0);
+    const m = c.make(puff, t > 0.84 ? tip : fur);
+    m.scale.setScalar(r);
+    m.position.copy(curve.getPoint(t));
     sway.add(m);
-  });
-  const end = c.make(new THREE.SphereGeometry(0.052, 20, 14), tip);
-  end.position.set(0.34, 0.34, -0.13);
-  sway.add(end);
+  }
   return {
     object: root,
     update(pose, time) {

@@ -581,7 +581,7 @@ export class RobotEngine {
     applyPose(this.robot, pose, { accent: look.accent, user: look.user, cameraFriendly: look.cameraFriendly, glowBoost: bloomOn ? 1 : 1.3, time: pose.t });
     this.stage.follow(pose.hoverY, pose.posX, pose.posZ);
     this.updateWorld(dt, pose);
-    this.rooms.update(dt, pose);
+    this.rooms.update(dt, pose, { friendly: look.cameraFriendly, reduced: this.reducedMotion.matches });
     this.face.render(pose, { face: look.design.face, largerFace: look.largerFace, color: look.faceColor || look.accent });
 
     this.frameCamera(dt, pose);

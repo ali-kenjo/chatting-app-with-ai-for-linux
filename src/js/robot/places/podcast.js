@@ -161,13 +161,11 @@ export function podcast({ colors, glow, props, sign, keep, group: room }) {
   return {
     glow: glowing,
     backdrop: { mode: "vignette", bg: colors.wall, edge: wallEdge, glow: 0, glowColor: glow, blobs: [] },
-    update(dt, time) {
-      if (signMaterial) {
-        // A neon tube's slight unevenness, and now and then a quick flicker
-        const flicker = Math.sin(time * 41) * 0.03 + (Math.sin(time * 0.7) > 0.985 ? -0.5 : 0);
-        signMaterial.emissiveIntensity = 1.7 + flicker;
-      }
-      bulbs.forEach((b, i) => (b.material.opacity = 0.33 + 0.03 * Math.sin(time * 1.3 + i)));
+    update(dt, time, pose, fx) {
+      // A neon tube's slight unevenness, and now and then a quick flicker (steady when filming)
+      const calm = fx.friendly || fx.reduced;
+      if (signMaterial) signMaterial.emissiveIntensity = calm ? 1.7 : 1.7 + Math.sin(time * 41) * 0.03 + (Math.sin(time * 0.7) > 0.985 ? -0.5 : 0);
+      bulbs.forEach((b, i) => (b.material.opacity = calm ? 0.33 : 0.33 + 0.03 * Math.sin(time * 1.3 + i)));
     },
   };
 }

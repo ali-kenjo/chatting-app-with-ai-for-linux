@@ -207,7 +207,7 @@ export class RoomScene {
       mesh.position.z = z;
     }
     this.floors.grid.material.uniforms.uTime.value = this.time;
-    this.built?.update?.(dt, this.time, pose, fx);
+    this.built?.update?.(dt, this.time, pose, fx || {});
   }
 
   dispose() {

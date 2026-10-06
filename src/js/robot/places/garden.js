@@ -129,7 +129,8 @@ export function garden({ colors, glow, props, keep, group: room }) {
       glowColor: glow,
       blobs: props.sun ? [{ x: 0.74, y: 0.4, r: 0.3, strength: 0.26, color: glow }] : [],
     },
-    update(dt, time) {
+    update(dt, time, pose, fx) {
+      if (fx.reduced) return;
       for (const child of group.children) {
         if (child.userData.drift) {
           child.position.x += child.userData.drift * dt;

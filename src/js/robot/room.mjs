@@ -82,7 +82,7 @@ export const PLACES = [
     id: "desk", label: "Cozy desk", icon: "🪴", about: "A desk corner with a lamp and a plant",
     colors: { wall: "#2f3136", floor: "#553d2d", glow: "#ffd6aa", detail: "#8b9d86" },
     names: { wall: "Wall", floor: "Desk", glow: "Window light", detail: "Plant pot" },
-    light: "studio", floor: "matte", air: "dust",
+    light: "studio", floor: "matte", air: "dust", ownFloor: true,
     props: [prop("plant", "Plant"), prop("mug", "Mug"), prop("books", "Books"), prop("lamp", "Lamp")],
   },
   {
@@ -97,7 +97,7 @@ export const PLACES = [
     id: "lounge", label: "Living room", icon: "🛋️", about: "Evening at home: window, shelf, rug and lights",
     colors: { wall: "#3c3039", floor: "#6b4a3a", glow: "#ffbf80", detail: "#c9744f" },
     names: { wall: "Wall", floor: "Floor", glow: "Lamp light", detail: "Rug" },
-    light: "evening", floor: "matte", air: "dust",
+    light: "evening", floor: "matte", air: "dust", ownFloor: true,
     props: [prop("window", "Window"), prop("shelf", "Bookshelf"), prop("plant", "Plant"), prop("lamp", "Floor lamp"), prop("rug", "Rug"), prop("lights", "String lights"), prop("frames", "Pictures")],
   },
   {

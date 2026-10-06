@@ -63,7 +63,8 @@ export function sky({ colors, glow, props, keep, group: room }) {
       glowColor: glow,
       blobs: props.sun ? [{ x: 0.78, y: 0.86, r: 0.3, strength: 0.26, color: glow }] : [],
     },
-    update(dt) {
+    update(dt, time, pose, fx) {
+      if (fx.reduced) return;
       for (const child of group.children) {
         if (child.userData.drift) {
           child.position.x += child.userData.drift * dt;

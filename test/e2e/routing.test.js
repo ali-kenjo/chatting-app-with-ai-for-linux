@@ -37,7 +37,7 @@ describe("Choosing the AI in the page", { skip: !CHROME && "no Chrome found" }, 
     server = start(0, "127.0.0.1");
     await new Promise((resolve) => (server.listening ? resolve() : server.on("listening", resolve)));
 
-    browser = await require("puppeteer-core").launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox", "--disable-gpu", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
+    browser = await require("puppeteer-core").launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox", "--disable-gpu", "--use-gl=swiftshader"] });
     page = await browser.newPage();
     // The interface language follows the browser's; these tests read the English
     await page.evaluateOnNewDocument(() => Object.defineProperty(navigator, "languages", { get: () => ["en-US", "en"] }));

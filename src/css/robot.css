@@ -82,55 +82,9 @@
   font-weight: 600;
 }
 
-.seg button:focus-visible,
-.robot-shells .color:focus-visible,
-.robot-eye-choices .choice:focus-visible {
+.seg button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-}
-
-.robot-shells .color {
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
-}
-
-.robot-eye-choices .choice {
-  align-items: center;
-  font-weight: 500;
-}
-
-/* The robot's face as a small picture: a dark screen, two eyes in the accent color */
-.face-icon-big {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3h);
-  width: 92px;
-  height: 58px;
-  border-radius: var(--radius-xl);
-  background: #0b0d12;
-  box-shadow: 0 0 0 5px var(--robot-shell, #ede4d6);
-  margin: var(--space-1h) 0 var(--space-1);
-}
-
-.face-icon-big i {
-  display: block;
-  width: 12px;
-  height: 22px;
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 70%, transparent);
-}
-
-.face-icon-big[data-eyes="round"] i {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-}
-
-.face-icon-big[data-eyes="wide"] i {
-  width: 22px;
-  height: 13px;
-  border-radius: var(--radius-sm);
 }
 
 .row-desc.warn {

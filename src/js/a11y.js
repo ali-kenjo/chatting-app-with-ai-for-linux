@@ -34,6 +34,9 @@ export function trapModal(modal, { initial } = {}) {
     el.inert = true;
     inerted.push(el);
   }
+  // A dialog that was already in the page when another one opened was made inert along with the rest of the page:
+  // it has to be usable now (the other dialog gets it back, inert, when it closes)
+  modal.inert = false;
   open.set(modal, { opener, inerted });
   // Focus: what the dialog asks for, else its first control, else the dialog itself
   const target = (initial && modal.querySelector(initial)) || modal.querySelector("[data-autofocus]") || focusables(modal)[0];

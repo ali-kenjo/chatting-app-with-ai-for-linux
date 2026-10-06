@@ -286,7 +286,8 @@ export function roomPanel(ctx) {
       dynamic.append(section(t("Your picture"), photo.el));
     }
     el.classList.toggle("is-chroma", Boolean(place.chroma));
-    lighting.hidden = ground.hidden = atmosphere.hidden = Boolean(place.chroma);
+    lighting.hidden = atmosphere.hidden = Boolean(place.chroma);
+    ground.hidden = Boolean(place.chroma || place.ownFloor);
   }
   return {
     el,

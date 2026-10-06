@@ -126,6 +126,10 @@ function serverStrings() {
       for (const o of f.options || []) out.add(o[1]);
     }
   }
+  // The robot's choices (what the Robot Studio lists: shapes, clothes, places, looks, lights…)
+  const { design, room } = require(path.join(root, "server", "robot-look"));
+  const looks = require(path.join(root, "src", "js", "robot", "looks.mjs"));
+  for (const label of [...design.labels(), ...room.labels(), ...looks.labels()]) out.add(label);
   return out;
 }
 

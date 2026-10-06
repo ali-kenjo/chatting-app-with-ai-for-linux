@@ -27,10 +27,9 @@ if [[ "${1:-}" == "--uninstall" ]]; then
   exit 0
 fi
 
-# 1. Node.js 20 or newer
-command -v node >/dev/null || die "Node.js isn't installed. Install version 20 or newer from https://nodejs.org (or: nvm install --lts), then run this again."
-NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
-(( NODE_MAJOR >= 20 )) || die "Node.js $(node -v) is too old; Friends needs 20 or newer (https://nodejs.org or: nvm install --lts)."
+# 1. Node.js 22.12 or newer (the robot's design code is an ES module that the helper loads with require())
+command -v node >/dev/null || die "Node.js isn't installed. Install version 22.12 or newer from https://nodejs.org (or: nvm install --lts), then run this again."
+node -e 'const [a, b] = process.versions.node.split(".").map(Number); process.exit(a > 22 || (a === 22 && b >= 12) ? 0 : 1)' || die "Node.js $(node -v) is too old; Friends needs 22.12 or newer (https://nodejs.org or: nvm install --lts)."
 command -v npm >/dev/null || die "npm isn't installed (it comes with Node.js)."
 say "✓ Node.js $(node -v)"
 
