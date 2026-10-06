@@ -139,9 +139,17 @@ export const api = {
     remove: (id) => call("DELETE", `/api/mcp/${encodeURIComponent(id)}`),
     restart: (id) => call("POST", `/api/mcp/${encodeURIComponent(id)}/restart`),
   },
-  builder: {
-    running: () => call("GET", "/api/builder/running"),
-    stop: (id) => call("POST", `/api/builder/${encodeURIComponent(id)}/stop`),
+  telegram: {
+    status: () => call("GET", "/api/telegram/status"),
+    test: () => call("POST", "/api/telegram/test"),
+  },
+  notesVault: {
+    list: (limit = 50) => call("GET", `/api/notes-vault?limit=${limit}`),
+    search: (q) => call("GET", `/api/notes-vault/search?q=${encodeURIComponent(q)}`),
+    read: (title) => call("GET", `/api/notes-vault/note?title=${encodeURIComponent(title)}`),
+    save: (title, content, tags) => call("POST", "/api/notes-vault/note", { title, content, tags }),
+    append: (title, text) => call("POST", "/api/notes-vault/append", { title, text }),
+    remove: (title) => call("DELETE", `/api/notes-vault/note?title=${encodeURIComponent(title)}`),
   },
   life: {
     today: () => call("GET", "/api/life/today"),
@@ -161,6 +169,20 @@ export const api = {
     addEntry: (e) => call("POST", "/api/life/journal", e),
     removeEntry: (id) => call("DELETE", `/api/life/journal/${encodeURIComponent(id)}`),
     briefing: (googleAccessToken) => call("POST", "/api/life/briefing", { googleAccessToken }),
+    calendar: (from, to) => {
+      const p = new URLSearchParams();
+      if (from) p.set("from", from);
+      if (to) p.set("to", to);
+      const qs = p.toString() ? `?${p.toString()}` : "";
+      return call("GET", `/api/life/calendar${qs}`);
+    },
+    addCalendarEvent: (ev) => call("POST", "/api/life/calendar", ev),
+    deleteCalendarEvent: (id) => call("DELETE", `/api/life/calendar/${encodeURIComponent(id)}`),
+    exportCalendarIcs: () => call("GET", "/api/life/calendar/ics"),
+    importCalendarIcs: (ics) => call("POST", "/api/life/calendar/ics", { ics }),
+    startFocus: (minutes, task) => call("POST", "/api/life/focus/start", { minutes, task }),
+    checkFocus: () => call("GET", "/api/life/focus"),
+    stopFocus: () => call("POST", "/api/life/focus/stop"),
   },
   backups: {
     list: () => call("GET", "/api/backups"),

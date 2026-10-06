@@ -44,7 +44,7 @@ export class LiveEngine {
   async start() {
     const voice = new LiveVoice({ audioCtx: audio.ctx, micSource: audio.micSource, output: audio.bus, handlers: this.handlers() });
     this.voice = voice;
-    await voice.start({ chatId: getCurrentChatId(), brainId: getSelectedBrainId(), googleAccessToken: getAccessToken(), robot: robotOnScreen(), onAir: isOnAir() });
+    await voice.start({ chatId: getCurrentChatId(), brainId: getSelectedBrainId(), googleAccessToken: getAccessToken(), robot: robotOnScreen(), onAir: isOnAir(), doc: this.doc });
     if (!this.stopped) voice.setMuted(isMuted());
   }
 
@@ -52,6 +52,11 @@ export class LiveEngine {
     this.stopped = true;
     clearTimeout(this.thinkingTimer);
     this.voice?.stop();
+  }
+
+  setDoc(doc) {
+    this.doc = doc;
+    this.voice?.send({ type: "doc", doc });
   }
 
   setMuted(muted) {

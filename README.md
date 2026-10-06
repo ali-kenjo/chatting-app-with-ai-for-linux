@@ -3,10 +3,11 @@
 A personal AI companion for Linux, in its own window or your browser. The AI behind it can be Google Gemini (cloud) or any AI model running on your own computer, so chats can stay completely private.
 
 - **Two characters to talk to for hours**: **Atlas** (calm, sharp, dry-witted, always a step ahead) and **Mira** (bright, playful, fearless, your most honest friend), or your own. Switch with one tap. They remember your conversations, follow up on what you told them, and never let a conversation run dry.
-- **Your on-camera co-host**: voice conversations with a 3D robot body, filming mode and video recording, and **ON AIR** co-host mode that keeps everything private off camera.
-- **Your everyday life**: tasks, reminders (as desktop notifications), habits, a journal and a daily briefing, all on your computer.
-- **Connected apps**: Gmail, Calendar, Drive, YouTube, Google Tasks, GitHub, Notion, Todoist, Home Assistant, weather, web search, Wikipedia, and any app with an MCP server.
-- **Builder mode**: build websites, apps and SaaS products together: project starters, code editing, running tests and builds (you choose how much it may do on its own), and a live preview.
+- **Flagship Voice Mode & On-Camera Co-Host**: Real-time voice conversations with a 3D robot body, filming mode, customizable **acting dynamics** (*Best Friends Banter*, *Podcast Co-Host*, *Comedy Partner*, *Sarcastic Critic*, *Curious Interviewer*, *Custom*), scene briefs, and **live document grounding** (talk through scripts, articles, or vault notes during conversations).
+- **Everyday Life & Offline Calendar**: Tasks, reminders (as desktop and Telegram notifications), habits, a journal, offline calendar (with `.ics` export/import), and focus/Pomodoro sessions.
+- **Telegram Companion Bot**: Talk to Friends and receive alerts from anywhere via your own private Telegram bot using secure long-polling with zero open ports or webhooks.
+- **Local Markdown Notes Vault**: Markdown notes kept on your computer in an Obsidian- and Logseq-compatible vault with tags, full-text search, and one-tap voice grounding.
+- **Connected Apps & Safe File Tools**: Gmail, Calendar, Drive, YouTube, Google Tasks, GitHub, Notion, Todoist, Home Assistant, weather, web search, Wikipedia, any MCP server, and sandboxed file tools (`read_file`, `create_file`, `edit_file_part`, `search_files`).
 
 ---
 
@@ -42,7 +43,7 @@ The same app in its own window, with a launcher entry and icon. It runs the help
 ./scripts/install.sh --desktop          # dependencies + the Electron download (~100 MB)
 npm run desktop                         # try it from the project folder (runs with --no-sandbox)
 npm run dist                            # builds dist/friends_<version>_amd64.deb
-sudo apt install ./dist/friends_0.3.2_amd64.deb
+sudo apt install ./dist/friends_0.4.0_amd64.deb
 ```
 
 Or download the `.deb` from the [Releases](../../releases) page. After changing the source, `npm run update` tests it, backs up your data, builds the `.deb` and installs it (it asks for your password).
@@ -393,7 +394,7 @@ Root                  the whole robot, standing on the ground (optional)
   - `src/js/robot/` — the robot. Pure logic in `.mjs` modules that `node:test` checks (springs and the layer mixer, moods and gestures as poses, the mood classifier, the animator, the director that turns app events into moods, clicker keys, voice bands). The browser side: `engine.js` (one shared three.js renderer that draws only where the robot is visible), `model.js` (the robot and custom models), `face.js` (eyes and mouth drawn with signed distance functions into a texture), `scene.js`, `dock.js`, `facetrack.js`, `settings-pane.js`, and `index.js`, which loads three.js only when a robot is first shown.
   - `src/js/filming.js` — filming mode. `src/models/face/` — the face detector model for Follow my face.
   - three.js and MediaPipe are served from `node_modules` under `/vendor/`; an import map (allowed by its hash in the page's security policy) names `three` and `three/addons/`.
-- `server/` — Local Node.js service providing Gemini API integration (`gemini.js`) and local/OpenAI-compatible AI servers (`openai.js`), file sandboxing, and data persistence. `characters.js` (the characters), `episodes.js` (memory of conversations), `activities.js`, `life.js` and `briefing.js` (daily life), `connectors/` (one module per app), `mcp.js` (the MCP client), `net.js` (safe web fetching), `builder.js` and `templates.js` (builder mode), `backup.js`. `live.js` bridges voice mode to Gemini Live over a WebSocket (`/api/live`), so the API key stays on your computer. `robot.js` checks and keeps your own robot model and asks Gemini for Smarter moods; the robot tools live in `tools.js`.
+- `server/` — Local Node.js service providing Gemini API integration (`gemini.js`) and local/OpenAI-compatible AI servers (`openai.js`), file sandboxing, and data persistence. `characters.js` (the characters), `episodes.js` (memory of conversations), `activities.js`, `life.js` and `briefing.js` (daily life), `local-notes.js` (Markdown notes vault engine), `telegram.js` (Telegram companion bot engine), `connectors/` (one module per app), `mcp.js` (the MCP client), `net.js` (safe web fetching), `files.js` (sandboxed file tools), `backup.js`. `live.js` bridges voice mode to Gemini Live over a WebSocket (`/api/live`), so the API key stays on your computer. `robot.js` checks and keeps your own robot model and asks Gemini for Smarter moods; the robot tools live in `tools.js`.
 - Data lives in `~/.config/friends/` (or `FRIENDS_DATA_DIR`):
   - `chats/` — JSON storage for conversations (including voice turns, drafts, and a summary of the older part of long chats).
   - `memory/` — AI long-term memory notes.

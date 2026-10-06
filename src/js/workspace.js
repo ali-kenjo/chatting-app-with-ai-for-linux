@@ -86,14 +86,6 @@ export function promptConfirmation(summary, details = {}) {
         body.textContent = JSON.stringify(details.args, null, 2).slice(0, 600);
         detailsEl.append(body);
       }
-    } else if (details.type === "command") {
-      // A command in builder mode (Settings → Builder)
-      row(t("In:"), details.cwd);
-      const body = document.createElement("pre");
-      body.className = "ws-detail-body ws-detail-command";
-      body.textContent = details.command || "";
-      detailsEl.append(body);
-      if (details.reason) row(t("Why:"), details.reason);
     }
 
     let release = null;

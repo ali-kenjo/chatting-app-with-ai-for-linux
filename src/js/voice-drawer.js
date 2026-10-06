@@ -4,12 +4,23 @@
 import { draftCard } from "./drafts.js";
 import { t } from "./i18n.js";
 import { characterName } from "./characters.js";
+import { api } from "./api.js";
+import { getActiveDoc, setActiveDoc, clearActiveDoc } from "./voice/session.js";
 
 const drawer = document.getElementById("voice-drawer");
 const draftsPane = document.getElementById("voice-drafts");
 const transcriptPane = document.getElementById("voice-transcript");
+const docPane = document.getElementById("voice-doc");
 const draftsButton = document.getElementById("voice-drafts-btn");
 const badge = document.getElementById("voice-drafts-badge");
+
+const docStatus = document.getElementById("voice-doc-status");
+const docClearBtn = document.getElementById("voice-doc-clear-btn");
+const docVaultSelect = document.getElementById("voice-doc-vault-select");
+const docAttachVaultBtn = document.getElementById("voice-doc-attach-vault-btn");
+const docCustomTitle = document.getElementById("voice-doc-custom-title");
+const docCustomText = document.getElementById("voice-doc-custom-text");
+const docAttachCustomBtn = document.getElementById("voice-doc-attach-custom-btn");
 
 const EMPTY = {
   drafts: t("Scripts, posts and ideas the AI writes land here, ready to copy. Try: “Write me three hooks for a video about…”"),
@@ -21,6 +32,39 @@ let unseen = 0;
 let lines = { user: null, model: null }; // the transcript lines of this turn, still growing
 
 const companion = characterName;
+
+function renderDocStatus() {
+  if (!docStatus) return;
+  const doc = getActiveDoc();
+  if (doc && doc.name) {
+    docStatus.textContent = `📄 ${doc.name} (${doc.content.length} chars)`;
+    if (docClearBtn) docClearBtn.hidden = false;
+  } else {
+    docStatus.textContent = t("No document attached.");
+    if (docClearBtn) docClearBtn.hidden = true;
+  }
+}
+
+async function loadVaultNotes() {
+  if (!docVaultSelect) return;
+  try {
+    const res = await api.notesVault.list();
+    const notes = res?.notes || [];
+    docVaultSelect.innerHTML = "";
+    const defaultOpt = document.createElement("option");
+    defaultOpt.value = "";
+    defaultOpt.textContent = notes.length ? t("Select a vault note…") : t("No notes found in vault");
+    docVaultSelect.appendChild(defaultOpt);
+    for (const n of notes) {
+      const opt = document.createElement("option");
+      opt.value = n.path;
+      opt.textContent = `${n.title || n.path}${n.tags?.length ? ` (${n.tags.join(" ")})` : ""}`;
+      docVaultSelect.appendChild(opt);
+    }
+  } catch (err) {
+    docVaultSelect.innerHTML = `<option value="">(${err.message})</option>`;
+  }
+}
 
 function placeholder(pane, text) {
   const p = document.createElement("p");
@@ -39,9 +83,13 @@ function showTab(next) {
   drawer.querySelectorAll(".voice-drawer-tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
   draftsPane.hidden = tab !== "drafts";
   transcriptPane.hidden = tab !== "transcript";
+  if (docPane) docPane.hidden = tab !== "doc";
   if (tab === "drafts") {
     unseen = 0;
     updateBadge();
+  } else if (tab === "doc") {
+    loadVaultNotes();
+    renderDocStatus();
   } else {
     transcriptPane.scrollTop = transcriptPane.scrollHeight;
   }
@@ -117,3 +165,29 @@ drawer.querySelector(".voice-drawer-tabs").addEventListener("click", (e) => {
 });
 document.getElementById("voice-drawer-close").addEventListener("click", () => toggleDrawer(false));
 draftsButton.addEventListener("click", () => toggleDrawer());
+
+docAttachVaultBtn?.addEventListener("click", async () => {
+  const path = docVaultSelect?.value;
+  if (!path) return;
+  try {
+    const res = await api.notesVault.read(path);
+    setActiveDoc({ name: path, content: res.content });
+    renderDocStatus();
+  } catch (err) {
+    if (docStatus) docStatus.textContent = err.message;
+  }
+});
+
+docAttachCustomBtn?.addEventListener("click", () => {
+  const content = docCustomText?.value?.trim();
+  if (!content) return;
+  const name = docCustomTitle?.value?.trim() || t("Custom Document");
+  setActiveDoc({ name, content });
+  renderDocStatus();
+});
+
+docClearBtn?.addEventListener("click", () => {
+  clearActiveDoc();
+  renderDocStatus();
+});
+

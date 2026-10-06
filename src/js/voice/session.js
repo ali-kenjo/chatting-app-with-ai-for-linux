@@ -86,12 +86,29 @@ function startClassic(tts) {
   engine.start();
 }
 
+let activeDoc = null; // { name: string, content: string }
+
+export function getActiveDoc() {
+  return activeDoc;
+}
+
+export function setActiveDoc(doc) {
+  activeDoc = doc && doc.content ? { name: doc.name || "Document", content: doc.content } : null;
+  if (engine?.setDoc) engine.setDoc(activeDoc);
+  document.dispatchEvent(new CustomEvent("friends:voice-doc", { detail: activeDoc }));
+}
+
+export function clearActiveDoc() {
+  setActiveDoc(null);
+}
+
 // greet: it speaks first (voice mode just opened, filming started, or another character took over)
 async function startEngine({ greet = false } = {}) {
   stopEngine();
-  const greetClassic = () => greet && getSettings()?.companion?.greeting !== false && engine?.ask("", { greet: true });
+  const greetClassic = () => greet && getSettings()?.companion?.greeting !== false && engine?.ask("", { greet: true, doc: activeDoc });
   if (engineChoice !== "live") {
     startClassic(engineChoice);
+    if (activeDoc && engine?.setDoc) engine.setDoc(activeDoc);
     return greetClassic();
   }
   // Gemini Live is Google's; a local AI speaks through Studio voice
@@ -99,12 +116,14 @@ async function startEngine({ greet = false } = {}) {
     const local = getLocalBrainId();
     if (local) api.local.warm(local, true); // the speech models too
     startClassic("studio");
+    if (activeDoc && engine?.setDoc) engine.setDoc(activeDoc);
     return greetClassic();
   }
 
   status.set("connecting");
   const live = new LiveEngine({ unavailable: (message) => engine === live && liveUnavailable(message) });
   engine = live;
+  if (activeDoc) live.setDoc(activeDoc);
   updateEnginePill();
   try {
     await live.start();
@@ -133,13 +152,14 @@ function liveUnavailable(message) {
   if (voiceMode.hidden) return;
   status.note(t("{message} Using Studio voice instead.", { message }), 6000);
   startClassic("studio");
+  if (activeDoc && engine?.setDoc) engine.setDoc(activeDoc);
 }
 
 // Something you typed or the app wants said. (Studio/Instant start themselves
 // when there's no engine, e.g. after an error, so typing always gets an answer.)
 export function askInVoice(text, opts) {
   if (!engine && !voiceMode.hidden) startClassic(engineChoice === "instant" ? "instant" : "studio");
-  return engine?.ask(text, opts);
+  return engine?.ask(text, { doc: activeDoc, ...opts });
 }
 
 const interrupt = () => engine?.interrupt();

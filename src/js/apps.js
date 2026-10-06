@@ -5,6 +5,7 @@ import { api } from "./api.js";
 import { t, tp } from "./i18n.js";
 import { confirmDialog } from "./dialogs.js";
 import { skeleton } from "./ui.js";
+import { getSettings, updateSettings, onSettings } from "./store.js";
 
 const grid = document.getElementById("app-grid");
 const mcpList = document.getElementById("mcp-list");
@@ -264,8 +265,92 @@ form.addEventListener("submit", async (e) => {
 grid.append(skeleton());
 mcpList.append(skeleton("li"));
 
+// ----- Telegram companion bot settings -----
+function syncTelegramAllowedUsers() {
+  const raw = document.getElementById("telegram-allowed-users")?.value || "";
+  const ids = raw.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean);
+  updateSettings((s) => {
+    s.telegram.allowedUserIds = ids;
+  });
+}
+
+document.getElementById("telegram-allowed-users")?.addEventListener("change", syncTelegramAllowedUsers);
+
+document.getElementById("telegram-save-btn")?.addEventListener("click", async () => {
+  syncTelegramAllowedUsers();
+  const feedback = document.getElementById("telegram-feedback");
+  if (feedback) {
+    feedback.textContent = t("Settings saved.");
+    feedback.className = "test-feedback ok";
+    setTimeout(() => { feedback.textContent = ""; }, 2500);
+  }
+  await refreshTelegramStatus();
+});
+
+document.getElementById("telegram-test-btn")?.addEventListener("click", async () => {
+  const feedback = document.getElementById("telegram-feedback");
+  if (feedback) {
+    feedback.textContent = t("Testing bot connection…");
+    feedback.className = "test-feedback";
+  }
+  try {
+    const res = await api.telegram.test();
+    if (res.ok) {
+      if (feedback) {
+        feedback.textContent = t("Connected as @{name}!", { name: res.bot?.username || "bot" });
+        feedback.className = "test-feedback ok";
+      }
+    } else {
+      if (feedback) {
+        feedback.textContent = res.error || t("Failed to connect.");
+        feedback.className = "test-feedback error";
+      }
+    }
+    refreshTelegramStatus();
+  } catch (err) {
+    if (feedback) {
+      feedback.textContent = err.message;
+      feedback.className = "test-feedback error";
+    }
+  }
+});
+
+async function refreshTelegramStatus() {
+  const pill = document.getElementById("telegram-status-pill");
+  if (!pill) return;
+  try {
+    const st = await api.telegram.status();
+    if (st.running) {
+      pill.textContent = st.botUsername ? `@${st.botUsername}` : t("Active");
+      pill.className = "app-status on";
+    } else if (st.enabled && st.lastError) {
+      pill.textContent = t("Error");
+      pill.className = "app-status warn";
+      pill.title = st.lastError;
+    } else if (st.enabled) {
+      pill.textContent = t("Starting…");
+      pill.className = "app-status warn";
+    } else {
+      pill.textContent = t("Off");
+      pill.className = "app-status off";
+    }
+  } catch {
+    pill.textContent = t("Off");
+    pill.className = "app-status off";
+  }
+}
+
+onSettings((s) => {
+  const allowedInput = document.getElementById("telegram-allowed-users");
+  if (allowedInput && document.activeElement !== allowedInput) {
+    allowedInput.value = (s?.telegram?.allowedUserIds || []).join(", ");
+  }
+  refreshTelegramStatus();
+});
+
 // ----- Drawing it all -----
 async function refresh() {
+  refreshTelegramStatus();
   try {
     const { apps, mcp } = await api.connectors.list();
     grid.replaceChildren(...apps.map(card));
@@ -278,3 +363,4 @@ async function refresh() {
 document.addEventListener("friends:settings", (e) => {
   if (e.detail.open && e.detail.tab === "integrations") refresh();
 });
+

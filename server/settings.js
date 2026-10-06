@@ -63,23 +63,30 @@ const DEFAULTS = {
     briefing: { auto: false, time: "08:00" }, // a briefing waiting as a chat every morning
     briefingNews: true, // headlines in the briefing (not in Private mode)
   },
-  // Builder mode (builder.js): code tools, project starters, commands, preview
-  builder: {
-    enabled: true, // the code tools, starters and preview (inside the allowed folders)
-    commands: "ask", // BUILDER_MODES: off | suggest | ask | smart | auto
-    allow: [], // more commands Smart may run by itself (their beginnings)
-    block: [], // commands that always ask, also in Auto (parts of them)
-    timeout: 120, // seconds a command may take
+  // Local Markdown Notes Vault (local-notes.js)
+  localNotes: {
+    enabled: true,
+    folder: "",
+  },
+  // Telegram Bot companion (telegram.js)
+  telegram: {
+    enabled: false,
+    botToken: "",
+    allowedUserIds: [],
+    notifyReminders: true,
+    notifyFocus: true,
   },
   // The desktop app (Electron)
   desktop: {
     tray: true, // keeps running in the tray when the window is closed, so reminders still come
     autostart: false, // starts (in the tray) when you log in
   },
-  // On camera: co-host mode for videos, streams and podcasts
+  // On camera: acting and co-host mode for videos, streams and content creation
   onAir: {
     auto: true, // on by itself in filming mode and while recording
     format: "podcast", // ON_AIR.formats
+    actingDynamic: "friends", // ON_AIR.dynamics: friends | cohost | comedy | critic | interviewer | custom
+    actingBrief: "", // Scene or dynamic context: e.g. "We are high school buddies discussing sci-fi"
     show: "", // the show's name
     audience: "", // who's watching
     hidePrivate: true, // nothing private (memories, emails, calendar, files) on camera
@@ -134,8 +141,10 @@ const DEFAULTS = {
   },
 };
 
-const BUILDER_MODES = ["off", "suggest", "ask", "smart", "auto"];
-const ON_AIR = { formats: ["podcast", "reaction", "qa", "debate", "explainer", "storytime", "free"] };
+const ON_AIR = {
+  formats: ["podcast", "reaction", "qa", "debate", "explainer", "storytime", "free"],
+  dynamics: ["friends", "cohost", "comedy", "critic", "interviewer", "custom"],
+};
 
 // Allowed values of the robot's choices
 const ROUTING = { modes: ["fixed", "auto", "dynamic", "fastest", "local", "cloud"], ask: ["always", "chat", "never"] };
@@ -193,13 +202,17 @@ function sanitize(input) {
   s.backup.keep = clamp(s.backup.keep, 3, 60);
   s.characters = characters.sanitize(s.characters);
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(s.life.briefing.time)) s.life.briefing.time = "08:00";
-  if (!BUILDER_MODES.includes(s.builder.commands)) s.builder.commands = "ask";
-  const list = (v) => [...new Set(v.filter((x) => typeof x === "string").map((x) => x.trim()).filter(Boolean))].slice(0, 100).map((x) => x.slice(0, 200));
-  s.builder.allow = list(s.builder.allow);
-  s.builder.block = list(s.builder.block);
-  s.builder.timeout = clamp(s.builder.timeout, 10, 600);
+  s.localNotes.enabled = Boolean(s.localNotes.enabled);
+  s.localNotes.folder = typeof s.localNotes.folder === "string" ? s.localNotes.folder.trim().slice(0, 300) : "";
+  s.telegram.enabled = Boolean(s.telegram.enabled);
+  s.telegram.botToken = typeof s.telegram.botToken === "string" ? s.telegram.botToken.trim().slice(0, 200) : "";
+  s.telegram.allowedUserIds = Array.isArray(s.telegram.allowedUserIds) ? s.telegram.allowedUserIds.map(String).filter(Boolean).slice(0, 100) : [];
+  s.telegram.notifyReminders = s.telegram.notifyReminders !== false;
+  s.telegram.notifyFocus = s.telegram.notifyFocus !== false;
   s.companion.interests = s.companion.interests.trim().slice(0, 1000);
   if (!ON_AIR.formats.includes(s.onAir.format)) s.onAir.format = "podcast";
+  if (!ON_AIR.dynamics.includes(s.onAir.actingDynamic)) s.onAir.actingDynamic = "friends";
+  s.onAir.actingBrief = String(s.onAir.actingBrief || "").trim().slice(0, 2000);
   s.onAir.show = s.onAir.show.trim().slice(0, 80);
   s.onAir.audience = s.onAir.audience.trim().slice(0, 300);
   if (!/^#[0-9a-f]{6}$/i.test(s.theme.accent)) s.theme.accent = DEFAULTS.theme.accent;

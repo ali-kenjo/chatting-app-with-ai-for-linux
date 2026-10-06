@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.4.0: Flagship Voice Mode, Telegram Companion, and Local Life Management
+
+Major evolution transforming Friends into an autonomous, privacy-first personal companion and content partner ready for public release.
+
+### Flagship Voice Mode (The Star)
+- **Document Grounding**: Live document attachment in voice mode (via Voice Drawer → Document or Notes Vault dropdown) grounds conversational turns, scripts, vault notes, or custom briefs into real-time voice sessions across both Gemini Live and Classic engines.
+- **Acting Dynamics & Scene Briefs**: Configurable on-camera acting presets (*Best Friends Banter*, *Podcast Co-Host*, *Comedy Partner*, *Sarcastic Critic*, *Curious Interviewer*, *Custom*) and persistent scene briefs empower dynamic roleplay, YouTube/podcast co-hosting, and scripted content creation.
+- **Long Conversational Continuity**: Tuned system prompt and grounding structure for sustained conversational presence, active listening, and natural banter without robotic repetition.
+
+### Comprehensive Life Management (Beyond Google)
+- **Remote Telegram Bot Companion**: Zero-setup-cost Telegram bot engine with long-polling (`getUpdates`), sender ID whitelist security, conversational turn dispatch, and reminder/focus push notifications.
+- **Local Markdown Notes Vault**: Privacy-first, Obsidian/Logseq-compatible markdown notes directory (`~/FriendsVault` by default) supporting daily notes, frontmatter tags, fuzzy search, and live voice grounding attachment.
+- **Local Offline Calendar**: Fully offline, JSON-backed calendar engine with `.ics` export and import for seamless interoperability with Thunderbird, Apple Calendar, or Google Calendar.
+- **Focus & Pomodoro Sessions**: Native focus timer with audio cues, desktop alerts, and optional remote Telegram notifications upon completion.
+- **Expanded Daily Agenda**: Unified `today` command incorporating calendar events, pending tasks, reminders, active focus sessions, and weather into a cohesive daily briefing.
+
+### Builder Mode Deprecation & Clean Up
+- **Clean Architecture**: Fully retired legacy web builder prototypes, dev preview servers, and arbitrary shell execution, while preserving robust sandboxed file editing tools (`read_file`, `create_file`, `edit_file_part`, `read_file_lines`, `search_files`).
+- **Complete Internationalization**: 100% translation coverage across English, German (`de`), and Arabic (`ar`) with complete RTL mirroring and 0 missing strings.
+
 ## Unreleased: the design overhaul
 
 A product-design pass over the whole interface, in the branch `design-overhaul`. The audit, the design system and screenshots before and after (English, German, Arabic) are in `docs/design/`. The version number is unchanged.

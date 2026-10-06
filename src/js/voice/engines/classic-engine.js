@@ -80,6 +80,9 @@ export class ClassicEngine {
 
   setRobot() {}
   setOnAir() {}
+  setDoc(doc) {
+    this.doc = doc;
+  }
 
   earClosed() {
     return this.listener.earClosed();
@@ -141,7 +144,7 @@ export class ClassicEngine {
   // Something you said (or typed): the AI answers, and its reply is spoken.
   // greet: nothing was said; the AI opens the conversation. note: the app tells
   // the AI something to say (a reminder went off); it isn't yours either.
-  async ask(text, { greet = false, note: appNote = "" } = {}) {
+  async ask(text, { greet = false, note: appNote = "", doc = this.doc } = {}) {
     if (appNote) greet = true;
     if (!greet && (!text || !text.trim())) return;
     const said = String(text || "").trim();
@@ -231,6 +234,7 @@ export class ClassicEngine {
         robot: robotOnScreen(),
         onAir: isOnAir(),
         note: appNote,
+        doc: doc || this.doc,
         onChunk(chunk) {
           if (!current()) return;
           fullReply += chunk;

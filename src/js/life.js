@@ -141,6 +141,60 @@ function reminderItem(r) {
   return li;
 }
 
+function calendarItem(event) {
+  const li = el("li", "life-item calendar-item");
+  const text = el("span", "life-text");
+  const d = new Date(event.start);
+  const timeStr = event.allDay
+    ? `${formatDate(d, { weekday: "short", day: "numeric", month: "short" })} · ${t("All day")}`
+    : `${formatDate(d, { weekday: "short", day: "numeric", month: "short" })} · ${event.start.includes("T") ? event.start.slice(11, 16) : ""}${event.end && event.end.includes("T") ? ` - ${event.end.slice(11, 16)}` : ""}`;
+  text.append(el("span", "life-title", event.title));
+  const meta = [timeStr, event.location].filter(Boolean).join(" · ");
+  if (meta) text.append(el("span", "life-meta", meta));
+  const remove = el("button", "icon-btn small");
+  remove.type = "button";
+  remove.title = t("Delete event: {title}", { title: event.title });
+  remove.setAttribute("aria-label", remove.title);
+  remove.innerHTML = REMOVE;
+  remove.addEventListener("click", () => act(() => api.life.calendar.delete(event.id)));
+  li.append(el("span", "life-icon", "📅"), text, remove);
+  return li;
+}
+
+let focusTickerInterval = null;
+
+function updateFocusDisplay(focus) {
+  const controls = document.getElementById("focus-controls");
+  const activeBox = document.getElementById("focus-active");
+  const tag = document.getElementById("focus-tag");
+  const timer = document.getElementById("focus-timer");
+  if (!controls || !activeBox) return;
+
+  if (focus && focus.active && focus.remainingSeconds > 0) {
+    controls.hidden = true;
+    activeBox.hidden = false;
+    if (tag) tag.textContent = `🎯 ${focus.task || t("Focusing")}`;
+    const updateTime = () => {
+      const remaining = Math.max(0, Math.round((focus.targetEnd - Date.now()) / 1000));
+      const m = Math.floor(remaining / 60);
+      const s = remaining % 60;
+      if (timer) timer.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+      if (remaining <= 0) {
+        clearInterval(focusTickerInterval);
+        refresh();
+      }
+    };
+    updateTime();
+    clearInterval(focusTickerInterval);
+    focusTickerInterval = setInterval(updateTime, 1000);
+  } else {
+    clearInterval(focusTickerInterval);
+    controls.hidden = false;
+    activeBox.hidden = true;
+  }
+}
+
+
 function habitCheck(h) {
   const b = el("button", `habit-check${h.today ? " done" : ""}`);
   b.type = "button";
@@ -220,6 +274,13 @@ async function refresh() {
       document.getElementById("life-today-reminders").replaceChildren(...(day.reminders.length ? day.reminders.map(reminderItem) : [empty(t("No more reminders today."))]));
       const habits = document.getElementById("life-today-habits");
       habits.replaceChildren(...(day.habits.length ? day.habits.map(habitCheck) : [el("span", "row-desc", t("No habits yet. Add one under Habits, or tell your AI."))]));
+      const todayCal = document.getElementById("life-today-calendar");
+      if (todayCal) todayCal.replaceChildren(...(day.calendar?.length ? day.calendar.map(calendarItem) : [empty(t("No calendar events today."))]));
+      updateFocusDisplay(day.focus);
+    } else if (tab === "calendar") {
+      const events = await api.life.calendar.list();
+      const calList = document.getElementById("calendar-event-list");
+      if (calList) calList.replaceChildren(...(events.length ? events.map(calendarItem) : [empty(t("No events on your calendar. Add one above or import an .ics file."))]));
     } else if (tab === "tasks") {
       const all = await api.life.tasks(document.getElementById("tasks-show-done").checked);
       const groups = new Map();
@@ -345,6 +406,79 @@ document.getElementById("life-briefing").addEventListener("click", async () => {
   }
 });
 
+document.getElementById("focus-start-btn")?.addEventListener("click", async () => {
+  const taskInput = document.getElementById("focus-task-input");
+  const durSelect = document.getElementById("focus-duration-select");
+  const task = taskInput?.value?.trim() || "Focus session";
+  const minutes = Number(durSelect?.value) || 25;
+  try {
+    const res = await api.life.focus.start(task, minutes);
+    updateFocusDisplay(res);
+    say(t("Focus session started!"), "ok");
+  } catch (err) {
+    say(err.message, "error");
+  }
+});
+
+document.getElementById("focus-stop-btn")?.addEventListener("click", async () => {
+  try {
+    await api.life.focus.stop();
+    updateFocusDisplay(null);
+    say(t("Focus session stopped."), "ok");
+  } catch (err) {
+    say(err.message, "error");
+  }
+});
+
+document.getElementById("calendar-add")?.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const f = e.target;
+  act(() => api.life.calendar.add({
+    title: f.title.value,
+    start: f.start.value,
+    end: f.end.value || undefined,
+    location: f.location.value || "",
+  })).then(() => {
+    f.reset();
+  });
+});
+
+document.getElementById("calendar-export-ics")?.addEventListener("click", async () => {
+  try {
+    const icsText = await api.life.calendar.exportIcs();
+    const blob = new Blob([icsText], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `friends-calendar-${localDay()}.ics`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    say(err.message, "error");
+  }
+});
+
+document.getElementById("calendar-import-ics")?.addEventListener("change", async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const feedback = document.getElementById("calendar-feedback");
+  try {
+    const text = await file.text();
+    const res = await api.life.calendar.importIcs(text);
+    if (feedback) {
+      feedback.textContent = t("Imported {n} events.", { n: res.imported });
+      feedback.className = "test-feedback ok";
+    }
+    refresh();
+  } catch (err) {
+    if (feedback) {
+      feedback.textContent = err.message;
+      feedback.className = "test-feedback error";
+    }
+  }
+  e.target.value = "";
+});
+
 // ----- Notifications -----
 const allowButton = document.getElementById("life-notify-allow");
 
@@ -431,6 +565,18 @@ function listen() {
   });
   source.addEventListener("reminder", (e) => onReminder(JSON.parse(e.data)));
   source.addEventListener("briefing", (e) => onBriefing(JSON.parse(e.data)));
+  source.addEventListener("focus_complete", (e) => {
+    const f = JSON.parse(e.data);
+    updateFocusDisplay(null);
+    toast({
+      icon: "🎯",
+      title: t("Focus session complete!"),
+      body: f.task,
+      actions: [[t("Open Today"), () => openToday()]],
+    });
+    systemNotification(`🎯 ${t("Focus session complete!")}`, f.task, () => openToday());
+    refresh();
+  });
 }
 listen();
 

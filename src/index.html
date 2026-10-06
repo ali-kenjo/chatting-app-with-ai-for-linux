@@ -312,10 +312,6 @@
             <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
             <span>Connected apps</span>
           </button>
-          <button class="tab" data-tab="builder" role="tab" id="tab-builder" aria-controls="pane-builder" aria-selected="false" tabindex="-1">
-            <svg viewBox="0 0 24 24"><polyline points="8 7 3 12 8 17"/><polyline points="16 7 21 12 16 17"/><line x1="14" y1="4" x2="10" y2="20"/></svg>
-            <span>Builder</span>
-          </button>
           <div class="nav-group" role="presentation">Your data</div>
           <button class="tab" data-tab="data" role="tab" id="tab-data" aria-controls="pane-data" aria-selected="false" tabindex="-1">
             <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
@@ -982,6 +978,22 @@
             </select>
           </div>
           <div class="row">
+            <div class="row-label">Acting dynamic</div>
+            <select class="field" data-setting="onAir.actingDynamic">
+              <option value="friends">Best Friends Banter</option>
+              <option value="cohost">Podcast Co-Host</option>
+              <option value="comedy">Comedy Partner / Duo</option>
+              <option value="critic">Sarcastic Critic</option>
+              <option value="interviewer">Curious Interviewer</option>
+              <option value="custom">Custom Dynamic</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <div class="row-label">Scene / dynamic brief</div>
+            <span class="row-desc">Specific roles, inside jokes, context, or scene instructions for on-camera content</span>
+            <textarea class="field textarea" data-setting="onAir.actingBrief" rows="2" maxlength="2000" placeholder="e.g. We are childhood friends reviewing vintage tech with sharp banter..."></textarea>
+          </div>
+          <div class="row">
             <div><div class="row-label">Show name</div><div class="row-desc">Optional</div></div>
             <input type="text" class="field" autocomplete="off" maxlength="80" data-setting="onAir.show" placeholder="e.g. Late Night Tech">
           </div>
@@ -1436,60 +1448,68 @@
             </form>
           </details>
 
+          <div class="subhead"><div>
+            <div class="subhead-title">Telegram companion bot</div>
+            <p class="hint">Talk to Friends and receive alerts from anywhere via Telegram. Safe outbound connection with zero open ports or webhooks required.</p>
+          </div></div>
+          <div class="app-card" id="telegram-card">
+            <div class="app-head">
+              <div class="app-title">
+                <strong>✈️ Telegram Bot</strong>
+                <span class="app-status off" id="telegram-status-pill">Off</span>
+              </div>
+              <input type="checkbox" class="toggle" id="telegram-enabled-toggle" data-setting="telegram.enabled" aria-label="Telegram Bot on">
+            </div>
+            <p class="row-desc">Run a private companion bot you can message on your phone. It runs tasks, takes notes, gives you your daily briefing, and pushes reminders.</p>
+            <details class="app-setup" id="telegram-setup" open>
+              <summary>Bot setup</summary>
+              <label class="form-field">
+                <span class="row-label">Bot Token</span>
+                <span class="row-desc">Create a bot with @BotFather on Telegram and paste the API token here.</span>
+                <input class="field" type="password" id="telegram-token-input" data-setting="telegram.botToken" placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ" autocomplete="off" spellcheck="false">
+              </label>
+              <label class="form-field">
+                <span class="row-label">Allowed Telegram User IDs</span>
+                <span class="row-desc">Comma-separated user IDs allowed to interact with the bot. Send a message to @userinfobot to find your ID. If blank, the first user to message becomes the allowed owner.</span>
+                <input class="field" type="text" id="telegram-allowed-users" placeholder="e.g. 12345678, 87654321" autocomplete="off" spellcheck="false">
+              </label>
+              <label class="life-toggle">
+                <input type="checkbox" data-setting="telegram.notifyReminders"> Push reminder alerts to Telegram
+              </label>
+              <label class="life-toggle">
+                <input type="checkbox" data-setting="telegram.notifyFocus"> Push focus timer alerts to Telegram
+              </label>
+              <div class="form-test-bar">
+                <button type="button" class="btn small btn-primary" id="telegram-save-btn">Save</button>
+                <button type="button" class="btn small" id="telegram-test-btn">Test Bot</button>
+                <span class="test-feedback" id="telegram-feedback"></span>
+              </div>
+            </details>
+          </div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Local Markdown Notes Vault</div>
+            <p class="hint">Keep your thoughts, meeting logs, and knowledge in standard Markdown (.md) files compatible with Obsidian, Logseq, and plain text editors.</p>
+          </div></div>
+          <div class="app-card" id="vault-card">
+            <div class="app-head">
+              <div class="app-title">
+                <strong>📝 Markdown Notes Vault</strong>
+              </div>
+              <input type="checkbox" class="toggle" data-setting="localNotes.enabled" aria-label="Notes Vault on">
+            </div>
+            <p class="row-desc">The AI can read, search, create, and append to notes in your local vault. Also lets you pull notes directly into voice mode for live discussion.</p>
+            <label class="form-field" style="margin-top: 8px;">
+              <span class="row-label">Vault Folder Path</span>
+              <span class="row-desc">Absolute path or ~/Documents/notes. Leave empty to use the default ~/.friends-vault folder.</span>
+              <input class="field" type="text" data-setting="localNotes.folder" placeholder="~/.friends-vault" autocomplete="off" spellcheck="false">
+            </label>
+          </div>
+
           <div class="honesty-note">
             <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             <span>Your Google sign-in token is kept in this window's memory only, never saved to disk. Sending an email or adding an event asks you first (Settings → AI &amp; privacy → Confirm Google actions). None of this is available in Private mode.</span>
           </div>
-        </section>
-
-        <!-- Builder mode -->
-        <section class="pane" data-pane="builder" id="pane-builder" role="tabpanel" aria-labelledby="tab-builder">
-          <h3>Builder</h3>
-          <p class="hint" data-i18n-html="builder.hint">Build websites, apps and SaaS products together: the AI starts projects, edits code, runs tests and builds, and shows you a live preview. It works only inside the folders you allow in <a href="#" data-open-tab="ai-control" data-open-section="permissions-section">AI &amp; privacy → Permissions and file access</a>, with the permissions set there.</p>
-          <label class="row">
-            <div><div class="row-label">Builder tools</div><div class="row-desc">Editing parts of files, searching code, project starters and the preview</div></div>
-            <input type="checkbox" class="toggle" data-setting="builder.enabled">
-          </label>
-          <p class="form-error" id="builder-folders-note" hidden>No folder is allowed yet. Add one (for example ~/projects) in Settings → AI &amp; privacy → Permissions and file access, with create, read and edit allowed.</p>
-
-          <div class="subhead"><div>
-            <div class="subhead-title">Running commands</div>
-            <p class="hint">Installing packages, tests, builds, git and dev servers, in a terminal the AI controls.</p>
-          </div></div>
-          <div class="choice-grid builder-modes" id="builder-modes" role="radiogroup" aria-label="Running commands">
-            <button type="button" class="choice" data-mode="off"><span class="choice-title">⛔ Off</span><span class="choice-desc">No commands at all</span></button>
-            <button type="button" class="choice" data-mode="suggest"><span class="choice-title">💬 Suggest only</span><span class="choice-desc">It tells you the command; you run it</span></button>
-            <button type="button" class="choice" data-mode="ask"><span class="choice-title">✋ Ask every time</span><span class="choice-desc">You approve each command</span></button>
-            <button type="button" class="choice" data-mode="smart"><span class="choice-title">🧠 Smart</span><span class="choice-desc">Safe ones (tests, builds, git status) run by themselves; the rest ask</span></button>
-            <button type="button" class="choice" data-mode="auto"><span class="choice-title">🚀 Auto</span><span class="choice-desc">Everything runs except risky commands, which ask</span></button>
-          </div>
-          <p class="hint builder-warning" id="builder-auto-warning" hidden>⚠️ In Auto, a web page or file the AI reads could try to trick it into running something. Use it for projects you trust, and keep "Never without asking" up to date.</p>
-          <div class="form-field">
-            <div class="row-label">Smart may also run</div>
-            <span class="row-desc" data-i18n-html="builder.allow">One command beginning per line, e.g. <code>npm install</code> or <code>docker compose up</code></span>
-            <textarea class="field textarea" id="builder-allow" rows="3" spellcheck="false" placeholder="npm install&#10;npm run dev"></textarea>
-          </div>
-          <div class="form-field">
-            <div class="row-label">Never without asking</div>
-            <span class="row-desc">Any command containing one of these asks, even in Auto (sudo, deleting outside the project, git push, ssh and others always do)</span>
-            <textarea class="field textarea" id="builder-block" rows="3" spellcheck="false" placeholder="prisma migrate reset&#10;--production"></textarea>
-          </div>
-          <div class="row">
-            <div class="row-label">Time limit per command</div>
-            <select class="field" data-setting="builder.timeout" data-type="number">
-              <option value="30">30 seconds</option>
-              <option value="60">1 minute</option>
-              <option value="120">2 minutes</option>
-              <option value="300">5 minutes</option>
-              <option value="600">10 minutes</option>
-            </select>
-          </div>
-
-          <div class="subhead"><div>
-            <div class="subhead-title">Running now</div>
-            <p class="hint">Dev servers, watchers and previews it started. They stop when Friends quits.</p>
-          </div></div>
-          <ul class="life-list" id="builder-running"></ul>
         </section>
 
         <!-- Daily life -->
@@ -1595,7 +1615,8 @@
       <div class="life-head">
         <h2 id="life-title">Today</h2>
         <div class="life-tabs" role="tablist" aria-label="Today">
-          <button type="button" class="life-tab active" data-life-tab="today" role="tab" id="life-tab-today" aria-controls="life-pane-today" aria-selected="true" tabindex="0">Today</button>
+          <button class="life-tab active" data-life-tab="today" role="tab" id="life-tab-today" aria-controls="life-pane-today" aria-selected="true" tabindex="0">Today</button>
+          <button type="button" class="life-tab" data-life-tab="calendar" role="tab" id="life-tab-calendar" aria-controls="life-pane-calendar" aria-selected="false" tabindex="-1">Calendar</button>
           <button type="button" class="life-tab" data-life-tab="tasks" role="tab" id="life-tab-tasks" aria-controls="life-pane-tasks" aria-selected="false" tabindex="-1">Tasks</button>
           <button type="button" class="life-tab" data-life-tab="reminders" role="tab" id="life-tab-reminders" aria-controls="life-pane-reminders" aria-selected="false" tabindex="-1">Reminders</button>
           <button type="button" class="life-tab" data-life-tab="habits" role="tab" id="life-tab-habits" aria-controls="life-pane-habits" aria-selected="false" tabindex="-1">Habits</button>
@@ -1613,6 +1634,26 @@
             <button type="button" class="btn small" id="life-notify-allow" hidden>Allow notifications</button>
             <span class="test-feedback" id="life-status" role="status"></span>
           </div>
+          <div class="focus-bar" id="focus-bar" style="margin: 12px 0; padding: 10px; background: var(--bg-hover, rgba(255,255,255,0.05)); border-radius: 8px;">
+            <div class="life-section-title" style="margin: 0 0 8px 0;">🎯 Focus Session</div>
+            <div class="focus-controls" id="focus-controls" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <input class="field" id="focus-task-input" placeholder="What are you focusing on?" autocomplete="off" style="flex: 1; min-width: 160px;">
+              <select class="field" id="focus-duration-select" style="width: auto;">
+                <option value="15">15 min</option>
+                <option value="25" selected>25 min (Pomodoro)</option>
+                <option value="45">45 min</option>
+                <option value="60">60 min</option>
+              </select>
+              <button type="button" class="btn small btn-primary" id="focus-start-btn">Start Focus</button>
+            </div>
+            <div class="focus-active" id="focus-active" hidden style="display: flex; gap: 12px; align-items: center;">
+              <span class="focus-tag" id="focus-tag" style="font-weight: 500;">Focusing</span>
+              <span class="focus-timer" id="focus-timer" style="font-family: monospace; font-size: 1.1em; font-weight: bold;">25:00</span>
+              <button type="button" class="btn small btn-danger" id="focus-stop-btn">Stop</button>
+            </div>
+          </div>
+          <div class="life-section-title">Calendar today</div>
+          <ul class="life-list" id="life-today-calendar"></ul>
           <div class="life-section-title">Tasks for today</div>
           <ul class="life-list" id="life-today-tasks"></ul>
           <div class="life-section-title">Reminders today</div>
@@ -1687,6 +1728,24 @@
             </div>
           </form>
           <ul class="life-list" id="journal-list"></ul>
+        </section>
+
+        <section class="life-pane" data-life-pane="calendar" id="life-pane-calendar" role="tabpanel" aria-labelledby="life-tab-calendar">
+          <form class="life-add" id="calendar-add">
+            <input class="field" name="title" placeholder="Event title…" autocomplete="off" maxlength="200" required>
+            <input class="field" type="datetime-local" name="start" aria-label="Start time" required>
+            <input class="field" type="datetime-local" name="end" aria-label="End time">
+            <input class="field" name="location" placeholder="Location (optional)" autocomplete="off" maxlength="200">
+            <button type="submit" class="btn small btn-primary">Add Event</button>
+          </form>
+          <div class="calendar-actions" style="display: flex; gap: 8px; margin: 10px 0; align-items: center; flex-wrap: wrap;">
+            <button type="button" class="btn small" id="calendar-export-ics">Export .ics</button>
+            <label class="btn small" style="cursor: pointer; margin: 0;">
+              Import .ics <input type="file" id="calendar-import-ics" accept=".ics,text/calendar" hidden>
+            </label>
+            <span class="test-feedback" id="calendar-feedback"></span>
+          </div>
+          <ul class="life-list" id="calendar-event-list"></ul>
         </section>
       </div>
     </div>
@@ -1867,7 +1926,7 @@
     <div class="voice-hint" id="voice-hint" hidden aria-hidden="true" data-i18n-html="voice.hint">Tap it &middot; hold it &middot; drag to look around &middot; <kbd>M</kbd> mutes</div>
 
     <div class="voice-controls">
-      <button class="voice-ctrl" id="voice-drafts-btn" title="Drafts and transcript" aria-label="Drafts and transcript" aria-controls="voice-drawer" aria-expanded="false">
+      <button class="voice-ctrl" id="voice-drafts-btn" title="Drafts, transcript & document grounding" aria-label="Drafts, transcript & document grounding" aria-controls="voice-drawer" aria-expanded="false">
         <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
         <span class="voice-ctrl-badge" id="voice-drafts-badge" hidden></span>
       </button>
@@ -1895,6 +1954,7 @@
         <div class="voice-drawer-tabs" role="tablist">
           <button type="button" class="voice-drawer-tab active" data-tab="drafts" role="tab">Drafts</button>
           <button type="button" class="voice-drawer-tab" data-tab="transcript" role="tab">Transcript</button>
+          <button type="button" class="voice-drawer-tab" data-tab="doc" role="tab">Document</button>
         </div>
         <button type="button" class="icon-btn small" id="voice-drawer-close" title="Close">
           <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
@@ -1902,6 +1962,30 @@
       </div>
       <div class="voice-drawer-pane" id="voice-drafts"></div>
       <div class="voice-drawer-pane" id="voice-transcript" hidden></div>
+      <div class="voice-drawer-pane" id="voice-doc" hidden>
+        <div class="voice-doc-active-bar" id="voice-doc-active-bar" style="padding: 10px; background: var(--bg-hover, rgba(255,255,255,0.05)); border-radius: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 0.8em; opacity: 0.7;">ACTIVE GROUNDING DOC</div>
+            <div id="voice-doc-status" style="font-weight: 500;">No document attached.</div>
+          </div>
+          <button type="button" class="btn small btn-danger" id="voice-doc-clear-btn" hidden>Clear</button>
+        </div>
+        <div class="voice-doc-section" style="margin-bottom: 16px;">
+          <div class="row-label" style="margin-bottom: 4px;">Ground from Notes Vault</div>
+          <div style="display: flex; gap: 6px;">
+            <select class="field" id="voice-doc-vault-select" style="flex: 1;">
+              <option value="">Select a vault note…</option>
+            </select>
+            <button type="button" class="btn small btn-primary" id="voice-doc-attach-vault-btn">Attach</button>
+          </div>
+        </div>
+        <div class="voice-doc-section">
+          <div class="row-label" style="margin-bottom: 4px;">Or Custom Text / Script</div>
+          <input class="field" id="voice-doc-custom-title" placeholder="Document title (e.g. Video Script)" autocomplete="off" style="margin-bottom: 6px;">
+          <textarea class="field textarea" id="voice-doc-custom-text" rows="6" placeholder="Paste script, discussion outline, or article here…" style="margin-bottom: 6px;"></textarea>
+          <button type="button" class="btn small btn-primary" id="voice-doc-attach-custom-btn">Attach Text</button>
+        </div>
+      </div>
     </aside>
 
     <!-- Things to do together (src/js/activities.js) -->

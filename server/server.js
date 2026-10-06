@@ -28,7 +28,8 @@ const life = require("./life");
 const briefing = require("./briefing");
 const connectors = require("./connectors");
 const mcp = require("./mcp");
-const builder = require("./builder");
+const localNotes = require("./local-notes");
+const telegram = require("./telegram");
 const google = require("./google");
 const { execFile } = require("child_process");
 
@@ -227,7 +228,7 @@ function toContents(messages, start = 0, others = {}) {
 async function chat(req, res) {
   const authHeader = req.headers.authorization || "";
   const headerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  const { chatId = null, text = "", retry = false, from = null, force = null, brainId = null, voice = false, robot: robotOnScreen = false, attachments: files = [], googleAccessToken, onAir: onAirFlag = false, greet = false, note = "" } = await readJson(req);
+  const { chatId = null, text = "", retry = false, from = null, force = null, brainId = null, voice = false, robot: robotOnScreen = false, attachments: files = [], googleAccessToken, onAir: onAirFlag = false, greet = false, note = "", doc = null } = await readJson(req);
   const onAir = onAirFlag === true;
   // greet: voice mode just opened; the AI speaks first (nothing of yours is added).
   // note: the same for something the app tells it (a reminder went off), in voice mode.
@@ -339,7 +340,7 @@ async function chat(req, res) {
       key: brain.key,
       model: brain.model,
       contents,
-      system: prompt.build(current, { voice, toolsOffered: offered, summary: conversation.summary?.text, onAir, chatId: conversation.id }),
+      system: prompt.build(current, { voice, toolsOffered: offered, summary: conversation.summary?.text, onAir, chatId: conversation.id, doc }),
       temperature: prompt.temperature(current),
       // Thinking at length makes a reply start 10+ seconds later; only "Deep" does
       fast: voice || current.aiControl?.reasoningEffort !== "deep",
@@ -589,7 +590,14 @@ function broadcast(type, data, { title, body, action } = {}) {
   }
 }
 
-life.onReminder((r) => broadcast("reminder", r, { title: `⏰ ${r.text}`, body: "Friends reminder", action: { type: "reminder", id: r.id } }));
+life.onReminder((r) => {
+  broadcast("reminder", r, { title: `⏰ ${r.text}`, body: "Friends reminder", action: { type: "reminder", id: r.id } });
+  telegram.sendAlert(`⏰ *Reminder:* ${r.text}`, settings.get());
+});
+life.onFocusComplete((f) => {
+  broadcast("focus_complete", f, { title: "🎯 Focus Complete!", body: `Completed focus session on ${f.task}`, action: { type: "focus" } });
+  telegram.sendAlert(`🎯 *Focus Complete!* You finished your session on: ${f.task}`, settings.get());
+});
 const briefingReady = (made) => broadcast("briefing", made, { title: "☀️ Your briefing is ready", body: made.title, action: { type: "open-chat", id: made.chatId } });
 
 // The desktop app (electron/main.js) shows notifications itself
@@ -638,7 +646,11 @@ const routes = [
   ["POST", /^\/api\/chats\/([\w-]+)\/suggestions$/, (req, id) => suggestions(id)],
 
   ["GET", /^\/api\/settings$/, () => settings.get()],
-  ["PUT", /^\/api\/settings$/, async (req) => settings.set(await readJson(req))],
+  ["PUT", /^\/api\/settings$/, async (req) => {
+    const res = settings.set(await readJson(req));
+    telegram.start(res);
+    return res;
+  }],
 
   // Characters (Settings → Characters): the choices; the characters themselves are in the settings
   ["GET", /^\/api\/characters\/meta$/, () => ({ voices: characters.GEMINI_VOICES, fields: characters.FIELDS, builtin: characters.BUILTIN, templates: characters.TEMPLATES, looks: characters.LOOKS, formats: Object.keys(prompt.FORMATS), max: characters.MAX_CHARACTERS })],
@@ -711,6 +723,30 @@ const routes = [
   ["DELETE", /^\/api\/life\/journal\/([\w-]+)$/, (req, id) => life.removeEntry(id)],
   ["POST", /^\/api\/life\/briefing$/, async (req) => briefing.make({ googleAccessToken: (await readJson(req)).googleAccessToken || (await googleToken()) })],
 
+  // Native offline local calendar
+  ["GET", /^\/api\/life\/calendar$/, (req, id, url) => life.listCalendarEvents({ from: url.searchParams.get("from") || undefined, to: url.searchParams.get("to") || undefined })],
+  ["POST", /^\/api\/life\/calendar$/, async (req) => life.addCalendarEvent(await readJson(req))],
+  ["DELETE", /^\/api\/life\/calendar\/([\w-]+)$/, (req, id) => life.deleteCalendarEvent(id)],
+  ["GET", /^\/api\/life\/calendar\/ics$/, () => ({ ics: life.exportCalendarIcs() })],
+  ["POST", /^\/api\/life\/calendar\/ics$/, async (req) => life.importCalendarIcs((await readJson(req)).ics)],
+
+  // Focus & Pomodoro session
+  ["POST", /^\/api\/life\/focus\/start$/, async (req) => life.startFocus(await readJson(req))],
+  ["GET", /^\/api\/life\/focus$/, () => life.checkFocus()],
+  ["POST", /^\/api\/life\/focus\/stop$/, () => life.stopFocus()],
+
+  // Telegram bot companion
+  ["GET", /^\/api\/telegram\/status$/, () => telegram.status(settings.get())],
+  ["POST", /^\/api\/telegram\/test$/, () => telegram.testConnection(settings.get())],
+
+  // Local Markdown Notes Vault (Obsidian/Logseq compatible)
+  ["GET", /^\/api\/notes-vault$/, (req, id, url) => localNotes.listNotes({ limit: Number(url.searchParams.get("limit")) || 50 })],
+  ["GET", /^\/api\/notes-vault\/search$/, (req, id, url) => localNotes.searchNotes(url.searchParams.get("q") || "")],
+  ["GET", /^\/api\/notes-vault\/note$/, (req, id, url) => localNotes.readNote(url.searchParams.get("title") || "")],
+  ["POST", /^\/api\/notes-vault\/note$/, async (req) => { const b = await readJson(req); return localNotes.writeNote(b.title, b.content, { tags: b.tags }); }],
+  ["POST", /^\/api\/notes-vault\/append$/, async (req) => { const b = await readJson(req); return localNotes.appendToNote(b.title, b.text); }],
+  ["DELETE", /^\/api\/notes-vault\/note$/, (req, id, url) => localNotes.deleteNote(url.searchParams.get("title") || "")],
+
   // Staying signed in to Google (google.js)
   ["GET", /^\/api\/google\/status$/, () => (settings.get().privacy.localOnly ? { private: true } : google.status())],
   ["PUT", /^\/api\/google\/client$/, async (req) => google.setClient(await readJson(req))],
@@ -726,10 +762,6 @@ const routes = [
   ["POST", /^\/api\/mcp$/, async (req) => mcp.save(await readJson(req))],
   ["DELETE", /^\/api\/mcp\/([\w-]+)$/, (req, id) => mcp.remove(id)],
   ["POST", /^\/api\/mcp\/([\w-]+)\/restart$/, async (req, id) => (await mcp.restart(id), mcp.list().find((s) => s.id === id))],
-
-  // Builder mode: what's running (commands in the background, previews)
-  ["GET", /^\/api\/builder\/running$/, () => builder.running()],
-  ["POST", /^\/api\/builder\/([\w-]+)\/stop$/, (req, id) => builder.stop(id)],
 
   ["GET", /^\/api\/backups$/, () => ({ dir: backup.dir, backups: backup.list() })],
   ["POST", /^\/api\/backups$/, () => backup.create("manual", { keep: settings.get().backup.keep })],
@@ -835,7 +867,30 @@ function start(port = PORT, host = HOST) {
   briefing.schedule(briefingReady);
   // Apps connected through MCP start in the background; they stop with Friends
   mcp.startAll();
-  process.once("exit", () => (mcp.stopAll(), builder.stopAll()));
+  telegram.setChatHandler(async (text) => {
+    const current = settings.get();
+    const brain = brains.forTask();
+    if (!brain) return "No AI model is configured or available right now.";
+    const activeChar = characters.active(current);
+    const system = prompt.build(current, { character: activeChar });
+    let reply = "";
+    try {
+      await gemini.streamChat({
+        brain,
+        systemInstruction: system,
+        temperature: prompt.temperature(current),
+        history: [],
+        message: text,
+        onChunk: (c) => { reply += c; },
+        tools: [],
+      });
+      return reply.trim() || "Received.";
+    } catch (err) {
+      return `Error generating response: ${err.message}`;
+    }
+  });
+  telegram.start(settings.get());
+  process.once("exit", () => (mcp.stopAll(), telegram.stop()));
   const connections = new Set();
   let isShuttingDown = false;
 
@@ -888,7 +943,7 @@ function start(port = PORT, host = HOST) {
     isShuttingDown = true;
     logger.info(`Received ${signal}. Shutting down gracefully...`);
     mcp.stopAll();
-    builder.stopAll();
+    telegram.stop();
 
     server.close(() => {
       logger.info("Closed HTTP server. Exiting process.");

@@ -14,8 +14,9 @@ const files = {
   reminders: path.join(dir, "reminders.json"),
   habits: path.join(dir, "habits.json"),
   journal: path.join(dir, "journal.json"),
+  calendar: path.join(dir, "calendar.json"),
 };
-const LIMITS = { tasks: 2000, reminders: 500, habits: 50, journal: 5000 };
+const LIMITS = { tasks: 2000, reminders: 500, habits: 50, journal: 5000, calendar: 1000 };
 const REPEATS = ["none", "daily", "weekdays", "weekly", "monthly", "yearly"];
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -302,6 +303,191 @@ function removeEntry(id) {
   return { ok: true };
 }
 
+// ---------- Local Calendar ----------
+function listCalendarEvents({ from, to, start, end } = {}) {
+  const events = load("calendar");
+  let filtered = events;
+  const f = from || start;
+  const t = to || end;
+  if (f) {
+    const fStr = String(f).trim();
+    if (fStr.includes("T")) {
+      filtered = filtered.filter((e) => (e.end || e.start) >= fStr);
+    } else {
+      filtered = filtered.filter((e) => (e.end || e.start).slice(0, 10) >= fStr.slice(0, 10));
+    }
+  }
+  if (t) {
+    const tStr = String(t).trim();
+    if (tStr.includes("T")) {
+      filtered = filtered.filter((e) => e.start <= tStr);
+    } else {
+      filtered = filtered.filter((e) => e.start.slice(0, 10) <= tStr.slice(0, 10));
+    }
+  }
+  return filtered.sort((a, b) => a.start.localeCompare(b.start));
+}
+
+
+function addCalendarEvent({ title, start, end, location = "", description = "", allDay = false }) {
+  const cleanTitle = clean(title, 120);
+  if (!cleanTitle) throw new Error("An event needs a title.");
+  const s = String(start || "").trim();
+  if (!s) throw new Error("When does the event start?");
+  let e = String(end || "").trim();
+  if (!e) {
+    if (s.includes("T")) {
+      const dt = new Date(s);
+      dt.setHours(dt.getHours() + 1);
+      e = dt.toISOString().slice(0, 16);
+    } else {
+      e = s;
+    }
+  }
+  const events = load("calendar");
+  const event = {
+    id: newId(),
+    title: cleanTitle,
+    start: s,
+    end: e,
+    location: clean(location, 200),
+    description: clean(description, 1000),
+    allDay: Boolean(allDay),
+    createdAt: Date.now(),
+  };
+  events.push(event);
+  store("calendar", events);
+  return event;
+}
+
+function deleteCalendarEvent(id) {
+  const events = load("calendar");
+  store("calendar", events.filter((e) => e.id !== id));
+  return { ok: true };
+}
+
+function exportCalendarIcs() {
+  const events = listCalendarEvents();
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Friends//Personal AI Life//EN",
+    "CALSCALE:GREGORIAN",
+  ];
+  for (const e of events) {
+    const fmt = (d) => d.replace(/[-:]/g, "").slice(0, 15) + (d.includes("T") ? "Z" : "");
+    lines.push(
+      "BEGIN:VEVENT",
+      `UID:${e.id}@friends.local`,
+      `DTSTAMP:${fmt(new Date(e.createdAt || Date.now()).toISOString())}`,
+      `DTSTART:${fmt(e.start)}`,
+      `DTEND:${fmt(e.end)}`,
+      `SUMMARY:${e.title.replace(/[,;]/g, "\\$&")}`,
+      ...(e.location ? [`LOCATION:${e.location.replace(/[,;]/g, "\\$&")}`] : []),
+      ...(e.description ? [`DESCRIPTION:${e.description.replace(/[,;\n]/g, "\\$&")}`] : []),
+      "END:VEVENT"
+    );
+  }
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n");
+}
+
+function importCalendarIcs(icsText) {
+  const blocks = String(icsText || "").split("BEGIN:VEVENT");
+  let imported = 0;
+  for (let i = 1; i < blocks.length; i++) {
+    const block = blocks[i].split("END:VEVENT")[0];
+    const get = (key) => {
+      const m = block.match(new RegExp(`(?:^|\\r?\\n)${key}[^:]*:(.*)`, "i"));
+      return m ? m[1].replace(/\\([,;n])/gi, (match, c) => (c === "n" ? "\n" : c)).trim() : "";
+    };
+    const title = get("SUMMARY");
+    const startRaw = get("DTSTART");
+    const endRaw = get("DTEND");
+    if (title && startRaw) {
+      const parseDt = (raw) => {
+        const c = raw.replace(/[^\d]/g, "");
+        if (c.length >= 8) {
+          const d = `${c.slice(0, 4)}-${c.slice(4, 6)}-${c.slice(6, 8)}`;
+          return c.length >= 12 ? `${d}T${c.slice(8, 10)}:${c.slice(10, 12)}` : d;
+        }
+        return raw;
+      };
+      addCalendarEvent({
+        title,
+        start: parseDt(startRaw),
+        end: endRaw ? parseDt(endRaw) : parseDt(startRaw),
+        location: get("LOCATION"),
+        description: get("DESCRIPTION"),
+      });
+      imported++;
+    }
+  }
+  return { ok: true, imported };
+}
+
+// ---------- Focus Sessions (Pomodoro / Deep Work) ----------
+let currentFocus = null;
+
+function startFocus(first = {}, second) {
+  let task = "Focus Session";
+  let minutes = 25;
+  if (typeof first === "string") {
+    task = first;
+    if (second !== undefined) minutes = second;
+  } else if (typeof first === "number") {
+    minutes = first;
+    if (typeof second === "string") task = second;
+  } else if (typeof first === "object" && first !== null) {
+    if (first.task) task = first.task;
+    if (first.minutes) minutes = first.minutes;
+  }
+  const now = Date.now();
+  const mins = Math.max(1, Math.min(180, Number(minutes) || 25));
+  currentFocus = {
+    id: newId(),
+    active: true,
+    task: clean(task, 80) || "Focus Session",
+    startedAt: now,
+    durationMinutes: mins,
+    minutes: mins,
+    endsAt: now + mins * 60 * 1000,
+    targetEnd: now + mins * 60 * 1000,
+    remainingSeconds: mins * 60,
+  };
+  return currentFocus;
+}
+
+function checkFocus() {
+  if (!currentFocus) return { active: false };
+  const now = Date.now();
+  const remainingMs = currentFocus.endsAt - now;
+  if (remainingMs <= 0) {
+    const finished = currentFocus;
+    currentFocus = null;
+    return { active: false, finished: true, task: finished.task };
+  }
+  const remainingSeconds = Math.max(0, Math.round(remainingMs / 1000));
+  return {
+    active: true,
+    task: currentFocus.task,
+    minutes: currentFocus.durationMinutes,
+    durationMinutes: currentFocus.durationMinutes,
+    remainingMinutes: Math.ceil(remainingMs / (60 * 1000)),
+    remainingSeconds,
+    startedAt: currentFocus.startedAt,
+    endsAt: currentFocus.endsAt,
+    targetEnd: currentFocus.endsAt,
+  };
+}
+
+function stopFocus() {
+  if (!currentFocus) return { ok: true, stopped: false };
+  const task = currentFocus.task;
+  currentFocus = null;
+  return { ok: true, stopped: true, task };
+}
+
 // ---------- Today ----------
 // What's on today: open tasks due today or earlier, today's reminders, habits not done yet
 function today(now = Date.now()) {
@@ -315,8 +501,10 @@ function today(now = Date.now()) {
     dueToday: tasks.filter((t) => t.due && t.due.slice(0, 10) === day),
     open: tasks.filter((t) => !t.due).slice(0, 20),
     reminders: listReminders().filter((r) => r.at <= end.getTime()),
+    events: listCalendarEvents({ from: day, to: day }),
     habits: listHabits(now),
     journaledToday: load("journal").some((e) => dayOf(e.at) === day),
+    focus: checkFocus(),
   };
 }
 
@@ -328,6 +516,7 @@ function agenda(now = Date.now()) {
   const taskLine = (x) => `${x.title}${x.due?.includes("T") ? ` at ${x.due.slice(11)}` : ""}${x.priority === "high" ? " (high priority)" : ""} [id ${x.id}]`;
   if (t.overdue.length) lines.push(`Overdue: ${t.overdue.slice(0, 6).map(taskLine).join("; ")}`);
   if (t.dueToday.length) lines.push(`Due today: ${t.dueToday.slice(0, 8).map(taskLine).join("; ")}`);
+  if (t.events?.length) lines.push(`Calendar events today: ${t.events.map((e) => `${e.title}${e.start.includes("T") ? ` at ${e.start.slice(11, 16)}` : ""}`).join("; ")}`);
   if (t.reminders.length) lines.push(`Reminders today: ${t.reminders.slice(0, 6).map((r) => `${time(r.at)} ${r.text}`).join("; ")}`);
   const habits = t.habits;
   if (habits.length) {
@@ -345,6 +534,9 @@ function agenda(now = Date.now()) {
 const listeners = new Set();
 const onReminder = (fn) => (listeners.add(fn), () => listeners.delete(fn));
 
+const focusListeners = new Set();
+const onFocusComplete = (fn) => (focusListeners.add(fn), () => focusListeners.delete(fn));
+
 function tick(now = Date.now()) {
   let due = [];
   try {
@@ -358,6 +550,17 @@ function tick(now = Date.now()) {
         fn(r);
       } catch (err) {
         logger.warn("A reminder listener failed:", err.message);
+      }
+    }
+  }
+  if (currentFocus && currentFocus.endsAt <= now) {
+    const finished = { task: currentFocus.task, minutes: currentFocus.minutes };
+    currentFocus = null;
+    for (const fn of focusListeners) {
+      try {
+        fn(finished);
+      } catch (err) {
+        logger.warn("A focus listener failed:", err.message);
       }
     }
   }
@@ -400,9 +603,18 @@ module.exports = {
   addEntry,
   listEntries,
   removeEntry,
+  listCalendarEvents,
+  addCalendarEvent,
+  deleteCalendarEvent,
+  exportCalendarIcs,
+  importCalendarIcs,
+  startFocus,
+  checkFocus,
+  stopFocus,
   today,
   agenda,
   onReminder,
+  onFocusComplete,
   tick,
   schedule,
 };

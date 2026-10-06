@@ -12,8 +12,7 @@ const episodes = require("./episodes");
 const life = require("./life");
 const connectors = require("./connectors");
 const mcp = require("./mcp");
-const builder = require("./builder");
-const templates = require("./templates");
+const localNotes = require("./local-notes");
 
 const str = (description) => ({ type: "STRING", description });
 const num = (description) => ({ type: "NUMBER", description });
@@ -26,8 +25,11 @@ const fn = (name, description, properties, required = Object.keys(properties)) =
 const FILE_TOOLS = {
   list_folder: fn("list_folder", "List the files and folders inside a folder.", { path: str("Folder path, e.g. ~/Documents") }),
   read_file: fn("read_file", "Read a text file (up to 1 MB).", { path: str("File path") }),
+  read_file_lines: fn("read_file_lines", "Read part of a text file, with line numbers.", { path: str("File path"), start_line: num("First line (default 1)"), end_line: num("Last line (default start + 299)") }, ["path"]),
+  search_files: fn("search_files", "Search files in a folder for text or a regular expression.", { path: str("Folder (or file) to search"), query: str("Text to find"), regex: { type: "BOOLEAN", description: "query is a regular expression" }, file_ending: str("Optional file extension filter, e.g. .txt") }, ["path", "query"]),
   create_file: fn("create_file", "Create a new text file. Fails if it already exists.", { path: str("New file path"), content: str("Text to write") }),
   edit_file: fn("edit_file", "Replace the whole content of an existing text file. Read it first so nothing is lost.", { path: str("File path"), content: str("The complete new content") }),
+  edit_file_part: fn("edit_file_part", "Change part of a text file: replace an exact piece of text with new text.", { path: str("File path"), find: str("The exact text to replace"), replace: str("The new text"), all: { type: "BOOLEAN", description: "Replace every place it appears" } }, ["path", "find", "replace"]),
   create_folder: fn("create_folder", "Create a folder (and any missing parent folders).", { path: str("New folder path") }),
   move_item: fn("move_item", "Rename or move a file or folder.", { path: str("Current path"), new_path: str("New path") }),
   delete_item: fn("delete_item", "Delete a file or folder.", { path: str("Path to delete") }),
@@ -207,46 +209,88 @@ const LIFE_TOOLS = {
     { text: str("The entry"), mood: { type: "STRING", enum: life.MOODS, description: "Optional: how they feel" } },
     ["text"]
   ),
-  read_journal: fn("read_journal", "Read the user's recent journal entries (only when they ask about them).", { days: num("How many days back (default 7)") }, []),
+    read_journal: fn("read_journal", "Read the user's recent journal entries (only when they ask about them).", { days: num("How many days back (default 7)") }, []),
   daily_briefing: fn(
     "daily_briefing",
     "Everything for a daily briefing in one go: today's tasks and reminders, habits, follow-ups, and (when connected) calendar, weather and headlines. Use it when they ask what's on today or for a briefing.",
     {},
     []
   ),
+  add_calendar_event: fn(
+    "add_calendar_event",
+    "Schedule an event on the user's calendar (works offline with the local calendar or syncs with Google).",
+    {
+      title: str("Title or summary of the event"),
+      start: str("Start date/time (ISO 8601 e.g. 2026-10-06T15:00 or YYYY-MM-DD)"),
+      end: str("Optional end date/time (ISO 8601)"),
+      location: str("Optional location or link"),
+      description: str("Optional agenda or details"),
+    },
+    ["title", "start"]
+  ),
+  list_calendar_events: fn(
+    "list_calendar_events",
+    "Check the user's upcoming calendar events (from local offline calendar or Google Calendar).",
+    { from: str("Optional start date YYYY-MM-DD (default today)"), to: str("Optional end date YYYY-MM-DD") },
+    []
+  ),
+  delete_calendar_event: fn(
+    "delete_calendar_event",
+    "Delete an event from the calendar.",
+    { eventId: str("The event ID") },
+    ["eventId"]
+  ),
+  start_focus: fn(
+    "start_focus",
+    "Start a focused work session or Pomodoro timer (gives audio/desktop/Telegram alert when complete).",
+    { minutes: num("Duration in minutes (e.g. 25, 45, 60)"), task: str("What you are working on") },
+    ["minutes", "task"]
+  ),
+  check_focus: fn(
+    "check_focus",
+    "Check time remaining in the active focus session.",
+    {},
+    []
+  ),
+  stop_focus: fn(
+    "stop_focus",
+    "Stop or cancel the active focus session.",
+    {},
+    []
+  ),
 };
 
-// Builder mode (builder.js): code tools, starters, commands, preview; inside the allowed folders
-const BUILDER_TOOLS = {
-  edit_file_part: fn(
-    "edit_file_part",
-    "Change part of a text file: replace an exact piece of text with new text. Better than edit_file for code: read the file first and copy the exact lines (with their spaces) to replace.",
-    { path: str("File path"), find: str("The exact text to replace (must be in the file once)"), replace: str("The new text"), all: { type: "BOOLEAN", description: "Replace every place it appears" } },
-    ["path", "find", "replace"]
+// Local Markdown Notes Vault (Obsidian/Logseq compatible)
+const VAULT_TOOLS = {
+  search_notes: fn(
+    "search_notes",
+    "Search your local Markdown notes vault (compatible with Obsidian/Logseq) by keyword or tag.",
+    { query: str("Search keyword or tag, e.g. 'project ideas' or '#meeting'") }
   ),
-  read_file_lines: fn("read_file_lines", "Read part of a (big) text file, with line numbers.", { path: str("File path"), start_line: num("First line (default 1)"), end_line: num("Last line (default start + 299)") }, ["path"]),
-  search_code: fn(
-    "search_code",
-    "Search the files in a folder (skipping node_modules, .git, build output) for text, with file names and line numbers.",
-    { path: str("Folder (or file) to search"), query: str("Text to find"), regex: { type: "BOOLEAN", description: "query is a regular expression" }, file_ending: str("Optional: only files ending like this, e.g. .js") },
-    ["path", "query"]
+  read_note: fn(
+    "read_note",
+    "Read a local Markdown note from your vault by title or filename (use 'today' for today's daily note).",
+    { title: str("Note title or relative filename, e.g. 'Meeting with Sarah' or 'today'") },
+    ["title"]
   ),
-  project_tree: fn("project_tree", "Show a project's files and folders a few levels deep.", { path: str("The project folder"), depth: num("Levels (default 3)") }, ["path"]),
-  create_project: fn(
-    "create_project",
-    `Start a new project from a starter in a new folder: ${templates.describe()}.`,
-    { template: { type: "STRING", enum: templates.names(), description: "Which starter" }, name: str("Project name (becomes the folder name)"), folder: str("Optional: the folder to put it in (default: the first allowed folder)") },
-    ["template", "name"]
+  save_note_file: fn(
+    "save_note_file",
+    "Create or update a local Markdown note in your notes vault.",
+    { title: str("Note title or 'today'"), content: str("Complete Markdown content"), tags: str("Optional comma-separated tags, e.g. 'work, ideas'") },
+    ["title", "content"]
   ),
-  run_command: fn(
-    "run_command",
-    "Run a shell command in a project folder: install packages, run tests and builds, git, scaffolders. Use background for things that keep running (dev servers); their address comes back.",
-    { command: str("The command, e.g. 'npm install' or 'npm test'"), folder: str("The folder to run it in"), reason: str("One short line: why (shown to the user when it asks)"), background: { type: "BOOLEAN", description: "Keep it running (a dev server, a watcher)" }, timeout_seconds: num("For normal commands: how long it may take (default from Settings)") },
-    ["command", "folder"]
+  append_note_file: fn(
+    "append_note_file",
+    "Quickly append a thought, bullet, or log to a Markdown note (use 'today' for today's daily note).",
+    { title: str("Note title or 'today'"), text: str("Text or bullet to append") },
+    ["title", "text"]
   ),
-  command_output: fn("command_output", "The latest output of a command running in the background.", { id: str("Its id") }),
-  stop_command: fn("stop_command", "Stop a command running in the background, or a preview.", { id: str("Its id") }),
-  preview_site: fn("preview_site", "Serve a website folder (with index.html) on this computer and get its address, to look at it in the browser.", { folder: str("The folder with index.html (for a built app: its dist or build folder)") }),
+  list_notes: fn(
+    "list_notes",
+    "List recent Markdown notes in your vault.",
+    { limit: num("How many notes to return (default 20)") },
+    []
+  ),
 };
 
 // Memory of earlier conversations (episodes.js); all on this computer
@@ -281,6 +325,7 @@ const ROBOT_TOOLS = {
 
 const ONLINE_TOOLS = new Set(Object.keys(WORKSPACE_TOOLS));
 const LIFE_NAMES = new Set(Object.keys(LIFE_TOOLS));
+const VAULT_NAMES = new Set(Object.keys(VAULT_TOOLS));
 
 const isRobotTool = (name) => Object.hasOwn(ROBOT_TOOLS, name);
 
@@ -354,16 +399,7 @@ function declarations(settings, { voice = false, robot: onScreen = false, nonBlo
     list.push(NOTE_TOOLS.save_note, NOTE_TOOLS.delete_note);
   }
   if (settings.life?.enabled !== false && !hidden) list.push(...Object.values(LIFE_TOOLS));
-  // Builder mode: needs an allowed folder; commands only in their mode
-  const b = settings.builder || {};
-  if (b.enabled !== false && p.folders.length && !hidden) {
-    if (p.files.edit) list.push(BUILDER_TOOLS.edit_file_part);
-    if (p.files.read) list.push(BUILDER_TOOLS.read_file_lines, BUILDER_TOOLS.search_code);
-    if (p.dirs.read) list.push(BUILDER_TOOLS.project_tree);
-    if (p.files.create && p.dirs.create) list.push(BUILDER_TOOLS.create_project);
-    if (b.commands && b.commands !== "off") list.push(BUILDER_TOOLS.run_command, BUILDER_TOOLS.command_output, BUILDER_TOOLS.stop_command);
-    if (p.files.read) list.push(BUILDER_TOOLS.preview_site);
-  }
+  if (settings.localNotes?.enabled !== false && !hidden) list.push(...Object.values(VAULT_TOOLS));
   if (settings.companion?.recall !== false && !hidden) {
     list.push(RECALL_TOOLS.recall_conversations);
     if (settings.companion?.followUps !== false) list.push(RECALL_TOOLS.resolve_follow_up);
@@ -379,9 +415,11 @@ function declarations(settings, { voice = false, robot: onScreen = false, nonBlo
 // their context. With "Local AI tools: essential" (Settings → AI & privacy) they
 // get these, plus file tools and the robot; "all" gives them everything.
 const ESSENTIAL = new Set([
-  "edit_file_part", "read_file_lines", "search_code", "project_tree", "create_project", "run_command", "command_output", "stop_command", "preview_site",
+  "edit_file_part", "read_file_lines", "search_files",
+  "search_notes", "read_note", "save_note_file", "append_note_file",
   "save_note", "recall_conversations", "resolve_follow_up", "write_draft",
   "add_task", "update_task", "list_tasks", "set_reminder", "list_reminders", "log_habit", "daily_briefing",
+  "add_calendar_event", "list_calendar_events", "start_focus", "check_focus",
   "get_weather", "web_search", "read_webpage",
   "search_gmail", "get_calendar_events",
   "home_devices", "home_control",
@@ -415,6 +453,24 @@ async function planFileAction(name, args, settings) {
       const { real } = await at(args.path);
       return { summary: `read ${files.shown(real)}`, done: `Read ${files.shown(real)}`, run: () => files.readFile(real) };
     }
+    case "read_file_lines": {
+      if (!p.files.read) deny("read files");
+      const { real } = await at(args.path);
+      return {
+        summary: `read lines ${args.start_line || 1} to ${args.end_line || (args.start_line || 1) + 299} of ${files.shown(real)}`,
+        done: `Read lines from ${files.shown(real)}`,
+        run: () => files.readLines(real, args.start_line, args.end_line),
+      };
+    }
+    case "search_files": {
+      if (!p.files.read) deny("read files");
+      const { real } = await at(args.path);
+      return {
+        summary: `search ${files.shown(real)} for "${args.query}"`,
+        done: `Searched ${files.shown(real)} for "${args.query}"`,
+        run: () => files.search(real, args.query, { regex: args.regex === true, glob: args.file_ending || "" }),
+      };
+    }
     case "create_file": {
       if (!p.files.create) deny("create files");
       const { real } = await at(args.path);
@@ -424,6 +480,15 @@ async function planFileAction(name, args, settings) {
       if (!p.files.edit) deny("edit files");
       const { real } = await at(args.path);
       return { summary: `change the file ${files.shown(real)}`, done: `Edited ${files.shown(real)}`, run: () => files.editFile(real, args.content) };
+    }
+    case "edit_file_part": {
+      if (!p.files.edit) deny("edit files");
+      const { real } = await at(args.path);
+      return {
+        summary: `change part of ${files.shown(real)}`,
+        done: `Edited part of ${files.shown(real)}`,
+        run: () => files.editPart(real, args.find, args.replace, { all: args.all === true }),
+      };
     }
     case "create_folder": {
       if (!p.dirs.create) deny("create folders");
@@ -460,101 +525,33 @@ async function planFileAction(name, args, settings) {
   return null;
 }
 
-// ---------- Builder mode (builder.js) ----------
-async function runBuilder(name, args, ctx) {
-  const s = ctx.settings;
-  const p = s.permissions;
-  const b = s.builder || {};
-  if (b.enabled === false) throw new Error("Builder mode is off (Settings → Builder).");
-  const at = (x) => files.resolve(x, p.folders);
-  const need = (ok, what) => {
-    if (!ok) throw new Error(`You don't have permission to ${what}. The user can allow it in Settings → AI & privacy.`);
-  };
+// ---------- Local Markdown Notes Vault (local-notes.js) ----------
+async function runVault(name, args, ctx) {
   const say = (line) => ctx.onActivity?.(line);
-  // Changing a file asks, like the other file tools, when "Ask before acting" is on
-  const ask = async (summary, details = { type: "file" }) => {
-    if (p.askBeforeActing && !(await ctx.confirm(summary, details))) {
-      say(`You declined: ${summary}`);
-      throw Object.assign(new Error("The user declined this action."), { declined: true });
-    }
-  };
   switch (name) {
-    case "edit_file_part": {
-      need(p.files.edit, "edit files");
-      const { real } = await at(args.path);
-      await ask(`change part of ${files.shown(real)}`);
-      const r = await builder.editPart(real, args.find, args.replace, { all: args.all === true });
-      say(`Edited ${r.path}${r.replaced > 1 ? ` (${r.replaced} places)` : ""}`);
-      return { ok: true, ...r };
+    case "search_notes": {
+      const results = await localNotes.searchNotes(args.query);
+      say(`Searched vault for "${args.query}": ${results.length} note${results.length === 1 ? "" : "s"} found`);
+      return { ok: true, notes: results };
     }
-    case "read_file_lines": {
-      need(p.files.read, "read files");
-      const { real } = await at(args.path);
-      const r = await builder.readLines(real, args.start_line, args.end_line);
-      say(`Read ${r.path} (lines ${r.from}-${r.to})`);
-      return { ok: true, ...r };
+    case "read_note": {
+      const note = await localNotes.readNote(args.title);
+      say(`Read vault note: ${note.title}`);
+      return { ok: true, note };
     }
-    case "search_code": {
-      need(p.files.read, "read files");
-      const { real } = await at(args.path);
-      const r = await builder.search(real, args.query, { regex: args.regex === true, glob: args.file_ending || "" });
-      say(`Searched ${files.shown(real)} for "${args.query}": ${r.matches.length} match${r.matches.length === 1 ? "" : "es"}`);
-      return { ok: true, ...r };
+    case "save_note_file": {
+      const note = await localNotes.writeNote(args.title, args.content, { tags: args.tags });
+      say(`Saved note in vault: ${note.title}`);
+      return { ok: true, note };
     }
-    case "project_tree": {
-      need(p.dirs.read, "see inside folders");
-      const { real } = await at(args.path);
-      return { ok: true, ...(await builder.tree(real, Math.min(6, Math.max(1, Number(args.depth) || 3)))) };
+    case "append_note_file": {
+      const note = await localNotes.appendToNote(args.title, args.text);
+      say(`Appended to note: ${note.title}`);
+      return { ok: true, note };
     }
-    case "create_project": {
-      need(p.files.create && p.dirs.create, "create files and folders");
-      const { real } = await at(args.folder || p.folders[0]);
-      await ask(`create the project "${args.name}" (${args.template}) in ${files.shown(real)}`);
-      const r = await builder.createProject(real, args.name, args.template);
-      if (r.command) return { ok: true, nextStep: "Run this with run_command in the given folder", command: r.command, folder: r.cwd, note: r.note };
-      say(`Created the project ${r.path}`);
-      return { ok: true, ...r };
-    }
-    case "run_command": {
-      const { real } = await at(args.folder);
-      if ((await files.kind(real)) !== "folder") throw new Error("That folder doesn't exist.");
-      const command = String(args.command || "").trim();
-      if (!command) throw new Error("Which command?");
-      if (command.length > 2000) throw new Error("That command is too long.");
-      const { action, risky } = await builder.decide(command, s, real);
-      if (action === "off") throw new Error("Running commands is off. The user can turn it on in Settings → Builder.");
-      if (action === "suggest") {
-        say(`Suggested: ${command}`);
-        return { ok: true, suggestedOnly: true, command, folder: files.shown(real), note: "Commands are in 'suggest only' mode: show the user the command so they can run it themselves." };
-      }
-      if (action === "ask" && !(await ctx.confirm(`Run ${command}`, { type: "command", command, cwd: files.shown(real), reason: [args.reason, risky ? "⚠️ This can change or delete things outside the project." : ""].filter(Boolean).join(" ") }))) {
-        say(`You declined: ${command}`);
-        return { error: "The user declined running this command." };
-      }
-      if (args.background === true) {
-        const r = await builder.runCommand(command, real, { background: true });
-        say(`Started ${command}${r.url ? ` → ${r.url}` : ""} (id ${r.id})`);
-        return { ok: true, ...r };
-      }
-      say(`Running ${command}…`);
-      const r = await builder.runCommand(command, real, { timeout: args.timeout_seconds || b.timeout });
-      say(`${r.exitCode === 0 ? "✓" : "✗"} ${command} (${r.timedOut ? "stopped: took too long" : `exit ${r.exitCode}`}, ${r.seconds} s)`);
-      return { ok: r.exitCode === 0, ...r };
-    }
-    case "command_output":
-      return { ok: true, ...builder.commandOutput(args.id) };
-    case "stop_command": {
-      const r = builder.stop(args.id);
-      say(`Stopped ${r.stopped}`);
-      return r;
-    }
-    case "preview_site": {
-      need(p.files.read, "read files");
-      const { real } = await at(args.folder);
-      if ((await files.kind(real)) !== "folder") throw new Error("That folder doesn't exist.");
-      const r = await builder.preview(real);
-      say(`Preview: ${r.url}`);
-      return { ok: true, ...r, note: "Give the user this address as a link; it works on this computer only." };
+    case "list_notes": {
+      const list = await localNotes.listNotes({ limit: args.limit });
+      return { ok: true, notes: list };
     }
   }
   throw new Error(`Unknown tool ${name}.`);
@@ -651,6 +648,34 @@ async function runLife(name, args, ctx) {
     case "daily_briefing":
       say("Put together your briefing");
       return { ok: true, briefing: await briefing(ctx) };
+    case "add_calendar_event": {
+      const ev = life.addCalendarEvent(args);
+      say(`Scheduled calendar event: ${ev.title} on ${ev.start}`);
+      return { ok: true, event: ev };
+    }
+    case "list_calendar_events": {
+      const events = life.listCalendarEvents({ from: args.from, to: args.to });
+      return { ok: true, events };
+    }
+    case "delete_calendar_event": {
+      const res = life.deleteCalendarEvent(args.eventId);
+      say("Deleted calendar event");
+      return { ok: true, ...res };
+    }
+    case "start_focus": {
+      const f = life.startFocus({ minutes: args.minutes, task: args.task });
+      say(`Started ${f.minutes}-minute focus session on: ${f.task}`);
+      return { ok: true, focus: f };
+    }
+    case "check_focus": {
+      const f = life.checkFocus();
+      return { ok: true, focus: f };
+    }
+    case "stop_focus": {
+      const f = life.stopFocus();
+      say("Stopped focus session");
+      return { ok: true, focus: f };
+    }
   }
   throw new Error(`Unknown tool ${name}.`);
 }
@@ -690,11 +715,11 @@ async function run(name, args, ctx) {
       return { ok: true, id: note.id };
     }
 
-    // Tasks, reminders, habits, journal
+    // Tasks, reminders, habits, journal, calendar, focus
     if (LIFE_NAMES.has(name)) return await runLife(name, args, ctx);
 
-    // Builder mode
-    if (Object.hasOwn(BUILDER_TOOLS, name)) return await runBuilder(name, args, ctx);
+    // Local Markdown Notes Vault
+    if (VAULT_NAMES.has(name)) return await runVault(name, args, ctx);
 
     // Connected apps
     if (connectors.find(name)) return await connectors.run(name, args, ctx);

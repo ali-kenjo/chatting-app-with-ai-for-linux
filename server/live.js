@@ -111,10 +111,21 @@ class LiveSession {
     else if (msg.type === "confirm") this.confirmations.get(msg.id)?.(msg.allow === true);
     else if (msg.type === "robot") this.setRobot(msg.on === true);
     else if (msg.type === "on-air") this.setOnAir(msg.on === true);
+    else if (msg.type === "doc") this.setDoc(msg.doc || { name: msg.name, content: msg.content });
     else if (msg.type === "echo") this.turn.echo = true;
     // Something the app tells the AI (a reminder went off): it says it, and it isn't saved as yours
     else if (msg.type === "note" && typeof msg.text === "string" && msg.text.trim() && this.ready) {
       this.toGemini({ realtimeInput: { text: prompt.appNote(this.settings || settings.get(), msg.text.trim().slice(0, 1000)) } });
+    }
+  }
+
+  // Active grounding document for voice discussion / acting
+  setDoc(doc) {
+    this.doc = doc && doc.content ? doc : null;
+    this.system = null;
+    if (this.everReady) {
+      this.switchSetup = true;
+      if (this.ready && !this.turn.model && !this.toolsRunning) this.reconnect({ quiet: true });
     }
   }
 
@@ -142,10 +153,11 @@ class LiveSession {
     if (this.ready && !this.turn.model && !this.toolsRunning) this.reconnect({ quiet: true });
   }
 
-  async start({ chatId, brainId, googleAccessToken, robot, onAir }) {
+  async start({ chatId, brainId, googleAccessToken, robot, onAir, doc }) {
     this.started = true;
     this.robot = robot === true;
     this.onAir = onAir === true;
+    this.doc = doc && doc.content ? doc : null;
     this.googleAccessToken = typeof googleAccessToken === "string" ? googleAccessToken : null;
     this.pageToken = Boolean(this.googleAccessToken); // otherwise the one Friends keeps (renewed per tool call)
     try {
@@ -227,6 +239,7 @@ class LiveSession {
         history: chat ? chat.messages.slice(summary.windowStart(chat, HISTORY)) : [],
         onAir: this.onAir,
         chatId: this.chatId,
+        doc: this.doc,
       });
     }
     const toolList = [];

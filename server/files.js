@@ -151,4 +151,80 @@ async function remove(real, useTrash) {
   return { path: shown(real), trash: movedToTrash };
 }
 
-module.exports = { resolve, kind, shown, listFolder, readFile, createFile, editFile, createFolder, move, remove };
+async function editPart(real, find, replace, { all = false } = {}) {
+  if ((await kind(real)) !== "file") throw new Error("That file doesn't exist.");
+  const text = await fsp.readFile(real, "utf8");
+  const needle = String(find ?? "");
+  if (!needle) throw new Error("Say which text to replace (find).");
+  const count = text.split(needle).length - 1;
+  if (!count) throw new Error("That text isn't in the file. Read the file again and copy the exact lines, including spaces.");
+  if (count > 1 && !all) throw new Error(`That text is in the file ${count} times. Include more lines so it's unique, or set all to replace every one.`);
+  const next = all ? text.split(needle).join(String(replace ?? "")) : text.replace(needle, () => String(replace ?? ""));
+  await fsp.writeFile(real, next);
+  return { path: shown(real), replaced: all ? count : 1 };
+}
+
+async function readLines(real, start = 1, end) {
+  const stat = await fsp.stat(real);
+  if (stat.isDirectory()) throw new Error("That's a folder, not a file.");
+  if (stat.size > 5 * 1024 * 1024) throw new Error("The file is larger than 5 MB.");
+  const lines = (await fsp.readFile(real, "utf8")).split("\n");
+  const from = Math.max(1, Math.round(Number(start)) || 1);
+  const to = Math.min(lines.length, Math.round(Number(end)) || from + 299);
+  const width = String(to).length;
+  return { path: shown(real), totalLines: lines.length, from, to, text: lines.slice(from - 1, to).map((l, i) => `${String(from + i).padStart(width)}  ${l}`).join("\n") };
+}
+
+const SKIP_SEARCH_DIRS = new Set(["node_modules", ".git", "dist", "build", ".venv", "venv", "__pycache__", ".cache"]);
+
+async function search(real, query, { regex = false, glob = "", max = 100 } = {}) {
+  const q = String(query ?? "");
+  if (!q) throw new Error("What should be searched for?");
+  let re;
+  try {
+    re = regex ? new RegExp(q, "i") : null;
+  } catch (err) {
+    throw new Error(`That isn't a valid regular expression: ${err.message}`);
+  }
+  const lower = q.toLowerCase();
+  const ext = glob.replace(/^\*+/, "");
+  const hits = [];
+  let scanned = 0;
+  async function scan(full) {
+    scanned++;
+    let text;
+    try {
+      if ((await fsp.stat(full)).size > 1024 * 1024) return;
+      const buf = await fsp.readFile(full);
+      if (buf.subarray(0, 4000).includes(0)) return;
+      text = buf.toString("utf8");
+    } catch {
+      return;
+    }
+    const lines = text.split("\n");
+    for (let i = 0; i < lines.length && hits.length < max; i++) {
+      if (re ? re.test(lines[i]) : lines[i].toLowerCase().includes(lower)) hits.push({ file: shown(full), line: i + 1, text: lines[i].trim().slice(0, 200) });
+    }
+  }
+  async function walk(dir) {
+    if (hits.length >= max || scanned > 5000) return;
+    let entries = [];
+    try {
+      entries = await fsp.readdir(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      if (hits.length >= max) return;
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        if (!SKIP_SEARCH_DIRS.has(e.name) && !e.name.startsWith(".")) await walk(full);
+      } else if (e.isFile() && (!ext || e.name.endsWith(ext))) await scan(full);
+    }
+  }
+  if ((await fsp.stat(real)).isFile()) await scan(real);
+  else await walk(real);
+  return { matches: hits, truncated: hits.length >= max };
+}
+
+module.exports = { resolve, kind, shown, listFolder, readFile, createFile, editFile, editPart, readLines, search, createFolder, move, remove };
