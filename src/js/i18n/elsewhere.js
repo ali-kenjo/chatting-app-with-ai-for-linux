@@ -16,4 +16,11 @@ export default [
   "A chat needs a name.",
   "Backup not found.",
   "Not found",
+  // The Robot Studio's tabs (their names are in a list, shown with t(name))
+  "Colors",
+  "Shape",
+  "Face",
+  "Outfit",
+  "Room",
+  "Looks",
 ];

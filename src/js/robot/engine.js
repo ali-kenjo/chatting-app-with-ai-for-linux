@@ -16,8 +16,11 @@ import { FullScreenQuad } from "three/addons/postprocessing/Pass.js";
 import { Face } from "./face.js";
 import { Stage } from "./scene.js";
 import { World } from "./world.js";
-import { buildRobot, loadRobot, applyPose, setShellColor, setMaterialDetail, disposeRobot, SCREEN_ASPECT } from "./model.js";
-import { SHELLS, userGlowFor } from "./presets.mjs";
+import { RoomScene } from "./room3d.js";
+import { defaultRoom } from "./room.mjs";
+import { buildRobot, loadRobot, applyPose, applyLook, setMaterialDetail, disposeRobot, SCREEN_ASPECT } from "./model.js";
+import { userGlowFor } from "./presets.mjs";
+import { defaultDesign, shapeKey } from "./design.mjs";
 import { springStep, clamp } from "./spring.mjs";
 
 // What each quality level spends: pixel ratio (capped by the screen's),
@@ -31,6 +34,8 @@ export const QUALITY = {
   high: { ratio: 2, samples: 4, float: true, rich: true, bloom: true, shadows: true, shadowSize: 2048, face: "high" },
 };
 const DOWN = { high: "medium", medium: "low" };
+// What the built-in robot measures with its default design (model.js measure()): the camera shots are made for it
+const STANDARD = { height: 1.312, width: 0.72 };
 
 // Camera shots: how much of the robot (meters, measured upward) is in the
 // picture and where its middle is; `width` must also fit (portrait videos)
@@ -41,9 +46,6 @@ const SHOTS = {
   dock: { height: 1.46, center: 0.7, width: 1.22 },
 };
 
-// Chroma keys (the standard green and blue) and the studio's grays
-const CHROMA = { green: new THREE.Color("#00b140"), blue: new THREE.Color("#0047bb") };
-const STUDIO = { middle: new THREE.Color("#26272c"), edge: new THREE.Color("#0b0b0d") };
 
 const FINAL = {
   uniforms: {
@@ -51,6 +53,14 @@ const FINAL = {
     tBloom: { value: null },
     uBloom: { value: 0 },
     uMode: { value: 1 },
+    uImage: { value: null },
+    uImageAspect: { value: 1 },
+    uDim: { value: 0 },
+    uBlobs: { value: Array.from({ length: 3 }, () => new THREE.Vector4()) },
+    uBlobColors: { value: Array.from({ length: 3 }, () => new THREE.Vector3()) },
+    uBgMid: { value: new THREE.Color() },
+    uHorizon: { value: 0.4 },
+    uMidOn: { value: 0 },
     uBg: { value: new THREE.Color() },
     uBgEdge: { value: new THREE.Color() },
     uGlow: { value: new THREE.Color() },
@@ -73,7 +83,15 @@ varying vec2 vUv;
 uniform sampler2D tScene;
 uniform sampler2D tBloom;
 uniform float uBloom;
-uniform int uMode;       // 0 flat color, 1 studio vignette, 2 studio with an accent glow
+uniform int uMode;       // 0 flat color, 1 vignette, 2 vignette with a glow, 3 top-to-bottom gradient, 4 your own picture
+uniform sampler2D uImage;
+uniform float uImageAspect;
+uniform float uDim;
+uniform vec3 uBgMid;     // a band of haze at the horizon (gradient only)
+uniform float uHorizon;  // where it is: 0 bottom .. 1 top
+uniform float uMidOn;
+uniform vec4 uBlobs[3];       // x, y (0..1 on the picture), radius, strength
+uniform vec3 uBlobColors[3];
 uniform vec3 uBg;        // linear, as displayed (no tone mapping)
 uniform vec3 uBgEdge;
 uniform vec3 uGlow;
@@ -119,16 +137,42 @@ void main() {
     lit *= 1.0 - 0.12 * smoothstep(0.72, 1.0, max(lit.r, max(lit.g, lit.b)));
   }
   vec3 bg = uBg;
-  if (uMode > 0) {
-    float r = length((vUv - uCenter) * vec2(uAspect, 1.0));
+  float r = length((vUv - uCenter) * vec2(uAspect, 1.0));
+  if (uMode == 1 || uMode == 2) {
     bg = mix(uBg, uBgEdge, smoothstep(0.12, 1.2, r));
     if (uMode == 2) bg += uGlow * uGlowAmount * exp(-r * r * 3.5);
+  } else if (uMode == 3) {
+    if (uMidOn > 0.5) {
+      // top → horizon haze → bottom
+      float up = clamp((vUv.y - uHorizon) / max(1.0 - uHorizon, 0.01), 0.0, 1.0);
+      float down = clamp(vUv.y / max(uHorizon, 0.01), 0.0, 1.0);
+      bg = vUv.y > uHorizon ? mix(uBgMid, uBg, smoothstep(0.0, 1.0, up)) : mix(uBgEdge, uBgMid, smoothstep(0.0, 1.0, down));
+    } else {
+      bg = mix(uBgEdge, uBg, smoothstep(0.0, 1.0, vUv.y));
+    }
+    bg += uGlow * uGlowAmount * exp(-r * r * 3.5);
+  } else if (uMode == 4) {
+    // Your picture, filling the frame (cropped where its shape differs), dimmed
+    vec2 uv = vUv;
+    if (uAspect > uImageAspect) uv.y = (uv.y - 0.5) * (uImageAspect / uAspect) + 0.5;
+    else uv.x = (uv.x - 0.5) * (uAspect / uImageAspect) + 0.5;
+    bg = mix(texture2D(uImage, uv).rgb, uBgEdge, 0.0) * (1.0 - uDim);
+  }
+  if (uMode > 0) {
+    // Soft patches of light: a sun low on the horizon, a nebula, the neon of a street
+    for (int i = 0; i < 3; i++) {
+      vec4 b = uBlobs[i];
+      if (b.w > 0.0) {
+        float d = length((vUv - b.xy) * vec2(uAspect, 1.0)) / max(b.z, 0.001);
+        bg += uBlobColors[i] * b.w * exp(-d * d);
+      }
+    }
   }
   vec3 color = mix(bg, lit, a);
   if (uBloom > 0.5) color += texture2D(tBloom, vUv).rgb * uExposure;
   vec3 outColor = toSRGB(clamp(color, 0.0, 1.0));
   // Soft gradients band in 8 bits; a little random noise hides that (never on chroma)
-  if (uMode > 0) outColor += (hash(gl_FragCoord.xy + uSeed) - 0.5) / 255.0;
+  if (uMode > 0 && uMode != 4) outColor += (hash(gl_FragCoord.xy + uSeed) - 0.5) / 255.0;
   gl_FragColor = vec4(outColor, 1.0);
 }`,
 };
@@ -151,11 +195,10 @@ export class RobotEngine {
     this.renderer = renderer;
 
     this.look = {
-      shell: SHELLS.warm,
-      eyes: "classic",
-      accent: linear("#6f9cf5"),
+      design: defaultDesign(),
+      accent: linear("#6f9cf5"), // the robot's light: its own color, or the app's accent
       user: linear(userGlowFor("#6f9cf5")),
-      background: "studio",
+      room: defaultRoom(),
       shot: "medium",
       position: "center",
       cinematic: false,
@@ -175,10 +218,15 @@ export class RobotEngine {
     this.stage = new Stage(renderer);
     this.camera = new THREE.PerspectiveCamera(30, 16 / 9, 0.05, 40);
     this.cam = { dist: { x: 4, v: 0 }, center: { x: 0.74, v: 0 }, shift: { x: 0, v: 0 }, ready: false };
-    this.robot = buildRobot({ shell: this.look.shell, accent: this.look.accent, faceTexture: this.face.texture });
+    this.robot = buildRobot({ design: this.look.design, light: this.look.accent, faceTexture: this.face.texture });
+    this.shape = shapeKey(this.look.design);
     this.stage.scene.add(this.robot.root);
     this.world = new World(this.stage);
     this.world.setRobot(this.robot);
+    this.rooms = new RoomScene(this.stage, this.world);
+    this.roomKey = "";
+    this.roomDirty = true;
+    this.photo = { texture: null, aspect: 1, source: null, blur: -1 };
     this.worldKey = "";
     this.tmp = new THREE.Vector3();
     this.hitSphere = new THREE.Sphere(new THREE.Vector3(), 0.5);
@@ -418,18 +466,70 @@ export class RobotEngine {
   }
 
   // ---------- Looks ----------
+  // look.design: the robot's design (design.mjs); look.accent: the app's accent color, used for
+  // the light unless the design has its own. Colors change at once; a new shape (size, ears,
+  // clothes…) rebuilds the robot at the start of the next frame, however many changes came in.
   setLook(look) {
-    const before = { ...this.look };
     Object.assign(this.look, look);
-    if (look.accent) {
-      this.look.accent = linear(look.accent);
-      this.look.user = linear(userGlowFor(look.accent));
+    if (look.design || look.accent) {
+      const d = this.look.design;
+      const app = look.accent || this.appAccent || "#6f9cf5";
+      this.appAccent = app;
+      const light = d.colors.light || app;
+      this.look.accent = linear(light);
+      this.look.user = linear(d.colors.user || userGlowFor(light));
+      this.look.faceColor = linear(d.colors.face || light);
       this.stage.setAccent(this.look.accent);
-      for (const key of ["finGlowL", "finGlowR", "ring"]) this.robot.materials[key]?.emissive.copy(this.look.accent);
+      this.designDirty = true;
     }
-    if (look.shell && look.shell !== before.shell) setShellColor(this.robot, look.shell);
+    if (look.room) this.roomDirty = true;
     if (look.cameraFriendly !== undefined) this.stage.setCameraFriendly(look.cameraFriendly);
     if (look.theme) this.look.themeColor.set(look.theme.bg);
+  }
+
+  // Which place is drawn: the host's own (the chat dock asks for "dock"), else the one in the settings
+  placeId() {
+    return this.active?.options.background ?? this.look.room.place;
+  }
+
+  // Builds the room for the place that's showing (when it, its settings or the quality change)
+  syncRoom() {
+    const place = this.placeId();
+    this.roomDirty = false;
+    this.roomKey = `${place}|${this.level}`;
+    if (place === "dock") this.rooms.configureDock();
+    else this.rooms.configure({ ...this.look.room, place }, { light: this.look.accent, level: this.level });
+    this.applyPhoto();
+    this.glowingFor = null;
+  }
+
+  // Applies the design to the robot: new shapes rebuild it, anything else repaints it
+  syncDesign() {
+    this.designDirty = false;
+    const d = this.look.design;
+    const key = shapeKey(d);
+    if (this.robot.builtIn && key !== this.shape) {
+      this.shape = key;
+      this.swapRobot(buildRobot({ design: d, light: this.look.accent, faceTexture: this.face.texture }));
+    } else if (this.robot.builtIn) {
+      applyLook(this.robot, d, this.look.accent);
+    }
+  }
+
+  swapRobot(next) {
+    const old = this.robot;
+    this.robot = next;
+    this.stage.scene.add(next.root);
+    this.world.setRobot(next);
+    old.outfit?.dispose?.();
+    disposeRobot(old);
+    for (const twin of this.twins.values()) twin.dispose();
+    this.twins.clear();
+    this.face.configure({ aspect: next.screenAspect || SCREEN_ASPECT });
+    this.useFaceTexture();
+    setMaterialDetail(next, QUALITY[this.level].rich);
+    next.glow = this.look.design.glow;
+    this.cam.ready = false;
   }
 
   useFaceTexture() {
@@ -448,18 +548,10 @@ export class RobotEngine {
       next = await loadRobot(`/api/robot/model?v=${encodeURIComponent(info.uploadedAt)}`, { accent: this.look.accent, faceTexture: this.face.texture });
     } else {
       if (this.robot.builtIn) return this.robot;
-      next = buildRobot({ shell: this.look.shell, accent: this.look.accent, faceTexture: this.face.texture });
+      this.shape = shapeKey(this.look.design);
+      next = buildRobot({ design: this.look.design, light: this.look.accent, faceTexture: this.face.texture });
     }
-    const old = this.robot;
-    this.robot = next;
-    this.stage.scene.add(next.root);
-    this.world.setRobot(next);
-    disposeRobot(old);
-    for (const twin of this.twins.values()) twin.dispose();
-    this.twins.clear();
-    this.face.configure({ aspect: next.screenAspect || SCREEN_ASPECT });
-    this.useFaceTexture();
-    setMaterialDetail(next, QUALITY[this.level].rich);
+    this.swapRobot(next);
     return next;
   }
 
@@ -470,6 +562,8 @@ export class RobotEngine {
     this.last = now;
     if (!this.active) return;
     this.measure(dt);
+    if (this.designDirty) this.syncDesign();
+    if (this.roomDirty || this.roomKey !== `${this.placeId()}|${this.level}`) this.syncRoom();
     const options = this.animator.options;
     options.reducedMotion = this.reducedMotion.matches;
     options.cameraFriendly = this.look.cameraFriendly;
@@ -482,14 +576,14 @@ export class RobotEngine {
 
   draw(pose, dt) {
     const look = this.look;
-    const background = this.hostOption("background");
-    const bloomOn = QUALITY[this.level].bloom && background !== "green" && background !== "blue";
-    applyPose(this.robot, pose, { accent: look.accent, user: look.user, cameraFriendly: look.cameraFriendly, glowBoost: bloomOn ? 1 : 1.3 });
+    const chroma = this.rooms.isChroma;
+    const bloomOn = QUALITY[this.level].bloom && !chroma;
+    applyPose(this.robot, pose, { accent: look.accent, user: look.user, cameraFriendly: look.cameraFriendly, glowBoost: bloomOn ? 1 : 1.3, time: pose.t });
     this.stage.follow(pose.hoverY, pose.posX, pose.posZ);
-    this.updateWorld(dt, pose, background);
-    this.face.render(pose, { eyes: look.eyes, largerFace: look.largerFace, color: look.accent });
+    this.updateWorld(dt, pose);
+    this.rooms.update(dt, pose, { friendly: look.cameraFriendly, reduced: this.reducedMotion.matches });
+    this.face.render(pose, { face: look.design.face, largerFace: look.largerFace, color: look.faceColor || look.accent });
 
-    this.stage.setBackground(background);
     this.frameCamera(dt, pose);
 
     const r = this.renderer;
@@ -502,7 +596,7 @@ export class RobotEngine {
       this.bloom.strength = look.cameraFriendly ? 0.35 : 0.5;
       this.bloom.render(r, null, this.glowTarget, dt, false);
     }
-    this.paintBackground(background, bloomOn, pose);
+    this.paintBackground(bloomOn, pose);
     r.setRenderTarget(null);
     this.final.render(r);
   }
@@ -511,10 +605,11 @@ export class RobotEngine {
   // alone (no reflections), solid parts black so they still hide what's behind,
   // see-through ones (shadows, the floor glow) left out
   renderGlow() {
-    if (this.glowingFor !== this.robot) {
+    if (this.glowingFor !== this.robot || this.glowingRoom !== this.rooms.key) {
       const m = this.robot.materials;
-      this.glowing = new Set([m.screen, m.finGlowL, m.finGlowR, m.ring, this.stage.lampShade].filter(Boolean));
+      this.glowing = new Set([m.screen, m.finGlowL, m.finGlowR, m.ring, ...this.rooms.glowing, ...(this.robot.outfit?.glowing || [])].filter(Boolean));
       this.glowingFor = this.robot;
+      this.glowingRoom = this.rooms.key;
     }
     const swapped = this.swapped;
     this.stage.scene.traverseVisible(this.glowVisit);
@@ -534,7 +629,7 @@ export class RobotEngine {
     swapped.length = 0;
   }
 
-  paintBackground(kind, bloomOn, pose) {
+  paintBackground(bloomOn, pose) {
     const u = this.final.material.uniforms;
     u.tScene.value = this.sceneTarget.texture;
     u.tBloom.value = this.bloom.renderTargetsHorizontal[0].texture;
@@ -546,28 +641,104 @@ export class RobotEngine {
     // Where the robot is on screen, for the vignette and the glow
     this.projected.set(pose.posX || 0, 0.72, pose.posZ || 0).project(this.camera);
     u.uCenter.value.set(this.projected.x * 0.5 + 0.5, this.projected.y * 0.5 + 0.5);
-    if (kind === "green" || kind === "blue") {
-      u.uMode.value = 0;
-      u.uBg.value.copy(CHROMA[kind]);
-    } else if (kind === "dock") {
+    const b = this.rooms.backdrop;
+    const blobs = u.uBlobs.value;
+    const colors = u.uBlobColors.value;
+    for (let i = 0; i < 3; i++) {
+      const blob = b.blobs?.[i];
+      if (blob) {
+        blobs[i].set(blob.x, blob.y, blob.r, blob.strength);
+        colors[i].set(blob.color.r, blob.color.g, blob.color.b);
+      } else blobs[i].set(0, 0, 1, 0);
+    }
+    if (b.mode === "dock") {
       u.uMode.value = 2;
       u.uBg.value.copy(this.look.themeColor);
       u.uBgEdge.value.copy(this.look.themeColor);
       u.uGlow.value.copy(this.look.accent);
       u.uGlowAmount.value = this.look.theme.glow;
-    } else {
-      u.uMode.value = kind === "accent" ? 2 : 1;
-      u.uBg.value.copy(STUDIO.middle);
-      u.uBgEdge.value.copy(STUDIO.edge);
-      u.uGlow.value.copy(this.look.accent);
-      u.uGlowAmount.value = 0.28;
+      return;
     }
+    const mode = { flat: 0, vignette: b.glow > 0 ? 2 : 1, gradient: 3, image: 4 }[b.mode] ?? 1;
+    u.uMode.value = mode;
+    u.uBg.value.copy(b.bg);
+    u.uBgEdge.value.copy(b.edge);
+    u.uMidOn.value = b.mid ? 1 : 0;
+    if (b.mid) {
+      u.uBgMid.value.copy(b.mid);
+      u.uHorizon.value = b.horizon ?? 0.4;
+    }
+    u.uGlow.value.copy(b.glowColor);
+    u.uGlowAmount.value = b.glow;
+    if (mode === 4) {
+      if (this.photo.texture) {
+        u.uImage.value = this.photo.texture;
+        u.uImageAspect.value = this.photo.aspect;
+        u.uDim.value = this.look.room.photo.dim;
+      } else u.uMode.value = 1;
+    }
+  }
+
+  // Your own picture, blurred as asked (the blur is done once on a canvas, not every frame)
+  async useBackground(info) {
+    if (!info?.custom) {
+      this.photo.texture?.dispose();
+      this.photo = { texture: null, aspect: 1, source: null, blur: -1 };
+      return;
+    }
+    const image = new Image();
+    image.decoding = "async";
+    image.src = `/api/robot/background?v=${encodeURIComponent(info.uploadedAt)}`;
+    await image.decode();
+    this.photo.source = image;
+    this.photo.blur = -1;
+    this.applyPhoto();
+  }
+
+  applyPhoto() {
+    const blur = this.look.room.photo?.blur ?? 0;
+    const image = this.photo.source;
+    if (!image || Math.abs(blur - this.photo.blur) < 0.005) return;
+    this.photo.blur = blur;
+    // Big enough to look sharp on a big screen, small enough to keep the memory down
+    const scale = Math.min(1, 2048 / Math.max(image.naturalWidth, image.naturalHeight));
+    const w = Math.max(2, Math.round(image.naturalWidth * scale));
+    const h = Math.max(2, Math.round(image.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    const px = Math.round(blur * 0.03 * Math.max(w, h));
+    // A blur's edges fade to transparent, so the picture is drawn a little bigger than the canvas
+    if (px > 0) {
+      ctx.filter = `blur(${px}px)`;
+      ctx.drawImage(image, -px, -px, w + px * 2, h + px * 2);
+    } else ctx.drawImage(image, 0, 0, w, h);
+    this.photo.texture?.dispose();
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 4;
+    this.photo.texture = texture;
+    this.photo.aspect = w / h;
+  }
+
+  // How much bigger (or smaller) than the standard robot this one stands, in height and width
+  fitFor(robot) {
+    const b = robot.bounds;
+    if (!b) return { height: 1, width: 1 };
+    return {
+      height: clamp(b.height / STANDARD.height, 0.85, 1.7),
+      width: clamp(b.width / STANDARD.width, 0.9, 1.6),
+    };
   }
 
   // The virtual camera: the shot, the robot's place in the picture (thirds),
   // a slow drift and a push-in on emphasis when "cinematic" is on
   frameCamera(dt, pose) {
-    const shot = SHOTS[this.hostOption("shot")] || SHOTS.medium;
+    const base = SHOTS[this.hostOption("shot")] || SHOTS.medium;
+    // A taller, wider or smaller robot (or one in a tall hat) is framed in proportion
+    const fit = this.fitFor(this.robot);
+    const shot = { height: base.height * fit.height, center: base.center * fit.height, width: base.width * fit.width };
     const aspect = this.camera.aspect;
     const portrait = aspect < 1;
     const t = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
@@ -597,6 +768,13 @@ export class RobotEngine {
         yaw += this.drag.yaw;
         pitch += this.drag.pitch;
       }
+    }
+    // The Robot Studio's views: front, angle, side, back, or a slow turn all the way around
+    const view = this.active?.options.view;
+    if (view) {
+      if (view.spin) this.spinAngle = (this.spinAngle || 0) + dt * 0.5;
+      else this.spinAngle = 0;
+      yaw += (view.yaw || 0) + (this.spinAngle || 0);
     }
     const follow = (pose.posX || 0) * 0.55;
     const place = portrait ? "center" : this.hostOption("position");
@@ -631,17 +809,16 @@ export class RobotEngine {
 
   // ---------- Roaming, and the room ----------
   // How far it may roam (0 = stays put): not while filming (the frame must
-  // stay steady), less at the desk (there are things in the way)
+  // stay steady), less where there are things in the way (the desk)
   roamAmount() {
     const place = this.active?.options;
     if (!place?.roam || !this.look.roam || this.look.cameraFriendly) return 0;
-    const bg = this.hostOption("background");
-    return bg === "desk" ? 0.5 : 1;
+    return this.rooms.built?.roam ?? 1;
   }
 
-  updateWorld(dt, pose, background) {
+  updateWorld(dt, pose) {
     const place = this.active?.options;
-    const on = Boolean(place?.world) && this.look.world && !this.look.cameraFriendly && (background === "studio" || background === "accent");
+    const on = Boolean(place?.world) && this.look.world && !this.look.cameraFriendly && !this.rooms.isChroma && this.placeId() !== "dock";
     const key = `${on}|${this.level}`;
     if (key !== this.worldKey) {
       this.worldKey = key;
@@ -757,6 +934,7 @@ export class RobotEngine {
     document.removeEventListener("visibilitychange", this.onVisibility);
     disposeRobot(this.robot);
     this.unbindPointer();
+    this.rooms.dispose();
     this.world.dispose();
     this.stage.dispose();
     this.face.dispose();

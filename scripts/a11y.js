@@ -85,6 +85,27 @@ async function main() {
         await sleep(300);
         await scan(`settings-${tab}`, lang, theme);
       }
+      // The Robot Studio: every tab, and the outfit and room with something chosen (so their colors and options are showing)
+      await page.evaluate(() => document.querySelector('.modal-nav .tab[data-tab="robot"]')?.click());
+      await click("#robot-studio-open");
+      await sleep(500);
+      for (const tab of ["colors", "shape", "face", "outfit", "room", "looks"]) {
+        await click(`#rs-tab-${tab}`);
+        await sleep(250);
+        await scan(`studio-${tab}`, lang, theme);
+      }
+      await click("#rs-tab-outfit");
+      await page.evaluate(() => document.querySelector("#rs-panel-outfit .rs-tile[data-id=beanie]")?.click());
+      await page.evaluate(() => document.querySelector('#rs-panel-outfit [data-slot="torso"]')?.click());
+      await page.evaluate(() => document.querySelector("#rs-panel-outfit .rs-tile[data-id=sweater]")?.click());
+      await sleep(250);
+      await scan("studio-outfit-worn", lang, theme);
+      await click("#rs-tab-room");
+      await page.evaluate(() => document.querySelector("#rs-panel-room .rs-tile[data-id=podcast]")?.click());
+      await sleep(250);
+      await scan("studio-room-podcast", lang, theme);
+      await click("#rs-done");
+      await sleep(200);
       await click("#settings-close");
 
       await click("#voice-open");

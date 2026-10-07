@@ -27,12 +27,10 @@ async function main() {
   console.log(paint(1, `Friends ${pkg.version}: checking this computer\n`));
 
   // Node
-  const need = Number((pkg.engines?.node || ">=20").match(/\d+/)[0]);
-  const have = Number(process.versions.node.split(".")[0]);
-  if (have >= need) ok(`Node.js ${process.versions.node}`);
-  else fail(`Node.js ${process.versions.node} is too old (needs ${need} or newer)`, "Install a current Node.js: https://nodejs.org or `nvm install --lts`");
-
-  // Dependencies
+  const [needMajor, needMinor = 0] = (pkg.engines?.node || ">=20").match(/\d+/g).map(Number);
+  const [haveMajor, haveMinor] = process.versions.node.split(".").map(Number);
+  if (haveMajor > needMajor || (haveMajor === needMajor && haveMinor >= needMinor)) ok(`Node.js ${process.versions.node}`);
+  else fail(`Node.js ${process.versions.node} is too old (needs ${needMajor}.${needMinor} or newer)`, "Install a current Node.js: https://nodejs.org or `nvm install --lts`");
   const missing = Object.keys(pkg.dependencies || {}).filter((d) => !fs.existsSync(path.join(root, "node_modules", d, "package.json")));
   if (!missing.length) ok("Dependencies are installed");
   else fail(`Dependencies are missing (${missing.slice(0, 4).join(", ")}${missing.length > 4 ? "…" : ""})`, "Run: npm ci");

@@ -15,10 +15,11 @@ describe("Robot settings are kept, checked and repaired", () => {
   test("defaults: the robot is set up for voice mode, AI gestures only there", () => {
     const r = settings.get().robot;
     assert.strictEqual(r.chatDock, true);
-    assert.strictEqual(r.shell, "warm");
-    assert.strictEqual(r.mouth, true);
-    assert.strictEqual(r.eyes, "classic");
-    assert.strictEqual(r.background, "studio");
+    assert.strictEqual(r.design.colors.head, "#ede4d6");
+    assert.strictEqual(r.design.face.mouth, "line");
+    assert.strictEqual(r.design.face.eyes, "classic");
+    assert.strictEqual(r.room.place, "studio");
+    assert.deepStrictEqual(r.looks, []);
     assert.strictEqual(r.shot, "medium");
     assert.strictEqual(r.position, "center");
     assert.strictEqual(r.seat, "front");
@@ -35,27 +36,31 @@ describe("Robot settings are kept, checked and repaired", () => {
   test("every robot choice is saved when it's valid", () => {
     const input = {
       robot: {
-        chatDock: false, shell: "graphite", mouth: false, eyes: "wide", background: "green", shot: "close",
+        chatDock: false, shot: "close",
         position: "left", seat: "right", followFace: true, cinematic: true, roam: false, world: false, aiGestures: { voice: false, chat: true },
         smartMoods: true, quality: "high", filming: { delay: 10, cameraFriendly: false, largeCaptions: true, largerFace: true },
       },
     };
     const saved = settings.set(input).robot;
-    assert.deepStrictEqual(saved, input.robot);
+    const { design, room, looks, ...rest } = saved;
+    assert.deepStrictEqual(rest, input.robot);
+    assert.deepStrictEqual(design, settings.DEFAULTS.robot.design);
+    assert.deepStrictEqual(room, settings.DEFAULTS.robot.room);
+    assert.deepStrictEqual(looks, []);
     const onDisk = JSON.parse(fs.readFileSync(path.join(tempDir, "settings.json"), "utf8")).robot;
-    assert.deepStrictEqual(onDisk, input.robot);
+    assert.deepStrictEqual(onDisk, saved);
   });
 
   test("unknown choices fall back to the defaults", () => {
     const r = settings.set({
       robot: {
-        shell: "gold", eyes: "laser", background: "https://evil.example/bg.png", shot: "extreme", position: "top",
+        design: { colors: { head: "gold" }, face: { eyes: "laser" } }, room: { place: "https://evil.example/bg.png" }, shot: "extreme", position: "top",
         seat: "behind", quality: "ultra",
       },
     }).robot;
-    assert.strictEqual(r.shell, "warm");
-    assert.strictEqual(r.eyes, "classic");
-    assert.strictEqual(r.background, "studio");
+    assert.strictEqual(r.design.colors.head, "#ede4d6");
+    assert.strictEqual(r.design.face.eyes, "classic");
+    assert.strictEqual(r.room.place, "studio");
     assert.strictEqual(r.shot, "medium");
     assert.strictEqual(r.position, "center");
     assert.strictEqual(r.seat, "front");
@@ -65,14 +70,14 @@ describe("Robot settings are kept, checked and repaired", () => {
   test("wrong types are dropped: a string isn't a switch, an object isn't a choice", () => {
     const r = settings.set({
       robot: {
-        chatDock: "yes", mouth: 1, followFace: "true", eyes: { evil: true }, aiGestures: "all",
+        chatDock: "yes", design: { face: { mouth: 1, eyes: { evil: true } } }, followFace: "true", aiGestures: "all",
         filming: { delay: "5", cameraFriendly: null, largeCaptions: [] },
       },
     }).robot;
     assert.strictEqual(r.chatDock, true);
-    assert.strictEqual(r.mouth, true);
+    assert.strictEqual(r.design.face.mouth, "line");
     assert.strictEqual(r.followFace, false);
-    assert.strictEqual(r.eyes, "classic");
+    assert.strictEqual(r.design.face.eyes, "classic");
     assert.deepStrictEqual(r.aiGestures, { voice: true, chat: false });
     assert.strictEqual(r.filming.delay, 3);
     assert.strictEqual(r.filming.cameraFriendly, true);

@@ -13,7 +13,7 @@ A personal AI companion for Linux, in its own window or your browser. The AI beh
 
 ## Install
 
-**You need:** a Linux computer (the app and the helper also run on macOS and Windows from source) and [Node.js](https://nodejs.org) 22 or newer. For a private, offline AI also an AI model server such as [Ollama](https://ollama.com/download) (optional; Gemini needs only a free API key).
+**You need:** a Linux computer (the app and the helper also run on macOS and Windows from source) and [Node.js](https://nodejs.org) 22.12 or newer. For a private, offline AI also an AI model server such as [Ollama](https://ollama.com/download) (optional; Gemini needs only a free API key).
 
 ### 1. One command (recommended)
 
@@ -43,7 +43,7 @@ The same app in its own window, with a launcher entry and icon. It runs the help
 ./scripts/install.sh --desktop          # dependencies + the Electron download (~100 MB)
 npm run desktop                         # try it from the project folder (runs with --no-sandbox)
 npm run dist                            # builds dist/friends_<version>_amd64.deb
-sudo apt install ./dist/friends_0.4.0_amd64.deb
+sudo apt install ./dist/friends_0.5.0_amd64.deb
 ```
 
 Or download the `.deb` from the [Releases](../../releases) page. After changing the source, `npm run update` tests it, backs up your data, builds the `.deb` and installs it (it asks for your password).
@@ -306,13 +306,13 @@ Settings → **Builder**. Build websites, apps and SaaS products with your chara
 
 ## The robot
 
-A small, friendly hovering robot is the AI's body: a rounded head with a glossy face screen (two expressive eyes and a mouth), glowing fins, two paddle arms, and a hover ring. It glows in your accent color (Settings → Appearance). While *you* talk, its fins switch to a second color, so viewers can see who's speaking.
+A small, friendly hovering robot is the AI's body: a rounded head with a glossy face screen (two expressive eyes and a mouth), glowing fins, two paddle arms, and a hover ring. It glows in your accent color (Settings → Appearance), or in a color of its own. While *you* talk, its fins switch to a second color, so viewers can see who's speaking. **Everything about how it looks is yours to change, and so is the room around it**: see [The Robot Studio](#the-robot-studio).
 
 - **In voice mode**, pick **🤖 Robot** in the style bar. It boots up while connecting, listens with its fins perked, leans in and turns to you while you talk (with little "mm-hm" nods when you pause), looks up and aside while thinking, and talks with its mouth, eyes, head and fins following the AI's voice. It waves at its first words and again when you press End. It works with all three engines (Live, Studio, Instant). The 🎥 button opens its scene: background, camera shot, its place in the picture, where you sit, the cinematic camera and Follow my face. It also **roams its room**: it drifts closer and turns to you while you talk, backs away while it thinks and wanders about while it speaks (banking into turns). **Tap it** and it reacts (more taps escalate to a victory spin), **hold it** and it gets affectionate, **drag the empty room** to look around. The room has a glossy floor with its reflection, drifting light at different depths, a light shaft and floor rings that swell with its voice (and close in on it while you talk). Buttons fade away after a few quiet seconds; **M** mutes. Roaming and room effects can be switched off in Settings → Robot, and both stay off while filming.
 - **Next to your text chats**, a small robot sits in the bottom right corner, in the free space beside the conversation, so it never covers anything. It hides on narrow windows. Fold it away with its arrow button, bring it back with the little face; that's remembered. It watches you type, thinks while a reply is on its way, "talks" as the text comes in, shows the reply's mood, bounces when you like a reply, nods when you pin one, and talks along with Read aloud. Click it to say hi.
 - **Its moods** come from, strongest first: the AI itself (the `robot_mood` and `robot_gesture` tools, when allowed), then **Smarter moods** (one small Gemini request per turn, off by default), then the words (a local classifier for English, German and Arabic that reads the captions as they stream), then the state it's in. There are 14 moods (neutral, happy, excited, laughing, curious, thinking, focused, surprised, confused, skeptical, sad, affectionate, proud, sleepy) and 13 gestures (nod, head shake, tilt, wave, shrug, bounce, celebrate spin, look around, lean in, point left, point right, double-take, shy). *Point left* and *point right* point at the left or right side of the video picture, for text you add while editing.
 - **Recording** (● in voice mode) records the robot with the captions, in screen size, 16:9 or 9:16 (the robot is reframed for vertical video).
-- Message avatars in the chat are a tiny version of its face screen.
+- Message avatars in the chat are a tiny version of its face screen, in its colors and with its eyes.
 - It respects *reduce motion* (the face stays expressive; body moves and camera drift get small or stop). Without WebGL it's simply unavailable: voice mode uses Sunset instead and says why.
 
 ### Settings → Robot
@@ -320,8 +320,8 @@ A small, friendly hovering robot is the AI's body: a rounded head with a glossy 
 | Setting | What it does |
 |---|---|
 | Robot in text chat | The small robot next to your chats |
-| Shell color, Eyes, Mouth | Warm white, cloud, graphite, peach or mint; classic, round or wide eyes; the mouth on or off |
-| Background | Studio (dark, soft vignette), Accent glow, Desk, **Chroma green** or **Chroma blue** (exactly #00B140 / #0047BB, flat, with no shadow or glow spilling onto it, for keying out in Kdenlive; don't pick an accent color close to the key color) |
+| Looks | **Open Robot Studio…**: colors, shape, face, clothes, the room around it, and your saved looks (next section). A line summarises what it wears now |
+| Where it is | The place the robot is in: Studio, Glow, Cozy desk, Podcast studio, Living room, Space, Sunset hills, Neon city, Clouds, Gradient, Your picture, or **Green screen** / **Blue screen** (exactly #00B140 / #0047BB, flat, with no shadow or glow spilling onto it, for keying out in Kdenlive; don't pick a light color close to the key color). Everything else about the place is in the Studio |
 | Camera shot, Place in the picture | Close-up, medium or wide; the robot on the left third, centered or on the right third |
 | Cinematic camera | A gentle drift, and a small push-in when it stresses a word |
 | Where do you sit? | Left, in front or right of the screen (as you look at it): it turns to you when you talk and looks out of the screen when it talks |
@@ -335,6 +335,31 @@ A small, friendly hovering robot is the AI's body: a rounded head with a glossy 
 The panel has a live preview, and "Try a mood" / "Try a move" to see every expression.
 
 **Tip for laptops with two GPUs (integrated + NVIDIA):** Chrome on Linux usually runs on the built-in Intel graphics. To use the NVIDIA GPU, start it with `__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia google-chrome` and check `chrome://gpu`.
+
+### The Robot Studio
+
+![The Robot Studio: the live robot on the left, what to change on the right](docs/design/robot-studio/studio.jpg)
+
+Settings → Robot → **Open Robot Studio…** (or **Customize…** in voice mode's 🎥 menu). A big live preview on one side (camera: close, medium, wide; view: front, angle, side, back, or a slow turn; try a mood or a move), six tabs on the other. Everything changes the robot at once, everywhere (voice mode, the chat dock, recordings), is saved as you go, and can be undone (Ctrl+Z, Ctrl+Shift+Z). **Each character keeps its own robot and room** while "Each has its own look" is on (Settings → Characters): Atlas can sit in a podcast studio in a headset while Mira lounges in a living room in a beanie.
+
+| Tab | What you can change |
+|---|---|
+| **Colors** | The shell (head, body, arms and hands, each on its own or one color for all; 16 colors and any you pick), the neck and shoulders, the finish (matte, satin, glossy, metallic, pearl), the light (fins, ring, eyes: any color, or Auto = your accent color), the light while you talk, how bright the lights are |
+| **Shape** | Body (bean, egg, capsule, ball, pear), what's on its head (glowing fins, antenna, two antennae, cat, bear or bunny ears, a sprout, little horns, nothing), hands (paddles, balls, mittens, pincers), how it floats (ring, two rings, jets, nothing), and eight sliders: overall size, head size, head shape (boxy to round), body width and height, arm length, hand size, size of the ears or fins |
+| **Face** | Eyes (classic, round, wide, big, dots, tall, pixel, visor), their size and distance, the mouth (smile, small, wide, bold, none), the color of the eyes and mouth, the blush |
+| **Outfit** | Seven places to dress, each with its own colors: **hat** (beanie, cap, top hat, beret, party hat, crown, wizard hat, chef's hat, propeller cap, cowboy hat, Santa hat, big bow, flower, halo), **face** (round, square, heart or star glasses, sunglasses, visor, monocle, eye patch, mustache), **ears** (headphones, headset with a microphone, earmuffs), **neck** (scarf, bow tie, necktie, bandana, frilly collar, medal, bell collar, shirt collar), **clothes** (T-shirt, sweater, hoodie, vest, overalls, apron, jacket; plain, stripes, bands, dots, checks, a fade or stars), **back** (cape, backpack, angel or butterfly wings, jetpack, a fluffy tail), **chest** (glowing core, heart, star, lightning bolt, name badge, buttons). Propellers spin, capes sway, wings flap, flames flicker while it talks |
+| **Room** | The **place** and, for each, its colors, the **lighting** (like the place, studio, daylight, golden hour, evening, night, neon; brightness), the **floor** (glossy mirror, matte, glowing grid, none), **what's in the air** (dust in the light, fireflies, snow, stars, bubbles, petals, sparkles, embers, rain; how much), **the pieces of the set** (switch each on or off), the **words on a neon sign** (podcast studio, neon city), and **your own picture** as the backdrop (PNG, JPEG or WebP up to 12 MB; blur and dim it) |
+| **Looks** | 14 ready-made looks to start from (Podcast host, Pilot, Chef, Wizard, Astronaut, Detective, Cozy, Party, Royal, Angel, Gardener, Neon, Kitty, and the Classic), up to 24 of your own (give it a name, **Save this look**), **Surprise me**, and **Export…** / **Import…** to share a look as a small `.robot-look.json` file (a picture you chose as a backdrop isn't in it) |
+
+The ready-made looks, each in its own room (every one is made in the Studio and can be changed from there):
+
+![Fourteen ready-made looks: the Classic, a podcast host, a pilot, a chef, a wizard, an astronaut, a detective, cozy, party, royal, an angel, a gardener, neon and a kitty](docs/design/robot-studio/looks.jpg)
+
+The places: **Studio** and **Glow** (dark, calm; the glossy floor with its reflection, soft lights, a beam of light, rings when it talks), **Cozy desk**, **Podcast studio** (sound panels, a flickering neon sign with your words, a microphone on a boom, hanging lamps), **Living room** (a window onto the evening, curtains, a bookshelf, a floor lamp, a rug on wooden boards, string lights, pictures), **Space** (a ringed planet, a moon, nebulae, a glowing grid), **Sunset hills** (three layers of hills, trees, flowers, a low sun, clouds), **Neon city** (a night skyline with lit windows, neon signs, a wet street), **Clouds** (a sun, clouds drifting by, a rainbow if you like), **Gradient**, **Your picture**, and the two flat chroma colors. ![Eight of the places: studio, desk, podcast studio, living room, space, sunset hills, neon city and clouds](docs/design/robot-studio/places.jpg)
+
+Everything is drawn from smooth colors and shapes by the page itself (no photos, no downloads), so it works offline; your own picture is the only exception, and it stays on this computer.
+
+Notes: shapes, colors and clothes apply to the built-in robot; with [your own model](#your-own-robot-from-blender) only the face, the light and the room apply (the Studio says so). In filming mode the room stays steady (no flicker, no drifting air). With *reduce motion* the set stops drifting. On a slow computer, **Quality → Auto** steps down (fewer particles, no mirror, simpler shaders).
 
 ### Filming mode
 

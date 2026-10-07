@@ -103,6 +103,46 @@ function removeModel() {
   return { custom: false };
 }
 
+// ---------- Your own picture behind the robot ----------
+// A PNG, JPEG or WebP (Settings → Robot Studio → Room → Your picture): kept as robot/background.<type>
+const MAX_BACKGROUND = 12 * 1024 * 1024;
+const BACKGROUND_TYPES = {
+  png: { mime: "image/png", magic: (b) => b.length > 24 && b.readUInt32BE(0) === 0x89504e47 && b.readUInt32BE(4) === 0x0d0a1a0a },
+  jpg: { mime: "image/jpeg", magic: (b) => b.length > 24 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
+  webp: { mime: "image/webp", magic: (b) => b.length > 24 && b.toString("latin1", 0, 4) === "RIFF" && b.toString("latin1", 8, 12) === "WEBP" },
+};
+const backgroundInfoFile = path.join(dir, "background.json");
+const backgroundPath = (ext) => path.join(dir, `background.${ext}`);
+
+function backgroundInfo() {
+  try {
+    const meta = JSON.parse(fs.readFileSync(backgroundInfoFile, "utf8"));
+    if (BACKGROUND_TYPES[meta.ext] && fs.existsSync(backgroundPath(meta.ext))) return { custom: true, ...meta };
+  } catch {}
+  return { custom: false };
+}
+
+function saveBackground(buffer, name = "picture") {
+  if (!Buffer.isBuffer(buffer) || buffer.length === 0) throw new Error("That isn't a picture.");
+  if (buffer.length > MAX_BACKGROUND) throw new Error("The picture can be up to 12 MB.");
+  const ext = Object.keys(BACKGROUND_TYPES).find((e) => BACKGROUND_TYPES[e].magic(buffer));
+  if (!ext) throw new Error("Use a PNG, JPEG or WebP picture.");
+  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  for (const other of Object.keys(BACKGROUND_TYPES)) if (other !== ext) fs.rmSync(backgroundPath(other), { force: true });
+  const tmp = backgroundPath(ext) + ".tmp";
+  fs.writeFileSync(tmp, buffer, { mode: 0o600 });
+  fs.renameSync(tmp, backgroundPath(ext));
+  const meta = { ext, mime: BACKGROUND_TYPES[ext].mime, name: path.basename(String(name || "picture")).slice(0, 120), size: buffer.length, uploadedAt: Date.now() };
+  fs.writeFileSync(backgroundInfoFile, JSON.stringify(meta, null, 2), { mode: 0o600 });
+  return { custom: true, ...meta };
+}
+
+function removeBackground() {
+  for (const ext of Object.keys(BACKGROUND_TYPES)) fs.rmSync(backgroundPath(ext), { force: true });
+  fs.rmSync(backgroundInfoFile, { force: true });
+  return { custom: false };
+}
+
 // ---------- Smarter moods ----------
 // One small request per turn: which mood fits this reply? Returns a mood or null.
 async function readMood({ brain, text, heard = "" }) {
@@ -125,4 +165,4 @@ async function readMood({ brain, text, heard = "" }) {
   return word.find((w) => MOODS.includes(w)) || null;
 }
 
-module.exports = { MOODS, GESTURES, NODES, MAX_MODEL, modelFile, validateGlb, info, saveModel, removeModel, readMood };
+module.exports = { MOODS, GESTURES, NODES, MAX_MODEL, modelFile, validateGlb, info, saveModel, removeModel, MAX_BACKGROUND, backgroundInfo, backgroundPath, saveBackground, removeBackground, readMood };

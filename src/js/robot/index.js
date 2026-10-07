@@ -6,9 +6,8 @@
 // and the rest of the app carries on.
 import { Animator } from "./animator.mjs";
 import { Director } from "./director.mjs";
-import { SHELLS } from "./presets.mjs";
 import { FaceTracker } from "./facetrack.js";
-import { getSettings, onSettings } from "../store.js";
+import { getSettings, onSettings, updateSettings } from "../store.js";
 
 export const animator = new Animator();
 
@@ -62,6 +61,7 @@ export function loadEngine() {
       e.setVisible(name, h.visible);
     }
     if (modelInfo.custom) useModel(modelInfo).catch(() => {});
+    if (backgroundInfo.custom) e.useBackground(backgroundInfo).catch(() => {});
     notify("ready", {});
     return e;
   })().catch((err) => {
@@ -83,19 +83,22 @@ function themeBackground() {
 function applySettings(s) {
   if (!s) return;
   const r = s.robot;
-  animator.setOptions({ mouth: r.mouth });
+  const d = r.design;
+  animator.setOptions({ mouth: d.face.mouth !== "none" });
   animator.setSeat(r.seat);
-  // The 2D faces (chat avatars, the eye-style buttons) match the robot
+  // The 2D faces (chat avatars) match the robot: its shell, its light and its eyes
   const root = document.documentElement;
-  root.style.setProperty("--robot-shell", SHELLS[r.shell] || SHELLS.warm);
-  root.dataset.robotEyes = r.eyes;
-  root.dataset.robotMouth = r.mouth ? "on" : "off";
+  const light = d.colors.light || s.theme.accent;
+  root.style.setProperty("--robot-shell", d.colors.head);
+  root.style.setProperty("--robot-light", light);
+  root.style.setProperty("--robot-face", d.colors.face || light);
+  root.dataset.robotEyes = d.face.eyes;
+  root.dataset.robotMouth = d.face.mouth === "none" ? "off" : "on";
   if (!engine) return;
   engine.setLook({
-    shell: SHELLS[r.shell] || SHELLS.warm,
-    eyes: r.eyes,
+    design: d,
     accent: s.theme.accent,
-    background: r.background,
+    room: r.room,
     shot: r.shot,
     position: r.position,
     cinematic: r.cinematic,
@@ -166,6 +169,12 @@ async function useModel(info) {
   }
 }
 
+// Your own picture behind the robot, if you uploaded one
+fetch("/api/robot/background/info")
+  .then((res) => (res.ok ? res.json() : { custom: false }))
+  .then((info) => useBackground(info))
+  .catch(() => {});
+
 // Your own model, if you uploaded one
 fetch("/api/robot/model/info")
   .then((res) => (res.ok ? res.json() : { custom: false }))
@@ -174,6 +183,14 @@ fetch("/api/robot/model/info")
     if (info.custom && engine) useModel(info).catch(() => {});
   })
   .catch(() => {});
+
+// Your own picture behind the robot (room.place "photo"): information from /api/robot/background/info
+let backgroundInfo = { custom: false };
+async function useBackground(info) {
+  backgroundInfo = info || { custom: false };
+  if (engine) await engine.useBackground(backgroundInfo).catch(() => {});
+  notify("background", { info: backgroundInfo });
+}
 
 export const robot = {
   director,
@@ -223,7 +240,11 @@ export const robot = {
   get modelInfo() {
     return modelInfo;
   },
+  useBackground,
+  get backgroundInfo() {
+    return backgroundInfo;
+  },
 };
 
 // For checking the robot by hand or in a test browser: open the app with ?robot-debug
-if (new URLSearchParams(location.search).has("robot-debug")) window.friendsRobot = robot;
+if (new URLSearchParams(location.search).has("robot-debug")) Object.assign(window, { friendsRobot: robot, friendsSettings: { getSettings, updateSettings } });

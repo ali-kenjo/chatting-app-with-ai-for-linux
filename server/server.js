@@ -555,6 +555,33 @@ function sendModel(req, res) {
   });
 }
 
+// Your own picture behind the robot: a PNG, JPEG or WebP, checked by what it starts with
+async function uploadBackground(req) {
+  let body;
+  try {
+    body = await readBody(req, robot.MAX_BACKGROUND);
+  } catch {
+    throw new Error("The picture can be up to 12 MB.");
+  }
+  let name = "picture";
+  try {
+    name = decodeURIComponent(req.headers["x-file-name"] || name);
+  } catch {}
+  return robot.saveBackground(body, name);
+}
+
+function sendBackground(req, res) {
+  const info = robot.backgroundInfo();
+  if (!info.custom) return sendJson(res, 404, { error: "No picture uploaded." });
+  const file = robot.backgroundPath(info.ext);
+  fs.stat(file, (err, stat) => {
+    if (err) return sendJson(res, 404, { error: "No picture uploaded." });
+    res.writeHead(200, securityHeaders({ "Content-Type": info.mime, "Content-Length": stat.size }));
+    if (req.method === "HEAD") return res.end();
+    fs.createReadStream(file).pipe(res);
+  });
+}
+
 // "Smarter moods": one small Gemini request per turn, only when it's switched on
 async function smartMood({ text, heard }) {
   if (!settings.get().robot.smartMoods) return { mood: null };
@@ -653,7 +680,7 @@ const routes = [
   }],
 
   // Characters (Settings → Characters): the choices; the characters themselves are in the settings
-  ["GET", /^\/api\/characters\/meta$/, () => ({ voices: characters.GEMINI_VOICES, fields: characters.FIELDS, builtin: characters.BUILTIN, templates: characters.TEMPLATES, looks: characters.LOOKS, formats: Object.keys(prompt.FORMATS), max: characters.MAX_CHARACTERS })],
+  ["GET", /^\/api\/characters\/meta$/, () => ({ voices: characters.GEMINI_VOICES, fields: characters.FIELDS, builtin: characters.BUILTIN, templates: characters.TEMPLATES, formats: Object.keys(prompt.FORMATS), max: characters.MAX_CHARACTERS })],
   ["GET", /^\/api\/activities$/, () => ({ activities: ACTIVITIES })],
   // What the AI remembers of your conversations (Settings → Memory)
   ["GET", /^\/api\/episodes$/, () => ({ episodes: episodes.all(), followUps: episodes.followUps() })],
@@ -772,6 +799,9 @@ const routes = [
   ["GET", /^\/api\/robot\/model\/info$/, () => robot.info()],
   ["PUT", /^\/api\/robot\/model$/, (req) => uploadModel(req)],
   ["DELETE", /^\/api\/robot\/model$/, () => robot.removeModel()],
+  ["GET", /^\/api\/robot\/background\/info$/, () => robot.backgroundInfo()],
+  ["PUT", /^\/api\/robot\/background$/, (req) => uploadBackground(req)],
+  ["DELETE", /^\/api\/robot\/background$/, () => robot.removeBackground()],
   ["POST", /^\/api\/robot\/mood$/, async (req) => smartMood(await readJson(req))],
 ];
 
@@ -826,6 +856,7 @@ async function handle(req, res) {
   const file = pathname.match(/^\/api\/attachments\/([\w-]+)$/);
   if (file && req.method === "GET") return download(req, res, file[1]);
   if (pathname === "/api/robot/model" && (req.method === "GET" || req.method === "HEAD")) return sendModel(req, res);
+  if (pathname === "/api/robot/background" && (req.method === "GET" || req.method === "HEAD")) return sendBackground(req, res);
   if (pathname === "/api/backups/export" && req.method === "GET") {
     const files = url.searchParams.get("files") === "1";
     return sendBackup(res, backup.exportBuffer({ files }), `friends-backup-${new Date().toISOString().slice(0, 10)}.json.gz`);

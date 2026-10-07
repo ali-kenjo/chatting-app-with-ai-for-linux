@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.5.0: The Robot Studio
+
+Everything about the robot's looks is now yours to change, and so is the room around it.
+
+### Added
+- **The Robot Studio** (Settings → Robot → Open Robot Studio…, or Customize… in voice mode's 🎥 menu): a big live preview and six tabs, **Colors**, **Shape**, **Face**, **Outfit**, **Room** and **Looks**. Changes show at once in voice mode, the chat dock and recordings, are saved as you go, and can be undone (Ctrl+Z / Ctrl+Shift+Z).
+- **Colors and finish**: head, body, arms, neck and shoulders in 16 colors or any you pick; matte, satin, glossy, metallic or pearl; the light (fins, ring, eyes) in any color, a second one for while you talk, how bright it all is.
+- **Shape**: five bodies, nine things for the top of its head (fins, antenna, two antennae, cat, bear or bunny ears, a sprout, horns), four kinds of hands, four ways of floating, eight proportion sliders (size, head, head shape, body width and height, arms, hands, ears).
+- **Face**: eight eye styles (new: big, dots, tall, pixel, visor), eye size and spacing, five mouths, the color of the eyes and mouth, the blush color.
+- **An outfit in seven places, 53 pieces**: hats, glasses and other things for the face, headphones, things for the neck, clothes (with seven patterns in two colors), things for the back (a cape that sways, wings that flap, a jetpack with flames) and the chest (a glowing core, a heart, a name badge…). Propellers spin; a cap or a hat never hides the ears or fins.
+- **Surroundings**: thirteen places, in colors you choose: Studio, Glow, Cozy desk, **Podcast studio** (a neon sign with your own words, a microphone, sound panels), **Living room**, **Space**, **Sunset hills**, **Neon city**, **Clouds**, Gradient, **your own picture** (PNG, JPEG or WebP, blurred and dimmed as you like) and the two chroma colors. Each has pieces of the set you can switch on or off, a lighting mood (daylight, golden hour, evening, night, neon), a floor (glossy mirror, matte, glowing grid, none) and what drifts through the air (dust, fireflies, snow, stars, bubbles, petals, sparkles, embers, rain).
+- **Looks**: 14 ready-made looks, up to 24 of your own, **Surprise me**, and sharing a look as a small file (Export / Import). **Each character keeps its own robot and room** (Atlas in a headset in the podcast studio, Mira in a beanie in the living room).
+- The camera frames a taller, wider or smaller robot (or one in a tall hat) in proportion; the Studio can look at the robot from the front, the side, the back, or turn it slowly all the way around.
+- Chat avatars follow the robot: its shell color, its eyes and the color of its face.
+- `test/robot-look.test.js` (the schema, migrations and saved looks), `test/robot-background.test.js` (the picture), `test/e2e/studio.test.js` (the Studio in a real browser).
+
+### Changed
+- Settings → Robot: the shell color, eye, mouth and background choices moved into the Studio; Settings keeps a summary and a place menu. Settings from before are upgraded on their own (a shell color becomes the head, body and arms color; "Accent glow" becomes the Glow place).
+- The room's effects (reflection, drifting air, rings, bokeh, light beam) are part of the place now, and work in every place, not only in the Studio and Glow ones.
+- Needs Node 22.12 or newer (the helper and the page share the robot's design code, and `require()` of an ES module is built in from 22.12).
+
+### Fixed
+- Test browsers on Chrome 154 and newer need `--use-angle=swiftshader --enable-unsafe-swiftshader` for software WebGL; the old `--use-gl=swiftshader` gave no WebGL at all. The scripts that draw the robot (`scripts/lib/harness.js` with `webgl: true`) use the new flags.
+
 ## 0.4.0: Flagship Voice Mode, Telegram Companion, and Local Life Management
 
 Major evolution transforming Friends into an autonomous, privacy-first personal companion and content partner ready for public release.
@@ -20,9 +44,9 @@ Major evolution transforming Friends into an autonomous, privacy-first personal 
 - **Clean Architecture**: Fully retired legacy web builder prototypes, dev preview servers, and arbitrary shell execution, while preserving robust sandboxed file editing tools (`read_file`, `create_file`, `edit_file_part`, `read_file_lines`, `search_files`).
 - **Complete Internationalization**: 100% translation coverage across English, German (`de`), and Arabic (`ar`) with complete RTL mirroring and 0 missing strings.
 
-## Unreleased: the design overhaul
+## 0.4.0 too: the design overhaul
 
-A product-design pass over the whole interface, in the branch `design-overhaul`. The audit, the design system and screenshots before and after (English, German, Arabic) are in `docs/design/`. The version number is unchanged.
+A product-design pass over the whole interface (merged before 0.4.0). The audit, the design system and screenshots before and after (English, German, Arabic) are in `docs/design/`.
 
 ### Added
 - **German and Arabic** (Settings → Appearance → Language; "Automatic" follows the browser). 1,275 texts in each language, with plurals (Arabic has six forms), numbers and dates by `Intl`. English stays the source text, and any text without a translation shows in English.

@@ -55,6 +55,8 @@ const FIELDS = {
   avoid: { label: "Never", max: 1000 },
 };
 
+const { design: D, room: R } = require("./robot-look");
+
 const BUILTIN = {
   atlas: {
     id: "atlas",
@@ -62,7 +64,7 @@ const BUILTIN = {
     name: "Atlas",
     gender: "male",
     voice: "Charon",
-    look: { shell: "graphite", eyes: "classic", accent: "#6f9cf5" },
+    look: { design: D.designFromLegacy({ shell: "graphite", eyes: "classic" }), room: R.defaultRoom(), accent: "#6f9cf5" },
     tagline: "Calm, sharp and quietly funny. Always a step ahead.",
     identity:
       "Atlas is {user}'s own AI: composed, quick and very capable, with a refined, unhurried way of talking. He keeps track of the details so {user} can think about the big picture, and he's usually one step ahead of what's needed. He's loyal to {user}, not a servant: he gives straight advice, says so when a plan has a hole in it, and is quietly proud when things go well.",
@@ -88,7 +90,7 @@ const BUILTIN = {
     name: "Mira",
     gender: "female",
     voice: "Sulafat",
-    look: { shell: "peach", eyes: "round", accent: "#f472b6" },
+    look: { design: D.designFromLegacy({ shell: "peach", eyes: "round" }), room: R.defaultRoom(), accent: "#f472b6" },
     tagline: "Bright, playful and fearless. Your hype-woman and your most honest friend.",
     identity:
       "Mira is {user}'s own AI and their best friend in the app: quick-witted, warm and full of energy. She gets genuinely excited about ideas, loves a good story, remembers the little things, and tells the truth even when it's awkward. She's the friend you can talk to for hours at two in the morning, and the first to say \"okay, but is that actually a good idea?\"",
@@ -119,7 +121,6 @@ const TEMPLATES = {
   calm: { name: "Sol", gender: "female", voice: "Vindemiatrix", tagline: "Relaxed, gentle and reassuring.", personality: "Relaxed, gentle and reassuring. Never rushed." },
 };
 
-const LOOKS = { shells: ["warm", "cloud", "graphite", "peach", "mint"], eyes: ["classic", "round", "wide"] };
 const MAX_CHARACTERS = 12;
 
 const str = (v, max) => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -135,11 +136,13 @@ function clean(input, fallback = {}) {
   };
   if (BUILTIN[c.builtin]) out.builtin = c.builtin;
   for (const [key, { max }] of Object.entries(FIELDS)) out[key] = typeof c[key] === "string" ? str(c[key], max) : fallback[key] || "";
+  // A look is its robot's design and room and the app's accent color (older ones had a shell color name and eye style)
   const look = c.look && typeof c.look === "object" ? c.look : fallback.look || {};
+  const base = fallback.look || {};
   out.look = {
-    shell: LOOKS.shells.includes(look.shell) ? look.shell : fallback.look?.shell || "warm",
-    eyes: LOOKS.eyes.includes(look.eyes) ? look.eyes : fallback.look?.eyes || "classic",
-    accent: /^#[0-9a-f]{6}$/i.test(look.accent) ? look.accent : fallback.look?.accent || "#6f9cf5",
+    design: D.sanitizeDesign(look.design || D.designFromLegacy(look), base.design),
+    room: R.sanitizeRoom(look.room || base.room),
+    accent: /^#[0-9a-f]{6}$/i.test(look.accent) ? look.accent : base.accent || "#6f9cf5",
   };
   return out;
 }
@@ -221,4 +224,4 @@ function promptSection(character, user) {
   return lines;
 }
 
-module.exports = { others, GEMINI_VOICES, VOICE_NAMES, FIELDS, BUILTIN, TEMPLATES, LOOKS, MAX_CHARACTERS, clean, sanitize, migrate, active, voiceOf, promptSection, fill };
+module.exports = { others, GEMINI_VOICES, VOICE_NAMES, FIELDS, BUILTIN, TEMPLATES, MAX_CHARACTERS, clean, sanitize, migrate, active, voiceOf, promptSection, fill };
