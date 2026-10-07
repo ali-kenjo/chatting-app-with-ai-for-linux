@@ -43,7 +43,7 @@ The same app in its own window, with a launcher entry and icon. It runs the help
 ./scripts/install.sh --desktop          # dependencies + the Electron download (~100 MB)
 npm run desktop                         # try it from the project folder (runs with --no-sandbox)
 npm run dist                            # builds dist/friends_<version>_amd64.deb
-sudo apt install ./dist/friends_0.4.0_amd64.deb
+sudo apt install ./dist/friends_0.5.0_amd64.deb
 ```
 
 Or download the `.deb` from the [Releases](../../releases) page. After changing the source, `npm run update` tests it, backs up your data, builds the `.deb` and installs it (it asks for your password).
@@ -338,6 +338,8 @@ The panel has a live preview, and "Try a mood" / "Try a move" to see every expre
 
 ### The Robot Studio
 
+![The Robot Studio: the live robot on the left, what to change on the right](docs/design/robot-studio/studio.jpg)
+
 Settings → Robot → **Open Robot Studio…** (or **Customize…** in voice mode's 🎥 menu). A big live preview on one side (camera: close, medium, wide; view: front, angle, side, back, or a slow turn; try a mood or a move), six tabs on the other. Everything changes the robot at once, everywhere (voice mode, the chat dock, recordings), is saved as you go, and can be undone (Ctrl+Z, Ctrl+Shift+Z). **Each character keeps its own robot and room** while "Each has its own look" is on (Settings → Characters): Atlas can sit in a podcast studio in a headset while Mira lounges in a living room in a beanie.
 
 | Tab | What you can change |
@@ -349,7 +351,13 @@ Settings → Robot → **Open Robot Studio…** (or **Customize…** in voice mo
 | **Room** | The **place** and, for each, its colors, the **lighting** (like the place, studio, daylight, golden hour, evening, night, neon; brightness), the **floor** (glossy mirror, matte, glowing grid, none), **what's in the air** (dust in the light, fireflies, snow, stars, bubbles, petals, sparkles, embers, rain; how much), **the pieces of the set** (switch each on or off), the **words on a neon sign** (podcast studio, neon city), and **your own picture** as the backdrop (PNG, JPEG or WebP up to 12 MB; blur and dim it) |
 | **Looks** | 14 ready-made looks to start from (Podcast host, Pilot, Chef, Wizard, Astronaut, Detective, Cozy, Party, Royal, Angel, Gardener, Neon, Kitty, and the Classic), up to 24 of your own (give it a name, **Save this look**), **Surprise me**, and **Export…** / **Import…** to share a look as a small `.robot-look.json` file (a picture you chose as a backdrop isn't in it) |
 
-The places: **Studio** and **Glow** (dark, calm; the glossy floor with its reflection, soft lights, a beam of light, rings when it talks), **Cozy desk**, **Podcast studio** (sound panels, a flickering neon sign with your words, a microphone on a boom, hanging lamps), **Living room** (a window onto the evening, curtains, a bookshelf, a floor lamp, a rug on wooden boards, string lights, pictures), **Space** (a ringed planet, a moon, nebulae, a glowing grid), **Sunset hills** (three layers of hills, trees, flowers, a low sun, clouds), **Neon city** (a night skyline with lit windows, neon signs, a wet street), **Clouds** (a sun, clouds drifting by, a rainbow if you like), **Gradient**, **Your picture**, and the two flat chroma colors. Everything is drawn from smooth colors and shapes by the page itself (no photos, no downloads), so it works offline; your own picture is the only exception, and it stays on this computer.
+The ready-made looks, each in its own room (every one is made in the Studio and can be changed from there):
+
+![Fourteen ready-made looks: the Classic, a podcast host, a pilot, a chef, a wizard, an astronaut, a detective, cozy, party, royal, an angel, a gardener, neon and a kitty](docs/design/robot-studio/looks.jpg)
+
+The places: **Studio** and **Glow** (dark, calm; the glossy floor with its reflection, soft lights, a beam of light, rings when it talks), **Cozy desk**, **Podcast studio** (sound panels, a flickering neon sign with your words, a microphone on a boom, hanging lamps), **Living room** (a window onto the evening, curtains, a bookshelf, a floor lamp, a rug on wooden boards, string lights, pictures), **Space** (a ringed planet, a moon, nebulae, a glowing grid), **Sunset hills** (three layers of hills, trees, flowers, a low sun, clouds), **Neon city** (a night skyline with lit windows, neon signs, a wet street), **Clouds** (a sun, clouds drifting by, a rainbow if you like), **Gradient**, **Your picture**, and the two flat chroma colors. ![Eight of the places: studio, desk, podcast studio, living room, space, sunset hills, neon city and clouds](docs/design/robot-studio/places.jpg)
+
+Everything is drawn from smooth colors and shapes by the page itself (no photos, no downloads), so it works offline; your own picture is the only exception, and it stays on this computer.
 
 Notes: shapes, colors and clothes apply to the built-in robot; with [your own model](#your-own-robot-from-blender) only the face, the light and the room apply (the Studio says so). In filming mode the room stays steady (no flicker, no drifting air). With *reduce motion* the set stops drifting. On a slow computer, **Quality → Auto** steps down (fewer particles, no mirror, simpler shaders).
 
