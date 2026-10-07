@@ -321,7 +321,7 @@ A small, friendly hovering robot is the AI's body: a rounded head with a glossy 
 |---|---|
 | Robot in text chat | The small robot next to your chats |
 | Looks | **Open Robot Studio…**: colors, shape, face, clothes, the room around it, and your saved looks (next section). A line summarises what it wears now |
-| Place | Where the robot is: Studio, Glow, Cozy desk, Podcast studio, Living room, Space, Sunset hills, Neon city, Clouds, Gradient, Your picture, or **Green screen** / **Blue screen** (exactly #00B140 / #0047BB, flat, with no shadow or glow spilling onto it, for keying out in Kdenlive; don't pick a light color close to the key color). Everything else about the place is in the Studio |
+| Where it is | The place the robot is in: Studio, Glow, Cozy desk, Podcast studio, Living room, Space, Sunset hills, Neon city, Clouds, Gradient, Your picture, or **Green screen** / **Blue screen** (exactly #00B140 / #0047BB, flat, with no shadow or glow spilling onto it, for keying out in Kdenlive; don't pick a light color close to the key color). Everything else about the place is in the Studio |
 | Camera shot, Place in the picture | Close-up, medium or wide; the robot on the left third, centered or on the right third |
 | Cinematic camera | A gentle drift, and a small push-in when it stresses a word |
 | Where do you sit? | Left, in front or right of the screen (as you look at it): it turns to you when you talk and looks out of the screen when it talks |

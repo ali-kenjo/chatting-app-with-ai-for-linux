@@ -2,7 +2,8 @@
 // full of books, a floor lamp, a rug on wooden boards, string lights and pictures. The lamp and the
 // string lights glow (and bloom).
 import * as THREE from "three";
-import { canvasTexture, matte, glossy, shade, css, rng, glowSprite, addPlant, mix } from "./kit.js";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { canvasTexture, matte, glossy, shade, css, rng, glowSprite, addPlant, mix, spotTexture } from "./kit.js";
 
 // What the window shows, by the light of the room: [top of the sky, horizon, ground glow, stars?]
 const SKIES = {
@@ -237,6 +238,17 @@ export function lounge({ colors, glow, props, mood, keep, group: room }) {
     add(new THREE.BoxGeometry(W, H, 0.02), lamb(shade(colors.floor, { l: -0.14 })), 0, H / 2, -D / 2 + 0.01, shelf);
     const levels = [0.03, 0.55, 1.05, 1.55, H - 0.02];
     for (const y of levels) add(new THREE.BoxGeometry(W + 0.04, 0.04, D), wood, 0, y, 0, shelf);
+    // All the books and vases are one piece of geometry, each with its own color (one draw call, not sixty)
+    const pieces = [];
+    const piece = (geometry, x, y, z, hex, tilt = 0) => {
+      geometry.rotateZ(tilt);
+      geometry.translate(x, y, z);
+      const c = new THREE.Color(hex);
+      const colors = new Float32Array(geometry.attributes.position.count * 3);
+      for (let k = 0; k < colors.length; k += 3) colors.set([c.r, c.g, c.b], k);
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      pieces.push(geometry);
+    };
     for (let i = 0; i < levels.length - 1; i++) {
       let x = -W / 2 + 0.06;
       const base = levels[i] + 0.02;
@@ -246,18 +258,21 @@ export function lounge({ colors, glow, props, mood, keep, group: room }) {
         if (t < 0.12 && i > 0) {
           // an object instead: a vase
           x += 0.14;
-          add(new THREE.CylinderGeometry(0.05, 0.065, 0.2, 16), lamb(new THREE.Color().setHSL(rand(), 0.35, 0.6)), x, base + 0.1, 0, shelf);
+          piece(new THREE.CylinderGeometry(0.05, 0.065, 0.2, 16), x, base + 0.1, 0, new THREE.Color().setHSL(rand(), 0.35, 0.6));
           x += 0.14;
           continue;
         }
         const bw = 0.035 + rand() * 0.04;
         const bh = Math.min(room2, 0.26 + rand() * 0.2);
         const tilt = rand() < 0.06 ? 0.2 : 0;
-        const book = add(new THREE.BoxGeometry(bw, bh, D * 0.78), lamb(new THREE.Color().setHSL(rand(), 0.4 + rand() * 0.25, 0.32 + rand() * 0.25)), x + bw / 2, base + bh / 2, 0.01, shelf);
-        book.rotation.z = tilt;
+        piece(new THREE.BoxGeometry(bw, bh, D * 0.78), x + bw / 2, base + bh / 2, 0.01, new THREE.Color().setHSL(rand(), 0.4 + rand() * 0.25, 0.32 + rand() * 0.25), tilt);
         x += bw + 0.004;
       }
     }
+    const books = new THREE.Mesh(keep(mergeGeometries(pieces)), keep(new THREE.MeshLambertMaterial({ vertexColors: true })));
+    books.receiveShadow = true;
+    shelf.add(books);
+    for (const g of pieces) g.dispose();
   }
 
   // ----- A floor lamp -----
@@ -306,17 +321,25 @@ export function lounge({ colors, glow, props, mood, keep, group: room }) {
     const curve = new THREE.CatmullRomCurve3(points);
     const tube = new THREE.Mesh(keep(new THREE.TubeGeometry(curve, 60, 0.005, 5)), wire);
     group.add(tube);
+    // The bulbs are one instanced mesh, their glow one cloud of points (two draw calls, not fifty)
     const bulbGeo = keep(new THREE.SphereGeometry(0.035, 14, 10));
-    for (let i = 1; i < 26; i += 1) {
+    const count = 25;
+    const bulbMesh = new THREE.InstancedMesh(bulbGeo, bulbMaterial, count);
+    const glowPositions = new Float32Array(count * 3);
+    const m4 = new THREE.Matrix4();
+    for (let i = 1; i <= count; i += 1) {
       const p = curve.getPoint(i / 26);
-      const bulb = new THREE.Mesh(bulbGeo, bulbMaterial);
-      bulb.position.set(p.x, p.y - 0.05, p.z + 0.02);
-      group.add(bulb);
-      const spot = glowSprite(keep, `#${glow.getHexString()}`, 0.32, 0.5);
-      spot.position.copy(bulb.position);
-      group.add(spot);
-      bulbs.push(spot);
+      m4.makeTranslation(p.x, p.y - 0.05, p.z + 0.02);
+      bulbMesh.setMatrixAt(i - 1, m4);
+      glowPositions.set([p.x, p.y - 0.05, p.z + 0.04], (i - 1) * 3);
     }
+    group.add(bulbMesh);
+    const glowGeo = keep(new THREE.BufferGeometry());
+    glowGeo.setAttribute("position", new THREE.BufferAttribute(glowPositions, 3));
+    const glowPoints = new THREE.Points(glowGeo, keep(new THREE.PointsMaterial({ map: keep(spotTexture([[0, "rgba(255,255,255,1)"], [0.35, "rgba(255,255,255,0.35)"], [1, "rgba(255,255,255,0)"]], 64)), color: glow, size: 0.34, sizeAttenuation: true, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false })));
+    glowPoints.frustumCulled = false;
+    group.add(glowPoints);
+    bulbs.push(glowPoints);
   }
 
   if (props.plant) addPlant(group, keep, 0.75 + 1.4, -1.9, shade(colors.detail, { l: 0.05 }), { scale: 2.0 });
@@ -328,7 +351,7 @@ export function lounge({ colors, glow, props, mood, keep, group: room }) {
     backdrop: { mode: "vignette", bg: colors.wall, edge: colors.wall.clone().multiplyScalar(0.3), glow: 0, glowColor: glow, blobs: [] },
     update(dt, time, pose, fx) {
       const calm = fx.friendly || fx.reduced;
-      bulbs.forEach((b, i) => (b.material.opacity = calm ? 0.42 : 0.42 + 0.1 * Math.sin(time * 1.6 + i * 0.9)));
+      bulbs.forEach((b) => (b.material.opacity = calm ? 0.5 : 0.5 + 0.1 * Math.sin(time * 1.6)));
     },
   };
 }

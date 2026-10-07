@@ -311,6 +311,8 @@ export function openStudio(tab = current) {
   setShot("medium");
   setView("front");
   showTab(tab);
+  // Focus goes to the tab that's showing (the dialog's own rule focuses the first one)
+  queueMicrotask(() => tabButtons.get(current)?.focus({ preventScroll: true }));
 }
 
 export function closeStudio() {

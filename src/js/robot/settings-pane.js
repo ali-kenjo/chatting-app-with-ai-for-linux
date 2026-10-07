@@ -124,7 +124,7 @@ onSettings((s) => {
   void hue;
   bgHint.textContent = clash
     ? t("Its light color is close to this key color, so keying it out would remove the robot's glow too. Pick another light color or the other chroma color.")
-    : t("Where the robot is. More in the Robot Studio: colors, lights, props and your own picture.");
+    : t("The room it is in. More in the Robot Studio: colors, lights, props and your own picture.");
   bgHint.classList.toggle("warn", clash);
 });
 

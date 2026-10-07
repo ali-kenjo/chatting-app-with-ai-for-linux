@@ -95,26 +95,28 @@ export function garden({ colors, glow, props, keep, group: room }) {
     for (const [x, z, s] of [[-2.3, -3.2, 1.7], [2.7, -3.8, 2.0], [-4.4, -5.6, 2.3], [4.9, -5.2, 2.2], [-1.0, -7.4, 2.4], [1.9, -8.6, 2.6]]) tree(x, z, s);
   }
 
-  // Flowers in the grass
+  // Flowers in the grass: all the stems are one instanced mesh, all the heads another
   if (props.flowers) {
-    const stem = keep(matte("#3f7a3a"));
-    const headGeo = keep(new THREE.SphereGeometry(0.035, 10, 8));
-    const stemGeo = keep(new THREE.CylinderGeometry(0.004, 0.005, 0.2, 5));
+    const spots = [];
     for (let i = 0; i < 46; i++) {
       const a = rand() * Math.PI * 2;
       const r = 0.95 + rand() * 2.6;
       const x = Math.cos(a) * r * 1.5;
       const z = Math.sin(a) * r * 0.9 - 0.3;
       if (z > 0.9 && Math.abs(x) < 1.3) continue;
-      const h = 0.14 + rand() * 0.14;
-      const stemMesh = new THREE.Mesh(stemGeo, stem);
-      stemMesh.scale.y = h / 0.2;
-      stemMesh.position.set(x, h / 2, z);
-      const col = rand() < 0.65 ? colors.detail : shade(colors.detail, { h: 0.5 * (rand() - 0.2), l: 0.1 });
-      const head = new THREE.Mesh(headGeo, keep(matte(col)));
-      head.position.set(x, h + 0.02, z);
-      group.add(stemMesh, head);
+      spots.push({ x, z, h: 0.14 + rand() * 0.14, color: rand() < 0.65 ? colors.detail : shade(colors.detail, { h: 0.5 * (rand() - 0.2), l: 0.1 }) });
     }
+    const stems = new THREE.InstancedMesh(keep(new THREE.CylinderGeometry(0.004, 0.005, 0.2, 5)), keep(matte("#3f7a3a")), spots.length);
+    const heads = new THREE.InstancedMesh(keep(new THREE.SphereGeometry(0.035, 10, 8)), keep(matte("#ffffff")), spots.length);
+    const m4 = new THREE.Matrix4();
+    spots.forEach((f, i) => {
+      m4.compose(new THREE.Vector3(f.x, f.h / 2, f.z), new THREE.Quaternion(), new THREE.Vector3(1, f.h / 0.2, 1));
+      stems.setMatrixAt(i, m4);
+      m4.makeTranslation(f.x, f.h + 0.02, f.z);
+      heads.setMatrixAt(i, m4);
+      heads.setColorAt(i, f.color);
+    });
+    group.add(stems, heads);
   }
 
   return {

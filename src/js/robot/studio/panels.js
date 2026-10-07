@@ -38,9 +38,9 @@ export function colorsPanel(ctx) {
     },
   });
   const separate = h("div", { class: "rs-indent" }, body.el, arms.el);
-  const finish = tiles({ label: t("Finish"), items: D.FINISHES, onChange: (v) => ctx.design((d) => (d.finish = v)), compact: true, columns: 5 });
+  const finish = tiles({ label: null, name: t("Finish"), items: D.FINISHES, onChange: (v) => ctx.design((d) => (d.finish = v)), compact: true, columns: 5 });
   const light = swatches({
-    label: t("Light"), colors: D.LIGHT_COLORS, empty: { label: t("Auto"), title: t("Like the app's accent color (Settings → Appearance)") },
+    label: t("Color of the light"), colors: D.LIGHT_COLORS, empty: { label: t("Auto"), title: t("Like the app's accent color (Settings → Appearance)") },
     onChange: (c) => ctx.design((d) => (d.colors.light = c)),
     hint: t("The fins, the ring and the eyes glow in this color. Auto follows the app's accent color."),
   });
@@ -116,10 +116,10 @@ export function shapePanel(ctx) {
 
 export function facePanel(ctx) {
   const el = h("div", { class: "rs-panel-body" });
-  const eyes = tiles({ label: t("Eyes"), items: D.EYES, onChange: (v) => ctx.design((d) => (d.face.eyes = v)), compact: true, columns: 4 });
+  const eyes = tiles({ label: null, name: t("Eyes"), items: D.EYES, onChange: (v) => ctx.design((d) => (d.face.eyes = v)), compact: true, columns: 4 });
   const eyeSize = slider({ label: t("Eye size"), min: D.RANGES.face.eyeSize[0], max: D.RANGES.face.eyeSize[1], step: 0.01, def: 1, value: 1, onChange: (v) => ctx.design((d) => (d.face.eyeSize = v)), format: percent });
   const eyeGap = slider({ label: t("Space between the eyes"), min: D.RANGES.face.eyeGap[0], max: D.RANGES.face.eyeGap[1], step: 0.01, def: 1, value: 1, onChange: (v) => ctx.design((d) => (d.face.eyeGap = v)), format: percent });
-  const mouth = tiles({ label: t("Mouth"), items: D.MOUTHS, onChange: (v) => ctx.design((d) => (d.face.mouth = v)), compact: true, columns: 5 });
+  const mouth = tiles({ label: null, name: t("Mouth"), items: D.MOUTHS, onChange: (v) => ctx.design((d) => (d.face.mouth = v)), compact: true, columns: 5 });
   const color = swatches({
     label: t("Color of the eyes and mouth"), colors: D.LIGHT_COLORS, empty: { label: t("Light"), title: t("Like its light color") },
     onChange: (c) => ctx.design((d) => (d.colors.face = c)),
@@ -178,7 +178,7 @@ export function outfitPanel(ctx) {
     shown = key;
     content.replaceChildren();
     const choose = tiles({
-      label: null, items, value: o.item, columns: 4,
+      label: null, name: t(def.label), items, value: o.item, columns: 4,
       onChange: (id) => {
         ctx.design((d) => {
           const it = D.ITEMS[slot][id];
@@ -202,7 +202,7 @@ export function outfitPanel(ctx) {
       content.append(section(t("Colors"), colors));
       content.colors = [first, second];
       if (def.pattern) {
-        const pattern = tiles({ label: t("Pattern"), items: D.PATTERNS, value: o.pattern, columns: 4, compact: true, onChange: (v) => ctx.design((d) => (d.outfit[slot].pattern = v)) });
+        const pattern = tiles({ label: null, name: t("Pattern"), items: D.PATTERNS, value: o.pattern, columns: 4, compact: true, onChange: (v) => ctx.design((d) => (d.outfit[slot].pattern = v)) });
         content.append(section(t("Pattern"), pattern.el));
         content.pattern = pattern;
       } else content.pattern = null;
@@ -228,17 +228,17 @@ export function outfitPanel(ctx) {
 // ---------- Room ----------
 export function roomPanel(ctx) {
   const el = h("div", { class: "rs-panel-body" });
-  const places = tiles({ label: t("Place"), items: R.PLACES, onChange: (id) => ctx.place(id), columns: 3 });
+  const places = tiles({ label: null, name: t("Place"), items: R.PLACES, onChange: (id) => ctx.place(id), columns: 3 });
   const dynamic = h("div", { class: "rs-room-dynamic" });
-  const light = tiles({ label: t("Light"), items: R.LIGHTS, onChange: (v) => ctx.room((r) => (r.light = v)), compact: true, columns: 4 });
+  const light = tiles({ label: t("Mood"), items: R.LIGHTS, onChange: (v) => ctx.room((r) => (r.light = v)), compact: true, columns: 4 });
   const brightness = slider({ label: t("Brightness"), min: R.RANGES.brightness[0], max: R.RANGES.brightness[1], step: 0.01, def: 1, value: 1, onChange: (v) => ctx.room((r) => (r.brightness = v)), format: percent });
-  const floor = tiles({ label: t("Floor"), items: R.FLOORS, onChange: (v) => ctx.room((r) => (r.floor = v)), compact: true, columns: 5 });
-  const air = tiles({ label: t("In the air"), items: R.AIRS, onChange: (v) => ctx.room((r) => (r.air = v)), compact: true, columns: 5 });
+  const floor = tiles({ label: null, name: t("Floor"), items: R.FLOORS, onChange: (v) => ctx.room((r) => (r.floor = v)), compact: true, columns: 5 });
+  const air = tiles({ label: null, name: t("In the air"), items: R.AIRS, onChange: (v) => ctx.room((r) => (r.air = v)), compact: true, columns: 5 });
   const amount = slider({ label: t("How much"), min: R.RANGES.airAmount[0], max: R.RANGES.airAmount[1], step: 0.01, def: 1, value: 1, onChange: (v) => ctx.room((r) => (r.airAmount = v)), format: percent });
   const surprise = button(t("Surprise me"), () => ctx.randomRoom(), { icon: "🎲" });
   const lighting = section(t("Lighting"), light.el, brightness.el);
   const ground = section(t("Floor"), floor.el);
-  const atmosphere = section(t("Atmosphere"), air.el, amount.el);
+  const atmosphere = section(t("In the air"), air.el, amount.el);
   el.append(section(t("Place"), places.el, h("div", { class: "rs-actions" }, surprise)), dynamic, lighting, ground, atmosphere);
 
   let builtFor = null;
@@ -312,8 +312,8 @@ export function roomPanel(ctx) {
 // ---------- Looks ----------
 export function looksPanel(ctx) {
   const el = h("div", { class: "rs-panel-body" });
-  const builtin = h("div", { class: "rs-looks", role: "list" });
-  const mine = h("div", { class: "rs-looks", role: "list" });
+  const builtin = h("div", { class: "rs-looks" });
+  const mine = h("div", { class: "rs-looks" });
   const empty = hint(t("Nothing saved yet. Make it yours in the other tabs, then save it here."));
   const name = textField({ label: t("Name this look"), max: 40, value: "", placeholder: t("My look"), onChange: () => {} });
   const save = button(t("Save this look"), () => ctx.saveLook(name.input.value), { primary: true, icon: "💾" });
@@ -332,7 +332,7 @@ export function looksPanel(ctx) {
     const worn = Object.values(d.outfit).filter((o) => o.item !== "none").map((o) => D.ITEMS[Object.keys(d.outfit).find((k) => d.outfit[k] === o)][o.item].icon);
     const place = R.PLACE_BY_ID[look.room.place];
     const b = h(
-      "button", { type: "button", class: "rs-look", role: "listitem", "data-id": look.id, title: look.about ? t(look.about) : "" },
+      "button", { type: "button", class: "rs-look", "data-id": look.id, title: look.about ? t(look.about) : "" },
       h("span", { class: "rs-look-swatch", "aria-hidden": "true", style: `--a:${d.colors.head};--b:${d.colors.body};--c:${d.colors.light || "var(--accent)"}` }, h("span", { class: "rs-look-eyes" }, h("i"), h("i"))),
       h("span", { class: "rs-look-name", text: look.builtin ? t(look.label) : look.name }),
       h("span", { class: "rs-look-things", "aria-hidden": "true", text: `${worn.slice(0, 4).join(" ")} ${place?.icon || ""}`.trim() })

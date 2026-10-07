@@ -25,7 +25,7 @@ export const nextId = (prefix = "rs") => `${prefix}-${++uid}`;
 // A heading and a group of controls
 export function section(title, ...kids) {
   const id = nextId("rs-sec");
-  const sec = h("section", { class: "rs-section", "aria-labelledby": id }, h("h4", { id, class: "rs-section-title", text: title }), ...kids);
+  const sec = h("section", { class: "rs-section", "aria-labelledby": id }, h("h3", { id, class: "rs-section-title", text: title }), ...kids);
   return sec;
 }
 
@@ -81,9 +81,10 @@ export function swatches({ label, colors, value = "", onChange, empty = null, hi
 }
 
 // A grid of tiles (an icon and a name): one is chosen
-export function tiles({ label, items, value, onChange, columns = 0, compact = false, hint: note = "" }) {
+// (label: the name shown above them; or null with `name` when the section's own heading says it already)
+export function tiles({ label, name = "", items, value, onChange, columns = 0, compact = false, hint: note = "" }) {
   const id = nextId("rs-tiles");
-  const group = h("div", { class: `rs-tiles${compact ? " compact" : ""}`, role: "radiogroup", "aria-labelledby": id, style: columns ? `--cols:${columns}` : "" });
+  const group = h("div", { class: `rs-tiles${compact ? " compact" : ""}`, role: "radiogroup", ...(label ? { "aria-labelledby": id } : { "aria-label": name }), style: columns ? `--cols:${columns}` : "" });
   const buttons = new Map();
   for (const item of items) {
     const b = h("button", { type: "button", class: "rs-tile", role: "radio", "aria-checked": "false", "data-id": item.id, title: item.about ? `${t(item.label)}: ${t(item.about)}` : t(item.label) }, h("span", { class: "rs-tile-icon", "aria-hidden": "true", text: item.icon || "" }), h("span", { class: "rs-tile-label", text: t(item.label) }));
@@ -92,7 +93,7 @@ export function tiles({ label, items, value, onChange, columns = 0, compact = fa
     group.append(b);
   }
   arrowKeys(group, 'button[role="radio"]');
-  const el = h("div", { class: "rs-field" }, label ? h("div", { id, class: "rs-label", text: label }) : h("span", { id, class: "sr-only", text: "" }), group, note ? h("div", { class: "rs-note", text: note }) : null);
+  const el = h("div", { class: "rs-field" }, label ? h("div", { id, class: "rs-label", text: label }) : null, group, note ? h("div", { class: "rs-note", text: note }) : null);
   const set = (v) => {
     let any = false;
     for (const [k, b] of buttons) {

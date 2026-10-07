@@ -1094,27 +1094,23 @@
             </div>
           </div>
 
+          <div class="robot-look-card">
+            <div class="robot-look-summary" id="robot-look-summary" aria-live="polite"></div>
+            <button type="button" class="btn btn-primary" id="robot-studio-open" data-open-studio="">Open Robot Studio…</button>
+          </div>
+
           <label class="row">
             <div><div class="row-label">Robot in text chat</div><div class="row-desc">A small live robot next to your chats (on wide windows)</div></div>
             <input type="checkbox" class="toggle" data-setting="robot.chatDock">
           </label>
 
           <div class="subhead"><div>
-            <div class="subhead-title">Looks</div>
-            <p class="hint">Colors, shape, face, clothes and the room around it. Each character keeps its own look.</p>
-          </div></div>
-          <div class="robot-look-card">
-            <div class="robot-look-summary" id="robot-look-summary" aria-live="polite"></div>
-            <button type="button" class="btn btn-primary" id="robot-studio-open" data-open-studio="">Open Robot Studio…</button>
-          </div>
-
-          <div class="subhead"><div>
             <div class="subhead-title">Scene and camera</div>
             <p class="hint">How voice mode shows it, on screen and in recordings.</p>
           </div></div>
           <div class="row">
-            <div><div class="row-label">Place</div><div class="row-desc" id="robot-bg-hint">Where the robot is. More in the Robot Studio: colors, lights, props and your own picture.</div></div>
-            <select class="field" id="robot-place" aria-label="Place"></select>
+            <div><div class="row-label">Where it is</div><div class="row-desc" id="robot-bg-hint">The room it is in. More in the Robot Studio: colors, lights, props and your own picture.</div></div>
+            <select class="field" id="robot-place" aria-label="Where it is"></select>
           </div>
           <div class="row">
             <div class="row-label" id="robot-shot-label">Camera shot</div>
@@ -1616,8 +1612,8 @@
           <div class="focus-bar" id="focus-bar" style="margin: 12px 0; padding: 10px; background: var(--bg-hover, rgba(255,255,255,0.05)); border-radius: 8px;">
             <div class="life-section-title" style="margin: 0 0 8px 0;">🎯 Focus Session</div>
             <div class="focus-controls" id="focus-controls" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-              <input class="field" id="focus-task-input" placeholder="What are you focusing on?" autocomplete="off" style="flex: 1; min-width: 160px;">
-              <select class="field" id="focus-duration-select" style="width: auto;">
+              <input class="field" id="focus-task-input" placeholder="What are you focusing on?" aria-label="What are you focusing on?" autocomplete="off" style="flex: 1; min-width: 160px;">
+              <select class="field" id="focus-duration-select" aria-label="How long to focus" style="width: auto;">
                 <option value="15">15 min</option>
                 <option value="25" selected>25 min (Pomodoro)</option>
                 <option value="45">45 min</option>
@@ -1747,7 +1743,7 @@
 
   <!-- Keyboard shortcuts (src/js/shortcuts.js): press ? anywhere -->
   <!-- The Robot Studio (src/js/robot/studio/): the robot's colors, shape, face, clothes and room -->
-  <div class="modal-backdrop robot-studio-backdrop" id="robot-studio" data-modal data-modal-focus="#rs-tab-looks" hidden>
+  <div class="modal-backdrop robot-studio-backdrop" id="robot-studio" data-modal hidden>
     <div class="robot-studio" role="dialog" aria-modal="true" aria-labelledby="rs-title">
       <header class="rs-head">
         <h2 id="rs-title">Robot Studio</h2>
@@ -1897,7 +1893,7 @@
     <div class="voice-scene-pop" id="voice-scene-pop" role="dialog" aria-label="Robot scene" hidden>
       <div class="voice-record-title">Robot scene</div>
       <div class="voice-record-row">
-        <label for="voice-scene-place-select">Place</label>
+        <label for="voice-scene-place-select">Where it is</label>
         <select class="field" id="voice-scene-place-select"></select>
       </div>
       <div class="voice-record-row">
