@@ -37,16 +37,23 @@ const cap = (c) => {
   const g = base(c, 0.03);
   const hat = c.paint(1, { roughness: 0.7 });
   const button = c.paint(2, { roughness: 0.6 });
-  const crown = turned(smooth([[0, 0.105], [0.07, 0.098], [0.13, 0.078], [0.175, 0.045], [0.192, 0.0]]), 48);
-  g.add(c.make(crown, hat).translateY(0.0));
-  const brim = new THREE.CylinderGeometry(0.17, 0.17, 0.014, 48, 1, false, -Math.PI / 2, Math.PI);
-  brim.scale(1.0, 1, 1.1);
+  // A taller crown than a beanie's, with a brim that reaches out over the face
+  const crown = turned(smooth([[0, 0.15], [0.07, 0.143], [0.13, 0.122], [0.172, 0.08], [0.192, 0.02], [0.196, 0.0]]), 48);
+  g.add(c.make(crown, hat));
+  const brim = new THREE.CylinderGeometry(0.2, 0.2, 0.016, 48, 1, false, -Math.PI / 2, Math.PI);
+  brim.scale(1.0, 1, 1.15);
   const b = c.make(brim, hat);
-  b.position.set(0, 0.012, 0.115);
-  b.rotation.x = 0.22;
+  b.position.set(0, 0.004, 0.13);
+  b.rotation.x = 0.16;
   g.add(b);
-  const knob = c.make(new THREE.SphereGeometry(0.016, 16, 12), button);
-  knob.position.y = 0.107;
+  // The seam up the middle, in the second color
+  const seam = c.make(new THREE.TorusGeometry(0.16, 0.004, 6, 48, Math.PI), button);
+  seam.rotation.set(0, 0, 0);
+  seam.scale.set(1, 0.92, 0.5);
+  seam.position.y = 0.0;
+  g.add(seam);
+  const knob = c.make(new THREE.SphereGeometry(0.018, 16, 12), button);
+  knob.position.y = 0.152;
   g.add(knob);
   return { object: g };
 };
