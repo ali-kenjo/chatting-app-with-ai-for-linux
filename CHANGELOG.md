@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased: A conversation that takes turns like a person
+## 0.5.1: A conversation that takes turns like a person
 
 Voice mode no longer answers every pause, says hello twice, or ignores the mute button.
 
