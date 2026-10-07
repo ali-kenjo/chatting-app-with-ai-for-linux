@@ -5,6 +5,7 @@
 import { t } from "../i18n.js";
 import { isOnAir, onOnAir, toggleOnAir } from "../onair.js";
 import { activityPrompt } from "../activities.js";
+import { getSettings } from "../store.js";
 import { canvas, store, voiceMode, voiceMute, voiceStatus } from "./dom.js";
 import { recording } from "./recording.js";
 import { isRobotStyle, setVoiceTheme } from "./stage.js";
@@ -184,6 +185,24 @@ export function initControls(actions) {
     if (e.key.toLowerCase() !== "m" || e.target.closest?.("input, textarea, select, [contenteditable]")) return;
     e.preventDefault();
     actions.toggleMute();
+  });
+
+  // The interrupt key (Settings → Voice; Space unless you changed it): cuts it off while it talks.
+  // Not while typing; Space on a focused button would also press the button, so its key-up is swallowed too.
+  let interruptKeyDown = null;
+  document.addEventListener("keydown", (e) => {
+    const key = getSettings()?.voice?.interruptKey;
+    if (!key || e.code !== key || voiceMode.hidden || actions.isFilming() || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target.closest?.("input, textarea, select, [contenteditable]")) return;
+    if (status.state !== "speaking") return;
+    e.preventDefault();
+    interruptKeyDown = key;
+    if (!e.repeat) actions.interrupt();
+  });
+  document.addEventListener("keyup", (e) => {
+    if (interruptKeyDown !== e.code) return;
+    interruptKeyDown = null;
+    e.preventDefault();
   });
 
   // Tap anywhere on canvas to interrupt

@@ -109,6 +109,19 @@
   font-weight: 500;
 }
 
+/* A row's control with a small extra button next to it (Voice conversation → Interrupt key) */
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.row-actions .btn.active {
+  border-color: var(--accent-text);
+  color: var(--accent-text);
+}
+
 .field {
   background: var(--bg-main);
   color: var(--text);

@@ -2,6 +2,8 @@
 // States: "connecting" | "listening" | "hearing" | "thinking" | "speaking" | "standby" | "error"
 import { robot } from "../robot/index.js";
 import { t } from "../i18n.js";
+import { getSettings } from "../store.js";
+import { keyLabel } from "../barge.mjs";
 import { voiceMode, voiceStatus, isMuted } from "./dom.js";
 
 const STATUS = {
@@ -30,6 +32,8 @@ export const status = {
     if (performance.now() < noteUntil) return;
     if (isMuted() && (next === "listening" || next === "hearing")) {
       voiceStatus.textContent = t("Microphone muted");
+    } else if (next === "speaking" && !text && getSettings()?.voice?.interruptKey) {
+      voiceStatus.textContent = t("Speaking · tap or press {key} to interrupt", { key: keyLabel(getSettings().voice.interruptKey, t("Space bar")) });
     } else {
       voiceStatus.textContent = text || STATUS[next] || "";
     }

@@ -397,6 +397,8 @@ async function chat(req, res) {
   } catch (err) {
     if (err.name !== "AbortError" && !controller.signal.aborted) send({ type: "error", error: err.message });
   } finally {
+    // Voice: a reply that only says it chose to stay silent isn't a message (see prompt.js)
+    if (voice === true && prompt.isSilent(reply)) reply = "";
     // Keep whatever arrived, even if the reply was stopped halfway
     if (reply || activity.length || drafts.length) {
       const message = { id: replyId, role: "model", text: reply, at: Date.now(), by: current.characters.active };

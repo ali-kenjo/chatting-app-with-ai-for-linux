@@ -11,7 +11,7 @@
 //   say(text)       the app tells the AI something to say (a reminder went off)
 //   interrupt()     you cut it off
 //   setMuted(bool)  the mic was muted / unmuted
-//   setRobot(bool), setOnAir(bool)   the AI's situation changed
+//   setRobot(bool), setOnAir(bool), setStyle(style)   the AI's situation changed (the conversation style is Settings → Voice)
 //   earClosed()     its voice (or the room's echo of it) may still be in the mic
 import { api } from "../../api.js";
 import { askFromVoice, greetFromVoice, stopReply } from "../../chat.js";
@@ -30,6 +30,14 @@ import { robotOnScreen } from "../stage.js";
 import { Listener, ECHO_TAIL_MS } from "./listener.js";
 import { speech, takeSpeakable } from "./speech.js";
 import { toWav } from "./wav.js";
+
+// Its whole reply is "[silent]" (or so far could still turn into it)
+const SILENT = "[silent]";
+const isSilent = (text) => /^\[silent\]\.?$/i.test(text.trim());
+const couldBeSilent = (text) => {
+  const s = text.trim().toLowerCase();
+  return s !== "" && (SILENT.startsWith(s) || isSilent(s));
+};
 
 export class ClassicEngine {
   constructor(tts) {
@@ -69,10 +77,15 @@ export class ClassicEngine {
     stopReply();
   }
 
+  // Muting also hushes it: the reply being said (or written) stops now
   setMuted(muted) {
     if (muted) {
+      this.turn++;
+      this.stopSpeaking();
+      stopReply();
       this.listener.drop();
-      status.set(status.state === "speaking" ? "speaking" : "listening");
+      captions.clear();
+      status.set("listening");
     } else {
       this.listen();
     }
@@ -80,6 +93,7 @@ export class ClassicEngine {
 
   setRobot() {}
   setOnAir() {}
+  setStyle() {} // the listener reads the style when it needs it
   setDoc(doc) {
     this.doc = doc;
   }
@@ -163,6 +177,7 @@ export class ClassicEngine {
     await audio.ensureOutput();
 
     let fullReply = "";
+    let delivered = 0; // how much of fullReply has been shown and queued to be said
     let buffer = "";
     let pieces = 0;
     let streamFinished = false;
@@ -238,8 +253,12 @@ export class ClassicEngine {
         onChunk(chunk) {
           if (!current()) return;
           fullReply += chunk;
-          buffer += chunk;
-          addTranscript("model", chunk);
+          // "[silent]" is how it says it's staying quiet: not shown, not said (see prompt.js)
+          if (couldBeSilent(fullReply)) return;
+          const fresh = fullReply.slice(delivered);
+          delivered = fullReply.length;
+          buffer += fresh;
+          addTranscript("model", fresh);
           speakMore();
         },
         onDraft(draft) {
@@ -253,6 +272,18 @@ export class ClassicEngine {
       if (error) throw new Error(error);
 
       endTurn();
+      if (isSilent(fullReply)) {
+        // It chose to listen: nothing to say, so back to listening
+        streamFinished = true;
+        return finishTurn();
+      }
+      if (delivered < fullReply.length) {
+        // It stopped at something that only looked like the start of "[silent]"
+        const rest = fullReply.slice(delivered);
+        delivered = fullReply.length;
+        buffer += rest;
+        addTranscript("model", rest);
+      }
       spoken.add(fullReply);
       streamFinished = true;
       speakMore(true);

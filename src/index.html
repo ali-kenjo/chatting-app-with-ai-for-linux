@@ -959,6 +959,44 @@
           </label>
 
           <div class="subhead"><div>
+            <div class="subhead-title">Voice conversation</div>
+            <p class="hint">How it takes turns when you talk to it.</p>
+          </div></div>
+          <div class="row">
+            <div>
+              <div class="row-label">Conversation style</div>
+              <div class="row-desc">Listener answers only when you speak to it directly and waits a long time, good for talking on camera. Balanced listens while you explain and answers when it makes sense. Chatty answers fast and joins in. Also on the voice screen</div>
+            </div>
+            <select class="field" data-setting="voice.style">
+              <option value="listener">Listener</option>
+              <option value="balanced">Balanced</option>
+              <option value="chatty">Chatty</option>
+            </select>
+          </div>
+          <div class="row">
+            <div>
+              <div class="row-label">Interrupt key</div>
+              <div class="row-desc">Cuts it off while it talks (or tap the screen)</div>
+              <div class="row-desc" id="interrupt-key-note" role="status"></div>
+            </div>
+            <div class="row-actions">
+              <button type="button" class="btn small" id="interrupt-key-btn" aria-describedby="interrupt-key-note"></button>
+              <button type="button" class="link-btn" id="interrupt-key-clear" title="No interrupt key" aria-label="No interrupt key">Remove</button>
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <div class="row-label">Interrupting by voice</div>
+              <div class="row-desc">How easily your voice cuts it off. Choose Hard on speakers, so it doesn't stop for its own echo</div>
+            </div>
+            <select class="field" data-setting="voice.interruptSensitivity">
+              <option value="easy">Easy</option>
+              <option value="normal">Normal</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+
+          <div class="subhead"><div>
             <div class="subhead-title">On camera</div>
             <p class="hint">Co-host mode for videos, streams and podcasts. Turn it on with ON AIR in voice mode.</p>
           </div></div>
@@ -1877,6 +1915,10 @@
       <button type="button" class="voice-speed-pill" id="voice-engine" title="How the conversation runs: Live (Google), Studio or Instant">
         <span class="speed-bolt" id="voice-engine-icon">⚡</span>
         <span id="voice-engine-label">Live</span>
+      </button>
+      <button type="button" class="voice-speed-pill" id="voice-style" title="How much it talks: Listener, Balanced or Chatty">
+        <span class="speed-bolt" id="voice-style-icon">🙂</span>
+        <span id="voice-style-label">Balanced</span>
       </button>
       <button type="button" class="voice-top-btn voice-robot-only" id="voice-scene" title="Robot scene: background and camera" aria-label="Robot scene: background and camera" aria-expanded="false" aria-controls="voice-scene-pop">
         <svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/></svg>

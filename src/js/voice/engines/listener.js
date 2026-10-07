@@ -2,17 +2,19 @@
 // what you say is cut out as one recording per turn (the engine has it transcribed).
 //
 // Gemini transcribes in whatever language you speak, and English and German
-// can be mixed. Pauses of over half a second are allowed, so you can think
-// mid-sentence, and one turn can be up to a minute long.
+// can be mixed. How long a pause may be before your turn ends depends on the
+// conversation style (Settings → Voice), so you can think mid-sentence, and one
+// turn can be up to a minute long.
 //
 // The mic also hears the AI's own voice. While it speaks, the ear is closed;
 // only a clearly louder voice (you) interrupts it. Right after it stops, the
 // ear stays closed a moment so the last echo isn't taken as you.
 import { audio } from "../audio.js";
+import { bargeProfile, endSilence } from "../../barge.mjs";
+import { getSettings } from "../../store.js";
 import { isMuted } from "../dom.js";
 import { status } from "../status.js";
 
-const END_SILENCE_MS = 650;
 const MAX_TURN_MS = 60000;
 export const ECHO_TAIL_MS = 450;
 
@@ -102,16 +104,17 @@ export class Listener {
     // Interrupting by voice: learn how loud the AI's own echo is, then only
     // react to something clearly louder that lasts (you talking over it)
     if (status.state === "speaking") {
+      const { learn, hold, floor, factor } = bargeProfile(getSettings()?.voice?.interruptSensitivity, "classic");
       const since = now - this.speakingSince;
-      if (since < 700) {
+      if (since < learn) {
         this.echoLevel = Math.max(this.echoLevel, level);
         return;
       }
       // echoLevel holds the loudest recent echo and slowly lets go of it
-      const bargeLevel = Math.max(0.06, this.echoLevel * 2.5, this.ambientFloor * 5);
+      const bargeLevel = Math.max(floor, this.echoLevel * factor, this.ambientFloor * 5);
       if (level > bargeLevel) {
         this.bargeSince = this.bargeSince || now;
-        if (now - this.bargeSince > 350) {
+        if (now - this.bargeSince > hold) {
           this.bargeSince = 0;
           this.onInterrupt();
         }
@@ -140,7 +143,7 @@ export class Listener {
     }
 
     if (level > dynamicQuiet) this.recording.lastLoud = now;
-    if (now - this.recording.lastLoud > END_SILENCE_MS || now - this.recording.started > MAX_TURN_MS) {
+    if (now - this.recording.lastLoud > endSilence(getSettings()?.voice?.style) || now - this.recording.started > MAX_TURN_MS) {
       const done = this.recording;
       this.recording = null;
       this.loudSince = 0;

@@ -243,6 +243,134 @@ describe("Gemini Live bridge", () => {
     page.ws.close();
   });
 
+  const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const audioOf = (conn) => conn.messages.filter((m) => m.realtimeInput?.audio);
+  const voiceChunk = { inlineData: { mimeType: "audio/pcm;rate=24000", data: Buffer.from([1, 0, 2, 0]).toString("base64") } };
+
+  test("it says hello before it listens: what the mic heard while connecting isn't sent", async () => {
+    const page = openPage(port);
+    await once(page.ws, "open");
+    const upstream = gemini.connection();
+    page.send({ type: "start", chatId: null });
+    const conn = await upstream;
+    await conn.next((m) => m.setup);
+    // "Hello?" and the room, heard while Gemini was still connecting
+    page.ws.send(Buffer.from([1, 1, 1, 1]));
+    await pause(30);
+    conn.send({ setupComplete: {} });
+    await page.next("ready");
+    await conn.next((m) => m.realtimeInput?.text);
+    // ...and a rustle right after the greeting was asked for: neither may reach Gemini, or it would take them for you cutting in
+    page.ws.send(Buffer.from([2, 2, 2, 2]));
+    await pause(100);
+    assert.strictEqual(audioOf(conn).length, 0);
+    // Its voice is on its way: from here the page holds the mic itself and lets you cut in
+    conn.send({ serverContent: { modelTurn: { parts: [voiceChunk] } } });
+    await pause(50);
+    page.ws.send(Buffer.from([3, 3, 3, 3]));
+    const heard = await conn.next((m) => m.realtimeInput?.audio);
+    assert.deepStrictEqual(Buffer.from(heard.realtimeInput.audio.data, "base64"), Buffer.from([3, 3, 3, 3]));
+    page.ws.close();
+  });
+
+  test("without a greeting, what the mic heard while connecting is still sent", async () => {
+    const before = settings.get();
+    settings.set({ ...before, companion: { ...before.companion, greeting: false } });
+    try {
+      const page = openPage(port);
+      await once(page.ws, "open");
+      const upstream = gemini.connection();
+      page.send({ type: "start", chatId: null });
+      const conn = await upstream;
+      await conn.next((m) => m.setup);
+      page.ws.send(Buffer.from([5, 5, 5, 5]));
+      await pause(30);
+      conn.send({ setupComplete: {} });
+      const heard = await conn.next((m) => m.realtimeInput?.audio);
+      assert.deepStrictEqual(Buffer.from(heard.realtimeInput.audio.data, "base64"), Buffer.from([5, 5, 5, 5]));
+      page.ws.close();
+    } finally {
+      settings.set(before);
+    }
+  });
+
+  test("the conversation style sets how long it waits and what it's told; changing it resumes the session", async () => {
+    const page = openPage(port);
+    await once(page.ws, "open");
+    const first = gemini.connection();
+    page.send({ type: "start", chatId: null, style: "listener" });
+    const a = await first;
+    const one = (await a.next((m) => m.setup)).setup;
+    assert.strictEqual(one.realtimeInputConfig.automaticActivityDetection.silenceDurationMs, 2500);
+    assert.strictEqual(one.realtimeInputConfig.automaticActivityDetection.endOfSpeechSensitivity, "END_SENSITIVITY_LOW");
+    assert.strictEqual(one.realtimeInputConfig.automaticActivityDetection.startOfSpeechSensitivity, "START_SENSITIVITY_LOW");
+    assert.deepStrictEqual(one.proactivity, { proactiveAudio: true });
+    assert.match(one.systemInstruction.parts[0].text, /wants you mostly to listen/);
+    assert.doesNotMatch(one.systemInstruction.parts[0].text, /If the conversation runs dry/);
+    a.send({ setupComplete: {} });
+    await page.next("ready");
+
+    const second = gemini.connection();
+    page.send({ type: "style", style: "chatty" });
+    const b = await second;
+    const two = (await b.next((m) => m.setup)).setup;
+    assert.strictEqual(two.realtimeInputConfig.automaticActivityDetection.silenceDurationMs, 700);
+    assert.strictEqual(two.realtimeInputConfig.automaticActivityDetection.endOfSpeechSensitivity, "END_SENSITIVITY_HIGH");
+    assert.strictEqual(two.proactivity, undefined);
+    assert.match(two.systemInstruction.parts[0].text, /lively back-and-forth/);
+    b.send({ setupComplete: {} });
+    await page.next("resumed");
+    page.ws.close();
+  });
+
+  test("the style in the settings is used when the page doesn't say", async () => {
+    const before = settings.get();
+    settings.set({ ...before, voice: { ...before.voice, style: "balanced" } });
+    try {
+      const page = openPage(port);
+      await once(page.ws, "open");
+      const upstream = gemini.connection();
+      page.send({ type: "start", chatId: null });
+      const conn = await upstream;
+      const { setup } = await conn.next((m) => m.setup);
+      assert.strictEqual(setup.realtimeInputConfig.automaticActivityDetection.silenceDurationMs, 1300);
+      assert.strictEqual(setup.proactivity, undefined);
+      assert.match(setup.systemInstruction.parts[0].text, /a pause is not an invitation to talk/);
+      page.ws.close();
+    } finally {
+      settings.set(before);
+    }
+  });
+
+  test("muted: nothing of the mic is sent, and Gemini isn't told your turn ended", async () => {
+    const page = openPage(port);
+    await once(page.ws, "open");
+    const upstream = gemini.connection();
+    page.send({ type: "start", chatId: null });
+    const conn = await upstream;
+    await conn.next((m) => m.setup);
+    conn.send({ setupComplete: {} });
+    await page.next("ready");
+    await conn.next((m) => m.realtimeInput?.text);
+    conn.send({ serverContent: { modelTurn: { parts: [voiceChunk] } } });
+    conn.send({ serverContent: { turnComplete: true } });
+    await page.next("turn-complete");
+
+    page.send({ type: "mute", on: true });
+    await pause(30);
+    page.ws.send(Buffer.from([7, 7, 7, 7]));
+    await pause(80);
+    assert.strictEqual(audioOf(conn).length, 0);
+    assert.ok(!conn.messages.some((m) => m.realtimeInput?.audioStreamEnd), "muting must not end your turn");
+
+    page.send({ type: "mute", on: false });
+    await pause(30);
+    page.ws.send(Buffer.from([8, 8, 8, 8]));
+    const heard = await conn.next((m) => m.realtimeInput?.audio);
+    assert.deepStrictEqual(Buffer.from(heard.realtimeInput.audio.data, "base64"), Buffer.from([8, 8, 8, 8]));
+    page.ws.close();
+  });
+
   test("a key that can't be used gives a clear error", async () => {
     const page = openPage(port);
     await once(page.ws, "open");

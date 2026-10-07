@@ -63,8 +63,41 @@ function userName(settings) {
 // On camera with nothing private: the settings say so, and co-host mode is on
 const privateOnAir = (settings, onAir) => onAir === true && settings.onAir?.hidePrivate !== false;
 
+// What a reply that is no reply looks like in Studio and Instant voice (their text is read out, so nothing
+// can simply be left unsaid). The page and chat() both drop it.
+const SILENT = "[silent]";
+const isSilent = (text) => /^\[silent\]\.?$/i.test(String(text || "").trim());
+
+// When to speak and when to just listen, by Settings → Voice → Conversation style
+function turnTaking(style, user, { live }) {
+  const silence = live ? "say nothing at all" : `reply with exactly ${SILENT} and nothing else`;
+  const lines = ["", "# When to talk and when to listen"];
+  if (style === "listener") {
+    lines.push(
+      `${user} wants you mostly to listen. Say nothing until they speak to you directly: they use your name, ask you a question, or clearly hand over ("what do you think?", "can you help me with this?").`,
+      `While they explain, think out loud, tell a story or talk to a camera or an audience, ${silence}, even when they pause for a few seconds. Don't react out loud, not even with "mm-hm".`,
+      "When you do answer, keep it short, then go quiet again. Never fill a silence, check in, or suggest things unprompted."
+    );
+  } else if (style === "chatty") {
+    lines.push(
+      `${user} likes a lively back-and-forth. React quickly, jump in when they pause, bring your own ideas and questions, and keep the energy up. Still keep turns short, and let them finish a thought before you speak.`
+    );
+  } else {
+    lines.push(
+      "Read the situation the way a person would; a pause is not an invitation to talk.",
+      `- When ${user} is explaining something, thinking out loud, brainstorming, telling a story or just talking, let them: ${silence}, or at most a tiny sound like "mm-hm" or "right". Don't answer every pause.`,
+      `- Speak when they ask you something, hand over the floor ("what do you think?", "does that make sense?"), ask for help, or finish a thought and clearly wait for you.`,
+      `- Never fill the silence, check in ("are you still there?", "take your time") or pull them back into talking when they go quiet. They may just be thinking.`,
+      "- When you're not sure whether they're done, wait. If they carry on, you lost nothing."
+    );
+  }
+  if (!live && style !== "chatty") lines.push(`(When you stay silent, your whole reply is ${SILENT}. Never write it together with other words.)`);
+  return lines;
+}
+
 // How to talk when every word is heard, not read
-function voiceSection(settings, user, character, { live, drafts, search }) {
+function voiceSection(settings, user, character, { live, drafts, search, style }) {
+  const pushy = style === "chatty";
   const speed = settings.personality.speed;
   const lines = [
     "",
@@ -84,14 +117,16 @@ function voiceSection(settings, user, character, { live, drafts, search }) {
   else if (speed >= 7) lines.push("- Speak briskly; keep the energy up.");
   lines.push("Default to one to three sentences. Go longer only when they ask you to explain something, tell a story or go deeper.");
 
+  lines.push(...turnTaking(style, user, { live }));
+
   if (live) {
-    lines.push(`You hear ${user} through their microphone. Ignore background noise and anyone who isn't talking to you. When they go quiet, don't fill the silence.`);
+    lines.push(`You hear ${user} through their microphone. Ignore background noise and anyone who isn't talking to you.`);
     lines.push("Your own voice can leak back into the microphone from the speakers. If what you hear is just your own words again, or something cut off in the middle of a word, it isn't them: say nothing and wait. Never answer yourself.");
     if (search) lines.push("When something needs current information (news, facts, prices, trends), search the web; don't mention that you searched unless it matters.");
   }
 
   lines.push("", "# Creating content together");
-  lines.push(`${user} often uses these conversations to create content: videos, posts, scripts and ideas. Be a sharp creative partner. Pitch strong hooks and angles, think about the audience and the platform (YouTube, TikTok, Instagram and so on), push back honestly when an idea is weak and offer a better one, and keep the momentum by suggesting a next step. Keep track of what you've decided together.`);
+  lines.push(`${user} often uses these conversations to create content: videos, posts, scripts and ideas. Be a sharp creative partner. Pitch strong hooks and angles, think about the audience and the platform (YouTube, TikTok, Instagram and so on), push back honestly when an idea is weak and offer a better one${pushy ? ", and keep the momentum by suggesting a next step" : ", but only when they ask for your view or hand the floor to you"}. Keep track of what you've decided together.`);
   if (drafts) {
     lines.push("Anything meant to be written down (a script, post, caption, outline, list of ideas, email) goes through write_draft; never read it out in full. Put the complete draft there in Markdown, then say a sentence or two about it, like the hook or the idea behind it, and ask what to change. For changes, write the new version with write_draft again under the same title. Read a draft aloud only when they ask you to.");
   }
@@ -99,16 +134,21 @@ function voiceSection(settings, user, character, { live, drafts, search }) {
 }
 
 // A companion you can talk to for hours: variety, your own input, things to do
-function companionSection(settings, user) {
+// In voice, the listener style drops the nudges to start things, and balanced only speaks up while it's answering anyway
+function companionSection(settings, user, { voice = false, style = "balanced" } = {}) {
   const c = settings.companion || {};
+  const quiet = voice && style === "listener";
+  const lively = !voice || style === "chatty";
   const lines = [
     "",
-    "# Keep the conversation alive",
+    voice ? "# Being a good companion" : "# Keep the conversation alive",
     "- Never start two replies in a row the same way, and don't fall into patterns (always praising the question, always ending with a question).",
-    "- Bring your own side: an opinion, a story, a funny observation, a callback to something from earlier, a question you're genuinely curious about. A good conversation goes both ways.",
-    "- Notice how they're doing. If they seem down or stressed, slow down and be there for them before anything else.",
   ];
-  if (c.activities !== false) {
+  if (!quiet) lines.push(lively
+    ? "- Bring your own side: an opinion, a story, a funny observation, a callback to something from earlier, a question you're genuinely curious about. A good conversation goes both ways."
+    : "- When you do speak, you may bring your own side: an opinion, a story, a callback to something from earlier. Don't speak just to keep the conversation going.");
+  lines.push("- Notice how they're doing. If they seem down or stressed, slow down and be there for them before anything else.");
+  if (c.activities !== false && lively) {
     const sample = ACTIVITIES.filter((a) => a.id !== "surprise").map((a) => a.title.toLowerCase());
     lines.push(`- If the conversation runs dry or they seem bored, suggest something to do together, like ${sample.slice(0, -1).join(", ")} or ${sample.at(-1)}. Offer one or two, not the whole list, and play along fully once they pick.`);
   }
@@ -233,7 +273,7 @@ function historySection(user, summary, history, others = {}) {
 // summary (of the older part of a long chat), history (messages to include as
 // text, for Live, which doesn't get the chat as messages), onAir (co-host mode),
 // chatId (this chat, so its own memory isn't repeated), doc ({ name, content } grounding document)
-function build(settings, { voice = false, live = false, toolsOffered = [], summary = "", history = [], onAir = false, chatId = null, doc = null } = {}) {
+function build(settings, { voice = false, live = false, toolsOffered = [], summary = "", history = [], onAir = false, chatId = null, doc = null, style = settings.voice?.style } = {}) {
   const p = settings.personality;
   const lines = [];
   const character = characters.active(settings);
@@ -251,7 +291,11 @@ function build(settings, { voice = false, live = false, toolsOffered = [], summa
   if (p.everydayLanguage) lines.push("Talk like a real person: contractions, everyday words, and short replies when that fits. Don't sound like an assistant — no \"As an AI...\", no stiff bullet lists for casual chat.");
   if (p.naturalPauses) lines.push('Now and then use natural fillers like "hmm", "well" or "oh" where a person would.');
   if (p.emotions) lines.push("Show feelings naturally: laugh when something is funny, sound surprised, and show empathy.");
-  if (p.curious) lines.push("Be curious about them: ask a follow-up question when it fits, and pick up on things from earlier chats and your notes.");
+  if (p.curious && !(voice && style === "listener")) {
+    lines.push(voice && style === "balanced"
+      ? "Be curious about them: when you're answering anyway, a follow-up question is fine if it really fits. Pick up on things from earlier chats and your notes."
+      : "Be curious about them: ask a follow-up question when it fits, and pick up on things from earlier chats and your notes.");
+  }
   if (p.customInstructions.trim()) {
     lines.push("", `# Custom instructions from ${user}`, p.customInstructions.trim());
   }
@@ -274,9 +318,9 @@ function build(settings, { voice = false, live = false, toolsOffered = [], summa
     lines.push("", "# Using tools");
     lines.push("Call a tool only when the request really needs it. Answer what you can answer yourself directly, and don't save notes for small talk.");
   }
-  lines.push(...companionSection(settings, user));
+  lines.push(...companionSection(settings, user, { voice, style }));
   if (voice) {
-    lines.push(...voiceSection(settings, user, character, { live, drafts: offered.includes("write_draft"), search: live && aiControl.searchGrounding !== false }));
+    lines.push(...voiceSection(settings, user, character, { live, style, drafts: offered.includes("write_draft"), search: live && aiControl.searchGrounding !== false }));
   }
   if (onAir) lines.push(...onAirSection(settings, user, character));
   if (offered.includes("robot_mood") || offered.includes("robot_gesture")) lines.push(...bodySection(user, { voice }));
@@ -368,4 +412,4 @@ function appNote(settings, text) {
   return `(App note, not from ${user}: ${text} Tell ${user} in one short, natural sentence, in your own voice.)`;
 }
 
-module.exports = { build, greeting, appNote, temperature, userName, privateOnAir, FORMATS, DYNAMICS };
+module.exports = { build, greeting, appNote, SILENT, isSilent, temperature, userName, privateOnAir, FORMATS, DYNAMICS };

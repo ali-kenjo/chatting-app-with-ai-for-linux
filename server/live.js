@@ -9,7 +9,10 @@
 //   paused), {type:"confirm", id, allow}, {type:"robot", on} (the robot body
 //   appeared or went away: the AI gets or loses its robot tools), {type:"on-air", on}
 //   (co-host mode), {type:"note", text} (the app tells the AI something, e.g. a reminder),
-//   {type:"echo"} (what Gemini just "heard" was the AI's own voice coming back: that turn isn't saved)
+//   {type:"echo"} (what Gemini just "heard" was the AI's own voice coming back: that turn isn't saved),
+//   {type:"mute", on} (the mic is muted: nothing of it is sent, and nothing is sent to end your turn),
+//   {type:"style", style} (Settings → Voice → Conversation style changed: the session is resumed with it)
+//   "start" also carries style, so a change that isn't saved yet counts
 // Helper → page: {type:"ready", model, robotTools}; binary 16-bit mono PCM (the AI's voice,
 //   24 kHz unless {type:"audio-format", rate} says otherwise);
 //   {type:"transcript", role:"user"|"model", text} (pieces as they come),
@@ -28,6 +31,7 @@ const prompt = require("./prompt");
 const gemini = require("./gemini");
 const summary = require("./summary");
 const characters = require("./characters");
+const voiceStyle = require("./voice-style");
 
 const UPSTREAM = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent";
 const MIC_TYPE = "audio/pcm;rate=16000";
@@ -35,6 +39,7 @@ const HISTORY = 30; // latest messages a new session gets as text
 const EARLY_AUDIO = 50; // mic chunks (~2 s) kept while Gemini is still connecting
 const RECONNECTS = 3; // tries in a row before giving up
 const NEW_CHAT_TITLE = "Voice conversation";
+const GREET_HOLD_MS = 4000; // the mic stays unheard this long at most while it says hello
 
 // Tests point this at a fake Gemini
 const upstreamUrl = () => process.env.FRIENDS_LIVE_UPSTREAM || UPSTREAM;
@@ -74,6 +79,10 @@ class LiveSession {
     this.rate = 24000;
     this.earlyAudio = [];
     this.earlyText = []; // typed before Gemini was ready
+    this.micHeld = false; // while it says hello your mic isn't sent: a rustle would "interrupt" the greeting, and it would say it again
+    this.micTimer = null;
+    this.muted = false;
+    this.style = null; // the conversation style the page asked for; else the one in the settings
     this.turn = newTurn();
     this.turns = 0;
     this.toolsRunning = 0;
@@ -93,8 +102,9 @@ class LiveSession {
 
   fromPage(data, isBinary) {
     if (isBinary) {
-      if (!this.started) return;
+      if (!this.started || this.muted) return;
       const chunk = toBuffer(data);
+      if (this.micHeld) return;
       if (this.ready) this.toGemini({ realtimeInput: { audio: { data: chunk.toString("base64"), mimeType: MIC_TYPE } } });
       else if (this.earlyAudio.length < EARLY_AUDIO) this.earlyAudio.push(chunk);
       return;
@@ -108,6 +118,8 @@ class LiveSession {
     if (msg.type === "start" && !this.started) this.start(msg);
     else if (msg.type === "text" && typeof msg.text === "string" && msg.text.trim()) this.sendText(msg.text.trim().slice(0, 8000));
     else if (msg.type === "audio-end") this.toGemini({ realtimeInput: { audioStreamEnd: true } });
+    else if (msg.type === "mute") this.muted = msg.on === true;
+    else if (msg.type === "style") this.setStyle(msg.style);
     else if (msg.type === "confirm") this.confirmations.get(msg.id)?.(msg.allow === true);
     else if (msg.type === "robot") this.setRobot(msg.on === true);
     else if (msg.type === "on-air") this.setOnAir(msg.on === true);
@@ -127,6 +139,17 @@ class LiveSession {
       this.switchSetup = true;
       if (this.ready && !this.turn.model && !this.toolsRunning) this.reconnect({ quiet: true });
     }
+  }
+
+  // The conversation style changed (it sets the pauses Gemini waits and what it's told about
+  // when to talk): resumed with a new setup between turns, like the robot and co-host mode
+  setStyle(style) {
+    if (!this.started || !voiceStyle.STYLES.includes(style) || style === this.style) return;
+    this.style = style;
+    if (!this.everReady) return;
+    this.system = null;
+    this.switchSetup = true;
+    if (this.ready && !this.turn.model && !this.toolsRunning) this.reconnect({ quiet: true });
   }
 
   // Co-host mode went on or off (filming, recording, or the On air button).
@@ -153,8 +176,9 @@ class LiveSession {
     if (this.ready && !this.turn.model && !this.toolsRunning) this.reconnect({ quiet: true });
   }
 
-  async start({ chatId, brainId, googleAccessToken, robot, onAir, doc }) {
+  async start({ chatId, brainId, googleAccessToken, robot, onAir, doc, style }) {
     this.started = true;
+    this.style = voiceStyle.STYLES.includes(style) ? style : null;
     this.robot = robot === true;
     this.onAir = onAir === true;
     this.doc = doc && doc.content ? doc : null;
@@ -214,6 +238,10 @@ class LiveSession {
     upstream.on("close", (code, reason) => this.upstream === upstream && this.upstreamClosed(code, String(reason || "")));
   }
 
+  currentStyle() {
+    return voiceStyle.styleOf(this.style || (this.settings || settings.get()).voice?.style);
+  }
+
   setup(model) {
     const current = settings.get();
     this.settings = current;
@@ -240,6 +268,7 @@ class LiveSession {
         onAir: this.onAir,
         chatId: this.chatId,
         doc: this.doc,
+        style: this.currentStyle(),
       });
     }
     const toolList = [];
@@ -257,9 +286,10 @@ class LiveSession {
       },
       systemInstruction: { parts: [{ text: this.system }] },
       tools: toolList,
-      // A little patience before answering, so a pause to think doesn't end your turn
-      // (Google recommends 500-800 ms; every ms here is added to each answer's delay)
-      realtimeInputConfig: { automaticActivityDetection: { prefixPaddingMs: 100, silenceDurationMs: 500 } },
+      // Patience before answering, so a pause to think doesn't end your turn: how much
+      // depends on the conversation style (voice-style.js). Every ms is added to each answer's delay.
+      realtimeInputConfig: { automaticActivityDetection: voiceStyle.detection(this.currentStyle(), model) },
+      ...(voiceStyle.proactive(this.currentStyle(), model) ? { proactivity: { proactiveAudio: true } } : {}),
       // Long conversations: older context is compressed instead of the session ending
       contextWindowCompression: { slidingWindow: {} },
       sessionResumption: this.handle ? { handle: this.handle } : {},
@@ -297,14 +327,31 @@ class LiveSession {
     } else {
       this.toPage({ type: "resumed" });
     }
-    for (const chunk of this.earlyAudio.splice(0)) this.toGemini({ realtimeInput: { audio: { data: chunk.toString("base64"), mimeType: MIC_TYPE } } });
+    // What the mic heard while connecting is sent, unless it's about to say hello: then it's old news,
+    // and it would only make Gemini think you cut the greeting off
+    const early = this.earlyAudio.splice(0);
+    if (!this.micHeld && !this.muted) for (const chunk of early) this.toGemini({ realtimeInput: { audio: { data: chunk.toString("base64"), mimeType: MIC_TYPE } } });
     for (const text of this.earlyText.splice(0)) this.sendText(text);
   }
 
   // It speaks first, like someone picking up. The note is from the app, and
   // isn't saved: only what you say (transcribed) or type counts as yours.
   greet() {
+    this.holdMic();
     this.toGemini({ realtimeInput: { text: prompt.greeting(this.settings || settings.get(), { chatId: this.chatId, onAir: this.onAir }) } });
+  }
+
+  // Your mic isn't sent until its voice is on its way (then the page holds the mic itself while
+  // it plays and lets you cut in), or a few seconds have passed
+  holdMic() {
+    this.micHeld = true;
+    clearTimeout(this.micTimer);
+    this.micTimer = setTimeout(() => this.releaseMic(), GREET_HOLD_MS);
+  }
+
+  releaseMic() {
+    clearTimeout(this.micTimer);
+    this.micHeld = false;
   }
 
   onContent(content) {
@@ -320,6 +367,7 @@ class LiveSession {
         this.rate = rate;
         this.toPage({ type: "audio-format", rate });
       }
+      if (this.micHeld) this.releaseMic();
       if (this.client.readyState === WebSocket.OPEN) this.client.send(Buffer.from(audio.data, "base64"), { binary: true });
     }
     if (content.outputTranscription?.text) {
@@ -327,10 +375,12 @@ class LiveSession {
       this.toPage({ type: "transcript", role: "model", text: content.outputTranscription.text });
     }
     if (content.interrupted) {
+      this.releaseMic();
       this.toPage({ type: "interrupted" });
       this.finishTurn();
     }
     if (content.turnComplete) {
+      this.releaseMic();
       this.finishTurn();
       this.toPage({ type: "turn-complete" });
       if (this.goingAway) this.reconnect();
@@ -515,6 +565,7 @@ class LiveSession {
   close() {
     if (this.closed) return;
     this.closed = true;
+    clearTimeout(this.micTimer);
     this.finishTurn();
     for (const answer of [...this.confirmations.values()]) answer(false);
     const upstream = this.upstream;

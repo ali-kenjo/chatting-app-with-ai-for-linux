@@ -54,4 +54,15 @@ describe("Settings Management", () => {
     assert.strictEqual(fileContent.theme.accent, "#34d399");
     assert.strictEqual(fileContent.theme.appearance, "light");
   });
+
+  test("voice settings: a style, an interrupt key and how easily your voice cuts in", () => {
+    const d = settings.sanitize({}).voice;
+    assert.deepStrictEqual(d, { style: "balanced", interruptKey: "Space", interruptSensitivity: "normal" });
+    assert.deepStrictEqual(settings.sanitize({ voice: { style: "listener", interruptKey: "KeyX", interruptSensitivity: "hard" } }).voice, { style: "listener", interruptKey: "KeyX", interruptSensitivity: "hard" });
+    // unknown values and keys that voice mode already uses fall back; no key at all is allowed
+    assert.deepStrictEqual(settings.sanitize({ voice: { style: "loud", interruptKey: "KeyM", interruptSensitivity: "max" } }).voice, d);
+    assert.strictEqual(settings.sanitize({ voice: { interruptKey: "Escape" } }).voice.interruptKey, "Space");
+    assert.strictEqual(settings.sanitize({ voice: { interruptKey: "not a key!" } }).voice.interruptKey, "Space");
+    assert.strictEqual(settings.sanitize({ voice: { interruptKey: "" } }).voice.interruptKey, "");
+  });
 });

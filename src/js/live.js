@@ -4,19 +4,20 @@
 // (server/live.js). The AI hears you directly, so there's no separate
 // speech-to-text step, and it can be interrupted like a person.
 import { t } from "./i18n.js";
+import { bargeProfile } from "./barge.mjs";
 const HOLD = 10; // mic chunks (~0.4 s) held back while the AI talks
 const ECHO_TAIL = 0.35; // s the mic stays held after the AI stops: the room's echo (plus the speakers' own delay, see tail())
 const ECHO_DROP = 6; // s an echo-triggered answer is silenced at most, in case it never ends on its own
-const LEARN = 0.6; // s at the start of the AI's speech spent learning how loud its echo is
-const BARGE = 0.25; // s you need to talk over it before it stops
 const CUSHION = 0.08; // s of audio gathered before a new stretch of speech starts playing
 
 const loadedWorklets = new WeakSet();
 
 export class LiveVoice {
   // audioCtx: the page's AudioContext; micSource: a node carrying your mic (or null);
-  // output: where the AI's voice goes (visualizer, speakers, recorder); handlers: see handle()
-  constructor({ audioCtx, micSource, output, handlers }) {
+  // output: where the AI's voice goes (visualizer, speakers, recorder); handlers: see handle();
+  // barge(): how easily your voice cuts it off (see barge.mjs), read again for every sound
+  constructor({ audioCtx, micSource, output, handlers, barge = () => bargeProfile("normal") }) {
+    this.barge = barge;
     this.ctx = audioCtx;
     this.micSource = micSource;
     this.output = output;
@@ -116,14 +117,15 @@ export class LiveVoice {
     }
     this.held.push(pcm);
     if (this.held.length > HOLD) this.held.shift();
-    if (now > this.playEnd || now - this.speakStart < LEARN) {
+    const { learn, hold, floor, factor } = this.barge();
+    if (now > this.playEnd || now - this.speakStart < learn) {
       this.echoPeak = Math.max(this.echoPeak, level);
       this.bargeSince = 0;
       return;
     }
-    if (level > Math.max(0.03, this.echoPeak * 2.5)) {
+    if (level > Math.max(floor, this.echoPeak * factor)) {
       this.bargeSince ||= now;
-      if (now - this.bargeSince >= BARGE) this.cutIn();
+      if (now - this.bargeSince >= hold) this.cutIn();
     } else {
       this.bargeSince = 0;
       this.echoPeak = Math.max(level, this.echoPeak * 0.995);
@@ -161,13 +163,29 @@ export class LiveVoice {
     this.send({ type: "echo" });
   }
 
+  // Muted: nothing of you is sent, and what it was saying stops at once (what it still had queued
+  // isn't played). It isn't told your turn ended, so it doesn't answer half a sentence.
   setMuted(muted) {
     this.muted = muted;
-    if (muted) this.send({ type: "audio-end" });
+    if (muted) {
+      this.held.length = 0;
+      this.bargeSince = 0;
+      this.silence();
+      this.dropAudio = true; // even an answer that hasn't started yet isn't played while you're muted
+    } else if (!this.turnOpen) {
+      this.dropAudio = false;
+    }
+    this.send({ type: "mute", on: muted });
+  }
+
+  // Settings → Voice → Conversation style changed
+  setStyle(style) {
+    this.send({ type: "style", style });
   }
 
   sendText(text) {
     this.silence();
+    if (this.muted && !this.turnOpen) this.dropAudio = false; // typing to it while muted still gets an answer out loud
     this.send({ type: "text", text });
   }
 
@@ -178,8 +196,9 @@ export class LiveVoice {
 
   // ---------- Its voice ----------
   play(data) {
-    if (this.dropAudio || this.closed) return;
+    if (this.closed) return;
     this.turnOpen = true;
+    if (this.dropAudio) return;
     const pcm = new Int16Array(data.byteLength % 2 ? data.slice(0, -1) : data);
     if (!pcm.length) return;
     const buffer = this.ctx.createBuffer(1, pcm.length, this.rate);

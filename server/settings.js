@@ -56,6 +56,12 @@ const DEFAULTS = {
     greeting: true, // starts voice conversations with something from last time
     interests: "", // what you love talking about, for fresh topics
   },
+  // How voice conversations take turns (server/voice-style.js, src/js/voice/)
+  voice: {
+    style: "balanced", // VOICE.styles: how much it talks and how long it waits for you
+    interruptKey: "Space", // a KeyboardEvent.code that cuts the AI off; "" = no key
+    interruptSensitivity: "normal", // VOICE.sensitivities: how easily your voice cuts it off
+  },
   // Tasks, reminders, habits and the journal (life.js), and the daily briefing
   life: {
     enabled: true, // the AI gets the tools and the Today panel shows
@@ -141,6 +147,13 @@ const DEFAULTS = {
   },
 };
 
+const VOICE = {
+  styles: ["listener", "balanced", "chatty"],
+  sensitivities: ["easy", "normal", "hard"],
+  // Keys with a job in voice mode already (Esc ends, M mutes, F films, Enter sends typing, Tab moves focus)
+  reservedKeys: ["Escape", "KeyM", "KeyF", "Enter", "NumpadEnter", "Tab"],
+};
+
 const ON_AIR = {
   formats: ["podcast", "reaction", "qa", "debate", "explainer", "storytime", "free"],
   dynamics: ["friends", "cohost", "comedy", "critic", "interviewer", "custom"],
@@ -209,6 +222,10 @@ function sanitize(input) {
   s.telegram.notifyReminders = s.telegram.notifyReminders !== false;
   s.telegram.notifyFocus = s.telegram.notifyFocus !== false;
   s.companion.interests = s.companion.interests.trim().slice(0, 1000);
+  s.voice.style = VOICE.styles.includes(s.voice.style) ? s.voice.style : DEFAULTS.voice.style;
+  s.voice.interruptSensitivity = VOICE.sensitivities.includes(s.voice.interruptSensitivity) ? s.voice.interruptSensitivity : DEFAULTS.voice.interruptSensitivity;
+  // A key code like "Space" or "KeyX"; anything else (or a key voice mode uses already) is the default
+  if (s.voice.interruptKey !== "") s.voice.interruptKey = /^[A-Za-z0-9]{1,20}$/.test(s.voice.interruptKey) && !VOICE.reservedKeys.includes(s.voice.interruptKey) ? s.voice.interruptKey : DEFAULTS.voice.interruptKey;
   if (!ON_AIR.formats.includes(s.onAir.format)) s.onAir.format = "podcast";
   if (!ON_AIR.dynamics.includes(s.onAir.actingDynamic)) s.onAir.actingDynamic = "friends";
   s.onAir.actingBrief = String(s.onAir.actingBrief || "").trim().slice(0, 2000);
@@ -271,4 +288,4 @@ function reload() {
   return get();
 }
 
-module.exports = { get, set, reload, onChange, sanitize, DEFAULTS, ROBOT, ROUTING, ON_AIR };
+module.exports = { get, set, reload, onChange, sanitize, DEFAULTS, ROBOT, ROUTING, ON_AIR, VOICE };

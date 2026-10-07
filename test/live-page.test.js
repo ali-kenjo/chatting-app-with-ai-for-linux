@@ -70,8 +70,8 @@ describe("Gemini Live, the page's side", () => {
     for (const voice of made.splice(0)) voice.stop(); // its timers would keep the test run alive
   });
 
-  const make = (ctx = fakeContext(), handlers = {}) => {
-    const voice = new LiveVoice({ audioCtx: ctx, micSource: { connect() {}, disconnect() {} }, output: {}, handlers });
+  const make = (ctx = fakeContext(), handlers = {}, extra = {}) => {
+    const voice = new LiveVoice({ audioCtx: ctx, micSource: { connect() {}, disconnect() {} }, output: {}, handlers, ...extra });
     made.push(voice);
     return voice;
   };
@@ -150,5 +150,62 @@ describe("Gemini Live, the page's side", () => {
     t.mock.timers.tick(6000);
     assert.ok(!voice.dropAudio);
     voice.stop();
+  });
+
+  test("muting stops what it is saying at once, and doesn't tell Gemini your turn ended", async () => {
+    const voice = make();
+    const socket = await ready(voice);
+    speak(voice, 5);
+    assert.strictEqual(voice.sources.size, 1);
+    voice.setMuted(true);
+    assert.strictEqual(voice.sources.size, 0, "what was queued is cut");
+    assert.ok(voice.playEnd <= voice.ctx.currentTime);
+    const sent = socket.sent.filter((d) => typeof d === "string").map((d) => JSON.parse(d));
+    assert.deepStrictEqual(sent.at(-1), { type: "mute", on: true });
+    assert.ok(!sent.some((m) => m.type === "audio-end"));
+    // the rest of that answer, and one that hadn't started, aren't played while you're muted
+    speak(voice);
+    assert.strictEqual(voice.sources.size, 0);
+    voice.fromMic({ pcm: new Int16Array(640).buffer, level: 0.5 });
+    assert.strictEqual(socket.sent.filter((d) => typeof d !== "string").length, 0, "nothing of you is sent");
+  });
+
+  test("unmuting: the next answer is heard again", async () => {
+    const voice = make();
+    const socket = await ready(voice);
+    voice.setMuted(true);
+    voice.setMuted(false);
+    assert.deepStrictEqual(JSON.parse(socket.sent.at(-1)), { type: "mute", on: false });
+    speak(voice);
+    assert.strictEqual(voice.sources.size, 1);
+  });
+
+  test("typing to it while muted still gets an answer out loud", async () => {
+    const voice = make();
+    await ready(voice);
+    voice.setMuted(true);
+    voice.sendText("what time is it?");
+    speak(voice);
+    assert.strictEqual(voice.sources.size, 1);
+  });
+
+  test("how easily your voice cuts in follows the setting", async () => {
+    const { bargeProfile } = await import(pathToFileURL(path.join(__dirname, "..", "src", "js", "barge.mjs")));
+    const cutsIn = async (sensitivity, level) => {
+      const ctx = fakeContext();
+      let interrupted = 0;
+      const voice = make(ctx, { onInterrupted: () => interrupted++ }, { barge: () => bargeProfile(sensitivity) });
+      await ready(voice);
+      speak(voice, 5);
+      ctx.currentTime += 1; // past what's spent learning how loud its echo is
+      for (let i = 0; i < 40; i++) {
+        voice.fromMic({ pcm: new Int16Array(640).buffer, level });
+        ctx.currentTime += 0.04;
+      }
+      return interrupted > 0;
+    };
+    assert.strictEqual(await cutsIn("easy", 0.04), true, "a quiet voice cuts in when it's easy");
+    assert.strictEqual(await cutsIn("hard", 0.04), false, "but not when it's hard");
+    assert.strictEqual(await cutsIn("hard", 0.3), true, "a clearly loud voice always does");
   });
 });

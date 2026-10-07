@@ -7,6 +7,8 @@ import { getSelectedBrainId } from "../../composer.js";
 import { getAccessToken } from "../../auth.js";
 import { promptConfirmation } from "../../workspace.js";
 import { LiveVoice } from "../../live.js";
+import { bargeProfile } from "../../barge.mjs";
+import { getSettings } from "../../store.js";
 import { robot } from "../../robot/index.js";
 import { isOnAir } from "../../onair.js";
 import { addTranscript, addDraft, endTurn, discardLine } from "../../voice-drawer.js";
@@ -42,9 +44,10 @@ export class LiveEngine {
 
   // Resolves once Gemini is ready to talk; rejects with a readable message
   async start() {
-    const voice = new LiveVoice({ audioCtx: audio.ctx, micSource: audio.micSource, output: audio.bus, handlers: this.handlers() });
+    const barge = () => bargeProfile(getSettings()?.voice?.interruptSensitivity, "live");
+    const voice = new LiveVoice({ audioCtx: audio.ctx, micSource: audio.micSource, output: audio.bus, handlers: this.handlers(), barge });
     this.voice = voice;
-    await voice.start({ chatId: getCurrentChatId(), brainId: getSelectedBrainId(), googleAccessToken: getAccessToken(), robot: robotOnScreen(), onAir: isOnAir(), doc: this.doc });
+    await voice.start({ chatId: getCurrentChatId(), brainId: getSelectedBrainId(), googleAccessToken: getAccessToken(), robot: robotOnScreen(), onAir: isOnAir(), doc: this.doc, style: getSettings()?.voice?.style });
     if (!this.stopped) voice.setMuted(isMuted());
   }
 
@@ -59,9 +62,21 @@ export class LiveEngine {
     this.voice?.send({ type: "doc", doc });
   }
 
+  // Muting also hushes it: what it was saying stops now (see LiveVoice.setMuted)
   setMuted(muted) {
+    const wasSpeaking = status.state === "speaking";
     this.voice?.setMuted(muted);
-    status.set(muted && status.state !== "speaking" ? "listening" : status.state);
+    if (muted) {
+      if (wasSpeaking) captions.clear();
+      clearTimeout(this.thinkingTimer);
+      if (status.state === "speaking" || status.state === "thinking" || status.state === "hearing") status.set("listening");
+    } else {
+      status.set(status.state);
+    }
+  }
+
+  setStyle(style) {
+    this.voice?.setStyle(style);
   }
 
   setRobot(on) {

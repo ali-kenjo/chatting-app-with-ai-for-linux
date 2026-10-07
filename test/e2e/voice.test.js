@@ -1,6 +1,6 @@
 // Voice conversation in the real page, with a fake microphone and fake AIs:
 // the engines (Studio, Instant, and Live falling back to Studio), typing a turn,
-// mute, recording, the visualizer styles, closing.
+// mute, the conversation style and the interrupt key, recording, the visualizer styles, closing.
 //   npm run test:e2e
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert");
@@ -89,6 +89,26 @@ describe("Voice conversation", { skip: !CHROME && "no Chrome found" }, () => {
     await page.waitForFunction(() => !document.getElementById("voice-mode").hidden);
   };
 
+  const savedVoice = () => page.evaluate(() => fetch("/api/settings").then((r) => r.json()).then((s) => s.voice));
+
+  test("Settings: the interrupt key is the next key you press, and keys voice mode uses are refused", async () => {
+    assert.strictEqual(await page.$eval("#interrupt-key-btn", (el) => el.textContent.trim()), "Space bar");
+    await click("#interrupt-key-btn");
+    assert.strictEqual(await page.$eval("#interrupt-key-btn", (el) => el.textContent.trim()), "Press a key…");
+    await page.keyboard.press("KeyM"); // mutes in voice mode already
+    assert.match(await page.$eval("#interrupt-key-note", (el) => el.textContent), /already does something/);
+    await click("#interrupt-key-btn");
+    await page.keyboard.press("KeyX");
+    await page.waitForFunction(() => document.getElementById("interrupt-key-btn").textContent.trim() === "X");
+    await page.waitForFunction(() => fetch("/api/settings").then((r) => r.json()).then((s) => s.voice.interruptKey === "KeyX"));
+    await click("#interrupt-key-clear");
+    await page.waitForFunction(() => fetch("/api/settings").then((r) => r.json()).then((s) => s.voice.interruptKey === ""));
+    assert.strictEqual(await page.$eval("#interrupt-key-clear", (el) => el.hidden), true);
+    await click("#interrupt-key-btn");
+    await page.keyboard.press("Space");
+    await page.waitForFunction(() => fetch("/api/settings").then((r) => r.json()).then((s) => s.voice.interruptKey === "Space"));
+  });
+
   test("opens with the microphone, and Studio voice runs when Live isn't wanted", async () => {
     await open();
     await waitStatus("Listening");
@@ -124,6 +144,101 @@ describe("Voice conversation", { skip: !CHROME && "no Chrome found" }, () => {
     await click("#voice-mute");
     assert.strictEqual(await page.$eval("#voice-mode", (el) => el.classList.contains("muted")), false);
     await waitStatus("Listening");
+  });
+
+  // A turn whose answer is being said. Headless Chrome has no speech voices, so Instant voice gets a
+  // pretend one: it never finishes by itself, and the engine's own timer ends it after a second and a half.
+  async function startSpeaking() {
+    await page.evaluate(() => {
+      window.SpeechSynthesisUtterance = class {};
+      Object.defineProperty(window, "speechSynthesis", { configurable: true, value: { speak() {}, cancel() {}, getVoices: () => [], addEventListener() {} } });
+    });
+    await typeTurn("Tell me something");
+    await waitStatus("Speaking", 15000);
+  }
+
+  test("muting while it talks stops it at once, and unmuting doesn't bring it back", async () => {
+    await startSpeaking();
+    await click("#voice-mute");
+    await waitStatus("muted", 1000);
+    assert.strictEqual(await page.$eval("#voice-mode", (el) => el.dataset.state), "listening");
+    assert.strictEqual(await captionText(), "", "its words leave the screen");
+    await new Promise((r) => setTimeout(r, 400));
+    await click("#voice-mute");
+    await waitStatus("Listening");
+    await new Promise((r) => setTimeout(r, 500));
+    assert.strictEqual(await page.$eval("#voice-mode", (el) => el.dataset.state), "listening", "it doesn't start again");
+  });
+
+  test("the interrupt key cuts it off while it talks, and does nothing when it doesn't", async () => {
+    await page.keyboard.press("Space");
+    assert.strictEqual(await page.$eval("#voice-mode", (el) => el.dataset.state), "listening", "nothing to interrupt");
+    await startSpeaking();
+    assert.match(await status(), /press Space bar to interrupt/);
+    await page.keyboard.press("Space");
+    await page.waitForFunction(() => document.getElementById("voice-mode").dataset.state === "listening", { timeout: 1000 });
+    await waitStatus("Listening");
+  });
+
+  test("a key you chose in Settings works, and with no key the Space bar does nothing", async () => {
+    await page.evaluate(() => document.getElementById("voice-end").click());
+    await page.waitForFunction(() => document.getElementById("voice-mode").hidden, { timeout: 5000 });
+    await click("#interrupt-key-btn");
+    await page.keyboard.press("KeyX");
+    await page.waitForFunction(() => document.getElementById("interrupt-key-btn").textContent.trim() === "X");
+    await open();
+    await waitStatus("Listening");
+    await startSpeaking();
+    assert.match(await status(), /press X to interrupt/);
+    await page.keyboard.press("Space");
+    await new Promise((r) => setTimeout(r, 200));
+    assert.strictEqual(await page.$eval("#voice-mode", (el) => el.dataset.state), "speaking", "Space isn't the key any more");
+    await page.keyboard.press("KeyX");
+    await page.waitForFunction(() => document.getElementById("voice-mode").dataset.state === "listening", { timeout: 1000 });
+    await click("#voice-end");
+    await page.waitForFunction(() => document.getElementById("voice-mode").hidden, { timeout: 5000 });
+    await click("#interrupt-key-btn");
+    await page.keyboard.press("Space"); // back to the default
+    await page.waitForFunction(() => fetch("/api/settings").then((r) => r.json()).then((s) => s.voice.interruptKey === "Space"));
+    await open();
+    await waitStatus("Listening");
+  });
+
+  test("Studio and Instant: when it answers '[silent]' it stays quiet, shows nothing and saves nothing", async () => {
+    fakes.behave.local.text = "[silent]";
+    try {
+      await typeTurn("I'm just thinking out loud here");
+      await page.waitForFunction(() => document.getElementById("voice-mode").dataset.state === "thinking", { timeout: 5000 });
+      await waitStatus("Listening", 10000);
+      assert.strictEqual(await captionText().then((t) => /silent/i.test(t)), false, "the word never shows");
+      await click("#voice-drafts-btn");
+      await click('.voice-drawer-tab[data-tab="transcript"]');
+      const transcript = await page.$eval("#voice-transcript", (el) => el.innerText);
+      assert.match(transcript, /thinking out loud/);
+      assert.doesNotMatch(transcript, /silent/i);
+      await click("#voice-drawer-close");
+      const messages = await page.evaluate(() => fetch("/api/chats").then((r) => r.json()).then((l) => fetch(`/api/chats/${l[0].id}`).then((r) => r.json())).then((c) => c.messages.map((m) => m.text)));
+      assert.ok(messages.includes("I'm just thinking out loud here"));
+      assert.ok(!messages.some((t) => /silent/i.test(t)), "no '[silent]' message in the chat");
+    } finally {
+      delete fakes.behave.local.text;
+    }
+  });
+
+  test("the style pill goes Listener, Balanced, Chatty and is saved with the settings", async () => {
+    const label = () => page.$eval("#voice-style-label", (el) => el.textContent.trim());
+    assert.strictEqual(await label(), "Balanced");
+    await click("#voice-style");
+    assert.strictEqual(await label(), "Chatty");
+    await page.waitForFunction(() => fetch("/api/settings").then((r) => r.json()).then((s) => s.voice.style === "chatty"));
+    await click("#voice-style");
+    assert.strictEqual(await label(), "Listener");
+    await page.waitForFunction(() => fetch("/api/settings").then((r) => r.json()).then((s) => s.voice.style === "listener"));
+    // The same choice in Settings
+    assert.strictEqual(await page.$eval('[data-setting="voice.style"]', (el) => el.value), "listener");
+    await click("#voice-style");
+    assert.strictEqual(await label(), "Balanced");
+    assert.strictEqual((await (async () => { await page.waitForFunction(() => fetch("/api/settings").then((r) => r.json()).then((s) => s.voice.style === "balanced")); return savedVoice(); })()).style, "balanced");
   });
 
   test("recording a video swaps Instant for Studio voice (the browser's own voice can't be recorded)", async () => {

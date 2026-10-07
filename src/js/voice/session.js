@@ -17,7 +17,7 @@
 // Live falls back to Studio by itself when it can't be used.
 import { api } from "../api.js";
 import { getCurrentChatId, reloadChat, stopReply } from "../chat.js";
-import { getSettings } from "../store.js";
+import { getSettings, onSettings, updateSettings } from "../store.js";
 import { voiceErrorText } from "../personality.js";
 import { liveWanted, getLocalBrainId } from "../composer.js";
 import { toggleDrawer, resetDrawer } from "../voice-drawer.js";
@@ -78,6 +78,33 @@ enginePill.addEventListener("click", () => {
   if (!voiceMode.hidden) startEngine();
 });
 updateEnginePill();
+
+// ---------- The conversation style pill (Settings → Voice has the same choice) ----------
+const STYLES = {
+  listener: { icon: "👂", label: t("Listener"), title: t("Listener: it only answers when you speak to it directly, and waits a long time. Click for Balanced.") },
+  balanced: { icon: "🙂", label: t("Balanced"), title: t("Balanced: it listens while you explain and answers when it makes sense. Click for Chatty.") },
+  chatty: { icon: "💬", label: t("Chatty"), title: t("Chatty: it answers quickly and joins in more. Click for Listener.") },
+};
+const STYLE_ORDER = ["listener", "balanced", "chatty"];
+const stylePill = document.getElementById("voice-style");
+let appliedStyle = null;
+
+function showStyle() {
+  const style = STYLES[getSettings()?.voice?.style] ? getSettings().voice.style : "balanced";
+  stylePill.querySelector("#voice-style-icon").textContent = STYLES[style].icon;
+  stylePill.querySelector("#voice-style-label").textContent = STYLES[style].label;
+  stylePill.title = STYLES[style].title;
+  // Changed here or in Settings while talking: the running conversation follows
+  if (appliedStyle && appliedStyle !== style) engine?.setStyle?.(style);
+  appliedStyle = style;
+}
+
+stylePill.addEventListener("click", () => {
+  const now = getSettings()?.voice?.style;
+  const next = STYLE_ORDER[(STYLE_ORDER.indexOf(now) + 1) % STYLE_ORDER.length];
+  updateSettings((s) => (s.voice.style = next));
+});
+onSettings(showStyle);
 
 // ---------- Starting and switching engines ----------
 function startClassic(tts) {

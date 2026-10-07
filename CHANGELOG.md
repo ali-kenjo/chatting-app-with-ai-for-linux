@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased: A conversation that takes turns like a person
+
+Voice mode no longer answers every pause, says hello twice, or ignores the mute button.
+
+### Added
+- **Conversation style** (Settings → Characters → Voice conversation, and a pill on the voice screen): **Listener** answers only when you speak to it directly and waits about 2.5 s (for talking on camera), **Balanced** (the default) listens while you explain and answers when it makes sense, **Chatty** answers fast and joins in. It sets how long Gemini Live waits after you stop, and what the AI is told about when to talk and when to listen. Changing it mid-conversation resumes the session with the new style. Studio and Instant voice use it too: the AI can answer `[silent]`, which is neither said, shown nor saved.
+- **Interrupt key** (Space by default, any key you like in Settings): cuts it off while it talks. **Interrupting by voice** (Easy, Normal, Hard) sets how easily your voice cuts it off; choose Hard on speakers.
+
+### Changed
+- Muting now also stops what the AI is saying, at once, and no longer tells Gemini your turn ended (that made it answer half a sentence a moment later). Typing to it while muted still gets an answer out loud.
+- In voice mode the "keep the conversation alive" nudges (suggest an activity when it runs dry, keep the momentum, always ask a follow-up) only apply in the Chatty style.
+
+### Fixed
+- Opening voice mode: the greeting is no longer interrupted by what the microphone heard while connecting, so it doesn't say hello twice.
+
 ## 0.5.0: The Robot Studio
 
 Everything about the robot's looks is now yours to change, and so is the room around it.

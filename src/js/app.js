@@ -23,6 +23,7 @@ import "./auth.js";
 import "./workspace.js";
 import "./data.js";
 import "./robot/settings-pane.js";
+import "./voice-settings.js";
 
 // Check if launched with ?voice=true or ?voice=1
 try {
