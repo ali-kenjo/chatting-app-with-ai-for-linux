@@ -61,6 +61,7 @@ export function loadEngine() {
       e.setVisible(name, h.visible);
     }
     if (modelInfo.custom) useModel(modelInfo).catch(() => {});
+    if (backgroundInfo.custom) e.useBackground(backgroundInfo).catch(() => {});
     notify("ready", {});
     return e;
   })().catch((err) => {
